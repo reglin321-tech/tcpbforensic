@@ -20,14 +20,20 @@
         }
 
         .card {
-            background: #16213e;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-            width: 100%;
-            max-width: 450px;
-            text-align: center;
-            border: 1px solid #0f3460;
+            width: 90%;          /* 在小螢幕時佔據 90% 寬度 */
+            max-width: 450px;    /* 但在大螢幕時最大不要超過 450px */
+            margin: 20px auto;   /* 讓卡片上下留空，左右置中 */
+            padding: 20px;       /* 減少內距，留更多空間給內容 */
+        }
+
+        /* 針對手機的小調整 */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 32px !important; /* 調小裝備名稱字體，避免換行太亂 */
+            }
+            .btn-ok, .btn-no {
+                padding: 20px 10px; /* 稍微縮小按鈕高度，才不會佔滿整個手機畫面 */
+            }
         }
 
         h2, h3 { color: #4ecca3; margin-top: 0; }
