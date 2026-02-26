@@ -1,0 +1,34 @@
+body {
+    font-family: Arial;
+    text-align: center;
+    padding-top: 40px;
+}
+
+input {
+    width: 100px;
+    padding: 5px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    background-color: #2b6ad2;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #1e4fa3;
+}
+
+h1 {
+    color: #2b6ad2;
+}
+#trajCanvas {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    max-width: 100%;
+}

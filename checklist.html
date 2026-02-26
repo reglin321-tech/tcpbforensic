@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>出勤裝備檢查系統</title>
+    <style>
+        /* 重點：讓 hidden 類別真正消失 */
+        .hidden { display: none !important; }
+
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* 讓內容垂直置中 */
+            min-height: 100vh;
+        }
+
+        .card {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            border: 1px solid #0f3460;
+        }
+
+        h2, h3 { color: #4ecca3; margin-top: 0; }
+
+        .choice-btn {
+            background: #0f3460;
+            color: white;
+            width: 100%;
+            padding: 20px;
+            margin: 12px 0;
+            border: 1px solid #533483;
+            border-radius: 8px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .choice-btn:hover { background: #533483; transform: scale(1.02); }
+
+        .check-controls { display: flex; gap: 15px; margin-top: 30px; }
+        .btn-ok { background: #4ecca3; color: #1a1a2e; padding: 25px; flex: 1; font-size: 28px; border-radius: 8px; border: none; font-weight: 900; cursor: pointer; }
+        .btn-no { background: #e94560; color: white; padding: 25px; flex: 1; font-size: 28px; border-radius: 8px; border: none; font-weight: 900; cursor: pointer; }
+
+        .missing-item {
+            background: rgba(233, 69, 96, 0.1);
+            color: #e94560;
+            font-weight: bold;
+            list-style: none;
+            padding: 15px;
+            margin: 8px 0;
+            border-left: 5px solid #e94560;
+            text-align: left;
+            border-radius: 4px;
+        }
+
+        #progress-text { font-size: 16px; color: #999; margin-top: 25px; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+    <div id="home-page" class="card">
+        <h2>請選擇出勤情況</h2>
+        <div id="button-list"></div>
+    </div>
+
+    <div id="check-page" class="card hidden">
+        <h3 id="current-scenario-name"></h3>
+        <hr style="border: 0.5px solid #0f3460;">
+        <p>正在檢查：</p>
+        <h1 id="current-item-name" style="font-size: 48px; margin: 20px 0; color: #fff;">---</h1>
+        <div class="check-controls">
+            <button class="btn-no" onclick="handleCheck(false)">❌ 沒帶</button>
+            <button class="btn-ok" onclick="handleCheck(true)">✅ 有帶</button>
+        </div>
+        <p id="progress-text"></p>
+    </div>
+
+    <div id="result-page" class="card hidden">
+        <h2>檢查完畢</h2>
+        <div id="result-content" style="margin: 20px 0;"></div>
+        <button class="choice-btn" style="background: #4ecca3; color: #1a1a2e;" onclick="location.reload()">🔄 重新檢查</button>
+    </div>
+
+    <script>
+        const configs = [
+            { "name": "槍擊案件", "items": ["鉛銅試劑", "彈道重建裝備"] },
+            { "name": "毒品工廠", "items": ["拉曼分光儀", "毒品初篩試劑", "石蕊試紙"] },
+            { "name": "爆裂物處理", "items": ["爆裂物檢測試劑", "防爆毯", "訊號遮蔽器", "車底檢視器", "金屬檢測器", "望遠相機"] },
+            { "name": "日常裝備檢查", "items": ["數字標籤", "箭頭標籤", "空白標籤", "捲尺", "比例尺", "證物紙袋(長)", "證物紙袋(中)", "證物紙袋(短)", "L比例尺", "證物清單", "垃圾袋", "封緘膠帶", "工具盒、捲尺" , "口罩", "手套(L)", "手套(XL)", "頭套", "號碼牌", "塑膠證物袋", "紙證物袋(中、大)", "指紋粉末(黑、白、磁)", "氰丙烯酸酯", "鋁箔盒",  "尼龍棉棒", "棉棒", "生理食鹽水", "紗布", "酒精棉片", "DNA黏膠片", "針筒罐", "鞋套", "指紋膠片"] }
+        ];
+
+        let selectedItems = [];
+        let currentIndex = 0;
+        let missingList = [];
+
+        const listDiv = document.getElementById('button-list');
+        configs.forEach(config => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = config.name;
+            btn.onclick = () => startCheck(config);
+            listDiv.appendChild(btn);
+        });
+
+        function startCheck(config) {
+            selectedItems = config.items;
+            currentIndex = 0;
+            missingList = [];
+            document.getElementById('home-page').classList.add('hidden');
+            document.getElementById('check-page').classList.remove('hidden');
+            document.getElementById('current-scenario-name').innerText = config.name;
+            showNextItem();
+        }
+
+        function showNextItem() {
+            if (currentIndex < selectedItems.length) {
+                document.getElementById('current-item-name').innerText = selectedItems[currentIndex];
+                document.getElementById('progress-text').innerText = `進度：${currentIndex + 1} / ${selectedItems.length}`;
+            } else {
+                showResult();
+            }
+        }
+
+        function handleCheck(isOk) {
+            if (!isOk) { missingList.push(selectedItems[currentIndex]); }
+            currentIndex++;
+            showNextItem();
+        }
+
+        function showResult() {
+            document.getElementById('check-page').classList.add('hidden');
+            document.getElementById('result-page').classList.remove('hidden');
+            const resultContent = document.getElementById('result-content');
+            if (missingList.length === 0) {
+                resultContent.innerHTML = "<h3 style='color: #4ecca3;'>✅ 裝備齊全<br>祝出勤平安！</h3>";
+            } else {
+                let listHtml = "<h3 style='color: #e94560;'>⚠️ 缺失清單：</h3><ul style='padding: 0;'>";
+                missingList.forEach(item => {
+                    listHtml += `<li class="missing-item">MISSING: ${item}</li>`;
+                });
+                listHtml += "</ul>";
+                resultContent.innerHTML = listHtml;
+            }
+        }
+    </script>
+</body>
+</html>

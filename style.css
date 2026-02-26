@@ -1,0 +1,29 @@
+body {
+    margin: 0;
+    font-family: Arial;
+}
+
+/* 功能列 */
+#navbar {
+    background-color: #2b6ad2;
+    padding: 15px;
+    position: fixed;       /* 固定在畫面 */
+    top: 0;                /* 靠上 */
+    width: 100%;           /* 全寬 */
+    z-index: 1000;         /* 在最上層 */
+}
+
+#navbar a {
+    color: white;
+    margin-right: 20px;
+    text-decoration: none;
+    font-size: 18px;
+}
+
+/* iframe 區域 */
+#content {
+    margin-top: 70px;      /* 避開上方固定的 navbar */
+    width: 100%;
+    height: calc(100vh - 70px); /* 剩下的高度全部給 iframe */
+    border: none;
+}
