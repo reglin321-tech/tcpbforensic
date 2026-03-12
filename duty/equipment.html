@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出勤裝備檢查系統</title>
+    <link rel="stylesheet" href="../assets/css/global_light.css">
+    <style>
+        /* --- 修正重點：確保隱藏標籤生效 --- */
+        .hidden { display: none !important; }
+
+        body {
+            /* 讓內容在頁面中垂直置中，避免在電腦上看時太靠頂部 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding-top: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 50px 15px;
+            box-shadow: 6px 6px 12px #e2e8f0, -6px -6px 12px #ffffff;
+            margin: 10px auto;
+            border: 1px solid var(--border-color);
+            width: 80%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        /* 出勤情境選單按鈕 */
+        .choice-btn {
+            background: var(--accent-color);
+            color: var(--text-main);
+            width: 80%;
+            padding: 18px;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: clamp(18px, 4vw, 22px);
+            transition: 0.2s;
+        }
+
+        /* 檢查控制按鈕 (有帶/沒帶) */
+        .check-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn-ok {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            flex: 1;
+            font-size: 24px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .btn-no {
+            background: #e94560;
+            color: white;
+            padding: 20px;
+            flex: 1;
+            font-size: 24px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        #current-item-name {
+            font-size: clamp(32px, 10vw, 48px);
+            margin: 25px 0;
+            color: var(--text-main);
+            min-height: 1.5em; /* 防止文字跳動 */
+        }
+
+        .missing-item {
+            background: rgba(233, 69, 96, 0.05);
+            color: #e94560;
+            font-weight: bold;
+            list-style: none;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 5px solid #e94560;
+            text-align: left;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="home-page" class="card">
+        <h2 style="color: var(--primary-color);">請選擇出勤情況</h2>
+        <div id="button-list"></div>
+    </div>
+
+    <div id="check-page" class="card hidden">
+        <h3 id="current-scenario-name" style="color: var(--text-muted); font-size: 16px;"></h3>
+        <hr style="border: 0.5px solid var(--border-color); margin: 15px 0;">
+        <p style="margin: 0; color: var(--text-muted);">正在檢查：</p>
+        <h1 id="current-item-name">---</h1>
+        <div class="check-controls">
+            <button class="btn-no" onclick="handleCheck(false)">❌ 沒帶</button>
+            <button class="btn-ok" onclick="handleCheck(true)">✅ 有帶</button>
+        </div>
+        <p id="progress-text" style="color: var(--text-muted); margin-top: 25px; font-size: 14px; letter-spacing: 1px;"></p>
+    </div>
+
+    <div id="result-page" class="card hidden">
+        <h2 style="color: var(--primary-color);">檢查完畢</h2>
+        <div id="result-content" style="margin: 20px 0;"></div>
+        <button class="choice-btn" style="background: var(--primary-color); color: white;" onclick="location.reload()">🔄 重新檢查</button>
+    </div>
+
+    <script src="equipment.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+tcpbforensic/
+│
+├── index.html              # 入口首頁 (整合所有功能)
+├── assets/                 # 共用資源
+│   ├── css/
+│   │   └── global.css      # 全域樣式 (原本的 style.css)
+│   └── js/
+│       └── main.js         # 全域邏輯 (導覽列控制等)
+│
+├── physics/                # 物理計算模組
+│   ├── kinetic.html        # 動能計算 (原 page1.html)
+│   ├── kinetic.js
+│   ├── projectile.html     # 拋體模擬 (原 page2.html)
+│   └── projectile.js
+│
+├── duty/                   # 勤務工具模組
+│   ├── equipment.html      # 裝備檢查 (原 checklist.html)
+│   └── equipment.js        # 將原本寫在 html 裡的 JS 抽出來
+│
+└── contacts/               # 通訊查詢模組
+    ├── phonebook.html      # 通訊錄 (原 page3.html)
+    └── phonebook.js        # 將通訊錄資料與邏輯抽出來

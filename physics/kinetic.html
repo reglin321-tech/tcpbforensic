@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動能計算器</title>
+    <link rel="stylesheet" href="../assets/css/global_light.css">
+    <style>
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-main);
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(78, 204, 163, 0.1);
+            color: var(--primary-color);
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 50px 15px;
+            box-shadow: 6px 6px 12px #e2e8f0, -6px -6px 12px #ffffff;
+            margin: 10px auto;
+            border: 1px solid var(--border-color);
+            width: 80%;
+            max-width: 450px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" style="max-width: 400px; margin: 40px auto; text-align: center;">
+        <h2 style="color: var(--primary-color);">動能計算器</h2>
+        <p>請輸入質量 M (kg) 與速度 V (m/s)</p>
+
+        <label style="display:block; text-align:left; margin-bottom: 5px;">質量 M：</label>
+        <input type="number" id="mass" placeholder="例如：70">
+
+        <label style="display:block; text-align:left; margin-bottom: 5px;">速度 V：</label>
+        <input type="number" id="velocity" placeholder="例如：5">
+
+        <button class="btn-primary" id="calcBtn" style="width:100%; margin-top:10px; font-size: 18px;">開始計算</button>
+
+        <div id="result" class="result-box">結果將顯示於此</div>
+    </div>
+
+    <script src="kinetic.js"></script>
+</body>
+</html>

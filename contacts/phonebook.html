@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刑事鑑識中心-通訊網</title>
+    <link rel="stylesheet" href="../assets/css/global_light.css">
+    <style>
+        .hidden { display: none !important; }
+        .group-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .group-btn {/* ... 保持原本的背景、邊框設定 ... */
+
+                        /* 關鍵修改：自動縮放字體 */
+                        /* clamp(最小值, 響應值, 最大值) */
+                        font-size: clamp(16px, 4vw, 24px);
+
+                        /* 確保文字置中且不換行 */
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis; /* 如果框框真的太小，文字尾端會變 ... */
+
+                        padding: 10% 5%; /* 使用百分比內距，讓按鈕高度也隨寬度縮放 */
+                        aspect-ratio: 3 / 1; /* 強制保持按鈕的長寬比，適合手機並排 */
+                    }
+        #contacts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .contact-card { background: var(--card-bg); padding: 15px 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; border-bottom: 3px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .name { font-size: 18px; font-weight: bold; color: var(--text-main); }
+        .ext-box { background: rgba(43, 106, 210, 0.1); color: var(--primary-color); padding: 6px 12px; border-radius: 20px; font-weight: bold; margin-top: 5px; }
+        .back-btn { background: var(--accent-color); color: var(--text-main); padding: 12px; border: none; border-radius: 8px; margin-bottom: 20px; width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="card" style="max-width: 500px; border: none; background: transparent; box-shadow: none;">
+        <h2 style="color: var(--primary-color); text-align: center;">📂 鑑識通訊系統</h2>
+        <div id="group-menu" class="group-grid">
+            <button class="group-btn" onclick="showGroup('長官室')">🏢 長官室</button>
+            <button class="group-btn" onclick="showGroup('第一股')">🛡️ 第一股</button>
+            <button class="group-btn" onclick="showGroup('第二股')">🔍 第二股</button>
+            <button class="group-btn" onclick="showGroup('第三股')">🔬 第三股</button>
+            <button class="group-btn" onclick="showGroup('DNA小組')">🧬 DNA小組</button>
+            <button class="group-btn" onclick="showGroup('辦公室區域')">🏢 辦公室</button>
+            <button class="group-btn" onclick="showGroup('8樓實驗室')">🧪 實驗室</button>
+        </div>
+        <div id="contact-list-view" class="hidden">
+            <button class="back-btn" onclick="goBack()">⬅️ 返回重查</button>
+            <h3 id="selected-group-name" style="text-align: center; color: var(--primary-color);"></h3>
+            <div id="contacts-container"></div>
+        </div>
+    </div>
+    <script src="phonebook.js"></script>
+</body>
+</html>

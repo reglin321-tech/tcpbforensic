@@ -1,25 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    <title>我的網站</title>
-    <link rel="stylesheet" href="style.css">
+    <title>刑事鑑識工具箱</title>
+    <link rel="stylesheet" href="assets/css/global_light.css">
+    <style>
+        #navbar { background-color: var(--accent-color); padding: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; display: flex; gap: 15px; overflow-x: auto; border-bottom: 1px solid var(--border-color); }
+        #navbar a { color: var(--text-main); text-decoration: none; white-space: nowrap; font-size: 16px; font-weight: bold; }
+        #content-frame { margin-top: 60px; width: 100%; height: calc(100vh - 60px); border: none; }
+    </style>
 </head>
-
 <body>
-
-    <!-- 功能列（固定在上方） -->
     <div id="navbar">
-        <a href="page1.html" target="contentFrame">動能計算</a>
-        <a href="page2.html" target="contentFrame">位能計算</a>
-        <a href="checklist.html" target="contentFrame">出勤檢查</a>
-        <a href="page3.html" target="contentFrame">辦公室電話分機</a>
+        <a href="physics/projectile.html" target="contentFrame">拋體計算</a>
+        <a href="physics/kinetic.html" target="contentFrame">動能計算</a>
+        <a href="duty/equipment.html" target="contentFrame">裝備檢查</a>
+        <a href="contacts/phonebook.html" target="contentFrame">分機查詢</a>
     </div>
-
-    <!-- 顯示不同頁面的 iframe -->
-    <iframe id="content" name="contentFrame"></iframe>
-
-    <script src="script.js"></script>
+    <iframe id="content-frame" name="contentFrame" src="duty/equipment.html"></iframe>
 </body>
 </html>

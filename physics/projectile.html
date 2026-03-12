@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>樓頂拋球初速度計算器</title>
+    <link rel="stylesheet" href="../assets/css/global_light.css">
+    <style>
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 50px 15px;
+            box-shadow: 6px 6px 12px #e2e8f0, -6px -6px 12px #ffffff;
+            margin: 10px auto;
+            border: 1px solid var(--border-color);
+            width: 80%;
+            max-width: 450px;
+            text-align: center;
+        }
+        body { text-align: center; padding: 20px; }
+        .input-group { margin: 15px 0; font-size: 18px; }
+        input[type="number"] { width: 120px; padding: 5px; font-size: 18px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--card-bg); color: var(--text-main); }
+        input[type="range"] { width: 150px; vertical-align: middle; }
+        #trajCanvas { margin-top: 20px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); max-width: 100%; }
+        #jumpResult { color: var(--primary-color); margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card" style="max-width: 500px;">
+        <h2>樓頂拋球初速度計算器</h2>
+        <div class="input-group">高度 H (m)：<input type="number" id="height" step="0.1"></div>
+        <div class="input-group">距離 L (m)：<input type="number" id="distance" step="0.1"></div>
+        <div class="input-group">角度 θ：<input type="number" id="angle" value="60" step="1"><br>
+        <input type="range" id="angleSlider" min="-90" max="90" value="45"><span id="angleDisplay">60°</span></div>
+        <button class="btn-primary" id="calcJumpBall">計算初速度 v₀</button>
+        <h2 id="jumpResult"></h2>
+        <p id="jumpError" style="color: red;"></p>
+        <canvas id="trajCanvas" width="500" height="300"></canvas>
+    </div>
+    <script src="projectile.js"></script>
+</body>
+</html>
