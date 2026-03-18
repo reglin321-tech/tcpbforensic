@@ -63,7 +63,14 @@ const contactData = [
     { "dept": "8樓實驗室", "name": "萃取室", "title": "Lab", "ext": "2676" },
     { "dept": "8樓實驗室", "name": "前處理室", "title": "Lab", "ext": "2675" },
     { "dept": "8樓實驗室", "name": "標準室", "title": "Lab", "ext": "2674" },
-    { "dept": "8樓實驗室", "name": "DNA收案", "title": "Lab", "ext": "2673" }
+    { "dept": "8樓實驗室", "name": "DNA收案", "title": "Lab", "ext": "2673" },
+
+    // --- 刑事警察局 ---
+    { "dept": "刑事警察局", "name": "生物科", "title": "CIB", "ext": "725-2502~5" },
+    { "dept": "刑事警察局", "name": "指紋科", "title": "CIB", "ext": "725-3124~6" },
+    { "dept": "刑事警察局", "name": "槍彈股", "title": "CIB", "ext": "725-2477~8" },
+    { "dept": "刑事警察局", "name": "化學股", "title": "CIB", "ext": "725-2471~2" },
+    { "dept": "刑事警察局", "name": "偵五隊", "title": "CIB", "ext": "791-4020~21" }
 ];
 
 function showGroup(groupName) {
