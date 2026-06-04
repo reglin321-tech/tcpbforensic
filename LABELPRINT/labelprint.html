@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>證物標籤與號碼牌列印</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --label-font-size: 40pt;
+            --tent-font-size: 100pt;
+            --preview-zoom: 0.6;
+            --barcode-scale: 1;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f1f5f9;
+        }
+
+        .control-panel {
+            width: 400px;
+            height: 100vh;
+            overflow-y: auto;
+            background: white;
+            border-right: 2px solid #e2e8f0;
+            padding: 1.5rem;
+            flex-shrink: 0;
+            z-index: 50;
+        }
+
+        .preview-area {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+            align-content: flex-start;
+        }
+
+        .page-zoom-wrapper {
+            transform: scale(var(--preview-zoom));
+            transform-origin: top center;
+            transition: transform 0.2s;
+            width: calc(210mm * var(--preview-zoom));
+            height: calc(297mm * var(--preview-zoom));
+            flex-shrink: 0;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { display: block; height: auto; overflow: visible; background: white; }
+            .preview-area { display: block; padding: 0; height: auto; overflow: visible; }
+            .page-zoom-wrapper {
+                transform: scale(1) !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                margin: 0 !important;
+            }
+            @page { size: A4; margin: 0; }
+        }
+
+        /* 3x10 標籤樣式 */
+        .label-page {
+            width: 210mm; height: 297mm;
+            display: grid;
+            grid-template-columns: repeat(3, 70mm);
+            grid-template-rows: repeat(10, 29.7mm);
+            background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .label-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            border: 0.1mm solid #f2f2f2; box-sizing: border-box; padding: 1.5mm 0;
+        }
+        .id-text-label {
+            height: 35%; display: flex; align-items: center;
+            font-size: var(--label-font-size); font-weight: 900; line-height: 1;
+            white-space: nowrap;
+        }
+        .divider { width: 85%; border: 0; border-top: 0.5mm solid black; margin: 0.5mm 0; }
+        .barcode-container {
+            height: 45%; width: 90%; display: flex; align-items: center; justify-content: center;
+            transform: scale(var(--barcode-scale));
+        }
+
+        /* 2x2 號碼牌樣式 */
+        .tent-page {
+            width: 210mm; height: 297mm;
+            display: grid;
+            grid-template-columns: repeat(2, 105mm);
+            grid-template-rows: repeat(2, 148.5mm);
+            background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .tent-item { display: flex; flex-direction: column; border: 0.2mm dashed #ccc; }
+        .tent-top { flex: 1; display: flex; align-items: center; justify-content: center; transform: rotate(180deg); border-bottom: 0.1mm dashed #eee; }
+        .tent-bottom { flex: 1; display: flex; align-items: center; justify-content: center; }
+        .tent-text { font-size: var(--tent-font-size); font-weight: 900; white-space: nowrap; }
+
+        .tag-chip { cursor: grab; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+
+    <aside class="control-panel no-print">
+        <h1 class="text-xl font-black text-blue-600 mb-6 tracking-tighter">證物標籤與號碼牌列印</h1>
+
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 space-y-3">
+            <span class="text-xs font-bold text-slate-500 uppercase">方法一：編號輸入指令，任意編碼+數字~數字</span>
+            <input id="numberInput" type="text" placeholder="例如: A1-B1~10(可以批次輸入，一次列印)" class="w-full border border-gray-300 p-2 text-sm rounded-lg outline-none focus:border-blue-500">
+            <div class="flex gap-2">
+                <button onclick="addFromInput()" class="flex-1 bg-blue-600 text-white font-bold py-2 text-xs rounded-lg hover:bg-blue-700 transition">快捷新增</button>
+                <button onclick="applyPackage()" class="bg-purple-100 text-purple-700 font-bold px-3 py-2 text-xs rounded-lg hover:bg-purple-200">🍱 套餐</button>
+            </div>
+        </div>
+
+        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-200 mb-6 space-y-3">
+            <span class="text-xs font-bold text-blue-600 uppercase block">方法二：精確頭尾範圍輸入(左小右大)</span>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-[10px] text-gray-500 block mb-1">起始數字</label>
+                    <input id="rangeStart" type="text" placeholder="例:1150001010" class="w-full border border-gray-300 p-2 text-sm rounded-lg outline-none focus:border-blue-500 font-mono">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-500 block mb-1">結束數字</label>
+                    <input id="rangeEnd" type="text" placeholder="例: 1150001100" class="w-full border border-gray-300 p-2 text-sm rounded-lg outline-none focus:border-blue-500 font-mono">
+                </div>
+            </div>
+            <button onclick="addFromRangeInput()" class="w-full bg-blue-700 text-white font-bold py-2 text-xs rounded-lg hover:bg-blue-800 transition shadow-sm">
+                🎯 依頭尾範圍生成標籤
+            </button>
+        </div>
+
+        <div class="space-y-6 mb-6">
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-gray-500 uppercase">標籤字體大小 (<span id="labelVal">40</span>pt)</label>
+                <input type="range" min="10" max="60" value="40" oninput="updateFontSize('label', this.value)" class="w-full h-1 bg-blue-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-gray-500 uppercase">號碼牌字體 (<span id="tentVal">100</span>pt)</label>
+                <input type="range" min="40" max="150" value="100" oninput="updateFontSize('tent', this.value)" class="w-full h-1 bg-orange-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+            <div class="space-y-2 pt-4 border-t border-gray-100">
+                <label class="text-xs font-black text-indigo-600 uppercase">🔍 畫面預覽縮放 (<span id="zoomVal">60</span>%)</label>
+                <input type="range" min="20" max="100" value="60" oninput="updateZoom(this.value)" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+        </div>
+
+        <div class="space-y-2 mb-6">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">切換預覽模式</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="btn-mode-label" onclick="switchMode('label')" class="bg-green-600 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-green-700 transition text-sm text-center">
+                    標籤模式
+                </button>
+                <button id="btn-mode-tent" onclick="switchMode('tent')" class="bg-gray-100 text-gray-500 font-bold py-3 px-2 rounded-xl border-2 border-transparent hover:bg-gray-200 transition text-sm text-center">
+                    號碼牌模式
+                </button>
+            </div>
+            <button onclick="openPhoneMode()" class="w-full mt-2 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-slate-900 transition flex items-center justify-center gap-2 text-sm">
+                📱 開啟手機現場展示模式 (全螢幕)
+            </button>
+        </div>
+
+        <div class="border-t pt-4 mb-6 space-y-2">
+            <button onclick="triggerPrint()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-xl transform hover:scale-[1.02] active:scale-95 transition flex items-center justify-center gap-2 text-lg">
+                🖨️ 執行 A4 列印
+            </button>
+            <button onclick="clearList()" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs rounded-lg transition text-center block">
+                🗑️ 清空所有編號
+            </button>
+        </div>
+
+        <div class="border-t pt-4">
+            <p class="text-xs font-bold text-gray-400 mb-2 uppercase">待印清單 (<span id="itemCount">0</span>)</p>
+            <div id="tagList" class="flex flex-col gap-1 min-h-[100px]"></div>
+        </div>
+    </aside>
+
+    <main class="preview-area" id="printArea">
+    </main>
+
+    <div id="phoneViewOverlay" class="fixed inset-0 bg-slate-900 z-[999] hidden flex-col justify-between items-center no-print">
+        <div class="w-full bg-slate-800 p-4 flex justify-between items-center border-b border-slate-700 shadow-md">
+            <div class="text-white font-bold flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                手機展示中
+            </div>
+            <button onclick="closePhoneMode()" class="bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 rounded-lg text-sm transition">
+                ❌ 離開手機模式
+            </button>
+        </div>
+
+        <div class="flex-grow w-full flex items-center justify-center p-4">
+            <div class="w-full max-w-sm bg-white aspect-[9/16] max-h-[70vh] rounded-2xl shadow-2xl border-4 border-white p-6 flex flex-col justify-around items-center overflow-hidden">
+                <div id="phoneShowText" class="text-5xl font-black text-slate-900 tracking-tight text-center font-sans break-all w-full select-none">
+                    -
+                </div>
+                <div class="w-full bg-white p-2 flex items-center justify-center">
+                    <svg id="phoneBarcodeSvg" style="width:100%; max-height:180px;"></svg>
+                </div>
+                <div class="w-full text-center">
+                    <select id="phoneSelectJump" onchange="jumpToPhoneIndex(this.value)" class="bg-slate-100 border border-slate-300 text-slate-700 font-bold py-1 px-3 rounded-lg text-xs outline-none focus:border-slate-500">
+                        </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full bg-slate-800 p-4 border-t border-slate-700 shadow-lg flex gap-4">
+            <button onclick="changePhonePage(-1)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl active:scale-95 transition text-base">
+                ⬅️ 上一張
+            </button>
+            <button onclick="changePhonePage(1)" class="flex-grow-[2] bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl active:scale-95 transition text-lg shadow-lg">
+                下一張 ➡️
+            </button>
+        </div>
+    </div>
+
+<script>
+    let itemArray = [];
+    let currentMode = 'label';
+    let currentPhoneIndex = 0; // 當前手機模式顯示的項目索引
+
+    const tagListEl = document.getElementById('tagList');
+
+    new Sortable(tagListEl, { animation: 150, ghostClass: 'sortable-ghost', onEnd: () => {
+        itemArray = Array.from(tagListEl.querySelectorAll('.tag-chip')).map(el => el.dataset.id);
+        refreshPreview();
+    }});
+
+    function updateFontSize(type, val) {
+        document.documentElement.style.setProperty(`--${type}-font-size`, val + 'pt');
+        document.getElementById(`${type}Val`).innerText = val;
+        if (type === 'label') {
+            const scale = val / 40;
+            document.documentElement.style.setProperty(`--barcode-scale`, scale);
+        }
+    }
+
+    function addFromRangeInput() {
+        const startVal = document.getElementById('rangeStart').value.trim();
+        const endVal = document.getElementById('rangeEnd').value.trim();
+
+        if (!startVal || !endVal) {
+            alert('請完整填寫起始與結束欄位！');
+            return;
+        }
+
+        let generated = [];
+        let endNum = parseInt(endVal);
+        let startMatch = startVal.match(/^(.*?)(\d+)$/);
+
+        if (startMatch) {
+            const prefix = startMatch[1];
+            const startNumStr = startMatch[2];
+            const startNum = parseInt(startNumStr);
+
+            if (isNaN(endNum) || endVal.length === startVal.length) {
+                let endMatch = endVal.match(/(\d+)$/);
+                if (endMatch) endNum = parseInt(endMatch[1]);
+            }
+
+            if (!isNaN(startNum) && !isNaN(endNum) && startNum <= endNum) {
+                let maxLen = Math.max(startNumStr.length, endVal.length - prefix.length);
+                if (endVal.length === startVal.length) maxLen = startNumStr.length;
+
+                for (let i = startNum; i <= endNum; i++) {
+                    const currentNumStr = i.toString().padStart(maxLen, '0');
+                    generated.push(prefix + currentNumStr);
+                }
+
+                itemArray = [...itemArray, ...generated];
+                document.getElementById('rangeStart').value = '';
+                document.getElementById('rangeEnd').value = '';
+                refreshUI();
+                return;
+            }
+        }
+        alert('無法解析此範圍，請檢查格式是否正確！');
+    }
+
+    function updateZoom(val) {
+        const zoom = val / 100;
+        document.documentElement.style.setProperty(`--preview-zoom`, zoom);
+        document.getElementById('zoomVal').innerText = val;
+    }
+
+    function switchMode(mode) {
+        currentMode = mode;
+        const btnLabel = document.getElementById('btn-mode-label');
+        const btnTent = document.getElementById('btn-mode-tent');
+        if (mode === 'label') {
+            btnLabel.className = "bg-green-600 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-green-700 transition text-sm text-center";
+            btnTent.className = "bg-gray-100 text-gray-500 font-bold py-3 px-2 rounded-xl border-2 border-transparent hover:bg-gray-200 transition text-sm text-center";
+        } else {
+            btnLabel.className = "bg-gray-100 text-gray-500 font-bold py-3 px-2 rounded-xl border-2 border-transparent hover:bg-gray-200 transition text-sm text-center";
+            btnTent.className = "bg-orange-500 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-orange-600 transition text-sm text-center";
+        }
+        refreshPreview();
+    }
+
+    /* 📱 全新研發：手機展示模式操控邏輯 */
+    function openPhoneMode() {
+        if (itemArray.length === 0) {
+            alert('目前待印清單內沒有任何編號，無法開啟展示！');
+            return;
+        }
+        currentPhoneIndex = 0;
+        // 顯示覆蓋遮罩
+        document.getElementById('phoneViewOverlay').classList.remove('hidden');
+        // 初始化下拉選單跳轉清單
+        const selectEl = document.getElementById('phoneSelectJump');
+        selectEl.innerHTML = itemArray.map((id, index) => 
+            `<option value="${index}">第 ${index + 1} / ${itemArray.length} 張 (${id})</option>`
+        ).join('');
+        
+        renderPhoneCard();
+    }
+
+    function closePhoneMode() {
+        document.getElementById('phoneViewOverlay').classList.add('hidden');
+    }
+
+    function renderPhoneCard() {
+        if (itemArray.length === 0) return;
+        const currentId = itemArray[currentPhoneIndex];
+        
+        // 渲染大文字
+        document.getElementById('phoneShowText').innerText = currentId;
+        // 更新同步下拉選單數值
+        document.getElementById('phoneSelectJump').value = currentPhoneIndex;
+        
+        // 渲染大條碼：針對行動裝置發光螢幕優化，加寬(3.5)高對比，拉高(140)方便對焦
+        JsBarcode("#phoneBarcodeSvg", currentId, {
+            format: "CODE128",
+            width: 3.5,
+            height: 140,
+            displayValue: false,
+            margin: 10
+        });
+    }
+
+    function changePhonePage(direction) {
+        currentPhoneIndex += direction;
+        // 循環邊界機制
+        if (currentPhoneIndex >= itemArray.length) currentPhoneIndex = 0;
+        if (currentPhoneIndex < 0) currentPhoneIndex = itemArray.length - 1;
+        renderPhoneCard();
+    }
+
+    function jumpToPhoneIndex(index) {
+        currentPhoneIndex = parseInt(index);
+        renderPhoneCard();
+    }
+
+    function triggerPrint() {
+        if (itemArray.length === 0) { alert('目前待印清單內沒有任何編號！'); return; }
+        setTimeout(() => { window.print(); }, 200);
+    }
+
+    function applyPackage() {
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+        const packageItems = [];
+        letters.forEach(letter => { for (let i = 1; i <= 20; i++) packageItems.push(letter + i); });
+        itemArray = [...itemArray, ...packageItems]; refreshUI();
+    }
+
+    function parseInput(val) {
+        let res = []; val = val.trim(); if (!val) return res;
+        if (val.includes('~')) {
+            const parts = val.split('~');
+            const startStr = parts[0].trim();
+            const endNum = parseInt(parts[1].trim());
+            const match = startStr.match(/^(.*?)(\d+)$/);
+            if (match) {
+                const prefix = match[1];
+                const startNum = parseInt(match[2]);
+                for (let i = startNum; i <= endNum; i++) res.push(prefix + i);
+            }
+        } else { res.push(val); }
+        return res;
+    }
+
+    function addFromInput() {
+        const input = document.getElementById('numberInput');
+        itemArray = [...itemArray, ...parseInput(input.value)];
+        input.value = ''; refreshUI();
+    }
+
+    function removeItem(index) { itemArray.splice(index, 1); refreshUI(); }
+    function clearList() { if(confirm('確定要清空清單上的所有編號嗎？')) { itemArray = []; refreshUI(); } }
+
+    function refreshUI() {
+        document.getElementById('itemCount').innerText = itemArray.length;
+        tagListEl.innerHTML = itemArray.map((id, index) => `
+            <div data-id="${id}" class="tag-chip flex items-center justify-between bg-gray-50 border border-gray-200 px-3 py-2 rounded shadow-sm hover:border-blue-400 transition">
+                <div class="flex items-center">
+                    <span class="text-gray-300 mr-2 text-xs">⠿</span>
+                    <span class="font-bold text-gray-700 text-sm">${id}</span>
+                </div>
+                <button onclick="removeItem(${index})" class="text-gray-300 hover:text-red-500">×</button>
+            </div>
+        `).join('');
+        refreshPreview();
+    }
+
+    function refreshPreview() {
+        const area = document.getElementById('printArea');
+        area.innerHTML = '';
+        const perPage = currentMode === 'label' ? 30 : 4;
+
+        for (let i = 0; i < itemArray.length; i += perPage) {
+            const zoomWrapper = document.createElement('div');
+            zoomWrapper.className = 'page-zoom-wrapper';
+            const pageDiv = document.createElement('div');
+            pageDiv.className = currentMode === 'label' ? 'label-page' : 'tent-page';
+
+            const pageItems = itemArray.slice(i, i + perPage);
+            pageItems.forEach((id, pIdx) => {
+                const gIdx = i + pIdx;
+                const div = document.createElement('div');
+                if (currentMode === 'label') {
+                    div.className = 'label-item';
+                    div.innerHTML = `<div class="id-text-label">${id}</div><hr class="divider"><div class="barcode-container"><svg id="barcode-${gIdx}" style="width:100%;height:100%"></svg></div>`;
+                } else {
+                    div.className = 'tent-item';
+                    div.innerHTML = `<div class="tent-top"><div class="tent-text">${id}</div></div><div class="tent-bottom"><div class="tent-text">${id}</div></div>`;
+                }
+                pageDiv.appendChild(div);
+            });
+
+            zoomWrapper.appendChild(pageDiv);
+            area.appendChild(zoomWrapper);
+
+            if (currentMode === 'label') {
+                pageItems.forEach((id, pIdx) => {
+                    JsBarcode(`#barcode-${i + pIdx}`, id, { format: "CODE128", width: 2.2, height: 55, displayValue: false, margin: 0 });
+                });
+            }
+        }
+    }
+    document.getElementById('numberInput').addEventListener('keypress', (e) => e.key === 'Enter' && addFromInput());
+</script>
+</body>
+</html>
