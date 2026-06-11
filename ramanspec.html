@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>拉曼 Peak 快速標註工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<style>
+  :root{
+    --red:#e74c3c;--blue:#1976d2;--green:#16a34a;--gray:#555;--purple:#8e44ad;--dark:#263747;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;height:100vh;display:flex;overflow:hidden;font-family:"Microsoft JhengHei","Segoe UI",sans-serif;background:#f7f7f7;color:#1f2d3d;user-select:none}
+  .sidebar{width:310px;background:#fff;padding:18px;box-shadow:2px 0 10px rgba(0,0,0,.08);z-index:10;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+  h2{margin:0 0 6px;font-size:1.22rem;border-bottom:3px solid var(--dark);padding-bottom:10px;color:var(--dark)}
+  label{font-weight:700;font-size:.92rem;margin-bottom:6px;display:block}
+  input[type=file]{width:100%;padding:8px;border:1px dashed #aaa;border-radius:6px;background:#fafafa}
+  .btn{width:100%;border:2px solid #ddd;background:#fff;border-radius:8px;padding:12px 10px;margin-bottom:8px;font-weight:700;font-size:1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .btn:hover{background:#f3f6f8}.btn.active{background:#fff7f7;box-shadow:inset 5px 0 0 currentColor}
+  .match{color:var(--red);border-color:rgba(231,76,60,.35)}
+  .nomatch{color:var(--blue);border-color:rgba(25,118,210,.35)}
+  .key{color:var(--green);border-color:rgba(22,163,74,.35)}
+  .compare{color:var(--gray);border-color:rgba(80,80,80,.35)}
+  .circle{color:var(--purple);border-color:rgba(142,68,173,.35)}
+  .cross{color:#111;border-color:rgba(0,0,0,.28)}
+  .select{color:#34495e;border-color:#ccd3d8}
+  .action{width:100%;border:0;border-radius:7px;padding:12px;font-weight:800;cursor:pointer;margin-top:8px;font-size:.98rem}
+  .reset{background:#e9eef1;color:#24435c}.delete{background:#e74c3c;color:white}.clear{background:#f39c12;color:white}.save{background:#34495e;color:white}
+  .hint{background:#f1f3f5;border-radius:7px;padding:10px;line-height:1.55;font-size:.86rem;color:#555}
+  .spacer{flex:1}
+  .workarea{flex:1;position:relative;overflow:hidden;background-image:linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%,#eee),linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%,#eee);background-size:20px 20px;background-position:0 0,10px 10px}
+  #c{position:absolute;left:0;top:0}
+  .dropText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#777;pointer-events:none;text-align:center;line-height:1.8}
+  .tip{position:absolute;right:14px;bottom:14px;background:rgba(0,0,0,.68);color:#fff;border-radius:6px;padding:9px 12px;font-size:.88rem;line-height:1.45;pointer-events:none}
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>拉曼 Peak 快速標註</h2>
+    <div><label>1. 上傳或拖曳光譜圖</label><input type="file" id="fileInput" accept="image/*"></div>
+    <div><label>2. 選擇標註工具</label>
+      <button class="btn match active" data-tool="match">相符 Peak <span>[1]</span></button>
+      <button class="btn nomatch" data-tool="nomatch">未相符 Peak <span>[2]</span></button>
+      <button class="btn key" data-tool="key">重點確認 Peak <span>[3]</span></button>
+      <button class="btn compare" data-tool="compare">虛線比對線，不存檔 <span>[4]</span></button>
+      <button class="btn circle" data-tool="circle">畫圈標記 <span>[5]</span></button>
+      <button class="btn cross" data-tool="cross">打叉標記 <span>[6]</span></button>
+      <button class="btn select" data-tool="select">選取/移動 <span>[空白鍵]</span></button>
+    </div>
+    <div class="hint">操作：圖片會自動放滿右側畫面。<br>垂直線會從畫面頂端到底端。<br>虛線比對線可暫時標記，儲存時會自動隱藏。<br>滾輪縮放，Alt+拖曳平移，Delete 刪除。</div>
+    <div class="spacer"></div>
+    <button id="resetBtn" class="action reset">🔍 重設畫布視角</button>
+    <button id="deleteBtn" class="action delete">🗑️ 刪除選取標註 Delete</button>
+    <button id="clearBtn" class="action clear">🧹 清除全部標註</button>
+    <button id="saveBtn" class="action save">💾 儲存標註圖片</button>
+  </aside>
+  <main class="workarea" id="workarea">
+    <canvas id="c"></canvas>
+    <div class="dropText" id="dropText">將拉曼光譜圖片拖曳到這裡<br>或使用左側選擇檔案</div>
+    <div class="tip">滾輪：縮放<br>Alt + 拖曳：平移<br>1/2/3/4/5/6：切換工具</div>
+  </main>
+<script>
+const workarea=document.getElementById('workarea');
+const canvas=new fabric.Canvas('c',{selection:true,preserveObjectStacking:true});
+let currentTool='match', previousTool='match', spaceDown=false;
+let imageObj=null;
+let previewLine=new fabric.Line([0,0,0,0],{stroke:'#555',strokeWidth:1,strokeDashArray:[8,6],selectable:false,evented:false,visible:false,excludeMark:true});
+canvas.add(previewLine);
+const styles={match:{color:'#e74c3c',dash:null},nomatch:{color:'#1976d2',dash:null},key:{color:'#16a34a',dash:null},compare:{color:'#555',dash:[10,7]}};
+function resizeCanvas(){canvas.setWidth(workarea.clientWidth);canvas.setHeight(workarea.clientHeight);fitImage();canvas.renderAll();}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+function setTool(t){currentTool=t;document.querySelectorAll('.btn[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));const sel=t==='select';canvas.selection=sel;canvas.getObjects().forEach(o=>{if(o!==imageObj&&o!==previewLine){o.selectable=sel;o.evented=sel;}});if(t!=='compare') previewLine.visible=false;canvas.renderAll();}
+document.querySelectorAll('.btn[data-tool]').forEach(b=>b.onclick=()=>{if(!spaceDown)setTool(b.dataset.tool)});
+function loadFile(file){if(!file||!file.type.startsWith('image/'))return;const r=new FileReader();r.onload=e=>{fabric.Image.fromURL(e.target.result,img=>{if(imageObj)canvas.remove(imageObj);imageObj=img;imageObj.set({left:0,top:0,selectable:false,evented:false});canvas.add(imageObj);canvas.sendToBack(imageObj);canvas.bringToFront(previewLine);document.getElementById('dropText').style.display='none';fitImage();clearMarks(false);});};r.readAsDataURL(file);}
+function fitImage(){if(!imageObj)return;const w=canvas.getWidth(),h=canvas.getHeight();const scale=Math.min(w/imageObj.width,h/imageObj.height);imageObj.set({scaleX:scale,scaleY:scale,left:(w-imageObj.width*scale)/2,top:(h-imageObj.height*scale)/2});canvas.setViewportTransform([1,0,0,1,0,0]);canvas.setZoom(1);canvas.renderAll();}
+document.getElementById('fileInput').onchange=e=>loadFile(e.target.files[0]);
+['dragenter','dragover'].forEach(ev=>workarea.addEventListener(ev,e=>{e.preventDefault();workarea.style.outline='4px solid #3498db'}));
+['dragleave','drop'].forEach(ev=>workarea.addEventListener(ev,e=>{e.preventDefault();workarea.style.outline='none'}));
+workarea.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+function makeVertical(x,tool){const zoom=canvas.getZoom(), s=styles[tool];const line=new fabric.Line([x,0,x,canvas.getHeight()],{stroke:s.color,strokeWidth:3/zoom,strokeDashArray:s.dash? s.dash.map(v=>v/zoom):null,selectable:false,evented:false,mark:true,isCompare:tool==='compare'});canvas.add(line);canvas.bringToFront(line);return line;}
+function makeCircle(p){const zoom=canvas.getZoom();const c=new fabric.Circle({left:p.x,top:p.y,originX:'center',originY:'center',radius:24/zoom,fill:'transparent',stroke:'#8e44ad',strokeWidth:4/zoom,selectable:false,evented:false,mark:true});canvas.add(c);canvas.bringToFront(c);}
+function makeCross(p){const zoom=canvas.getZoom(),d=24/zoom;const l1=new fabric.Line([p.x-d,p.y-d,p.x+d,p.y+d],{stroke:'#111',strokeWidth:5/zoom,selectable:false,evented:false,mark:true});const l2=new fabric.Line([p.x-d,p.y+d,p.x+d,p.y-d],{stroke:'#111',strokeWidth:5/zoom,selectable:false,evented:false,mark:true});const g=new fabric.Group([l1,l2],{selectable:false,evented:false,mark:true});canvas.add(g);canvas.bringToFront(g);}
+canvas.on('mouse:down',function(opt){const e=opt.e;if(e.altKey||e.button===1){this.isDragging=true;this.selection=false;this.lastPosX=e.clientX;this.lastPosY=e.clientY;return;} if(currentTool==='select'||opt.target)return; const p=canvas.getPointer(e); if(['match','nomatch','key','compare'].includes(currentTool))makeVertical(p.x,currentTool); else if(currentTool==='circle')makeCircle(p); else if(currentTool==='cross')makeCross(p); canvas.renderAll();});
+canvas.on('mouse:move',function(opt){const e=opt.e;if(this.isDragging){const vpt=this.viewportTransform;vpt[4]+=e.clientX-this.lastPosX;vpt[5]+=e.clientY-this.lastPosY;this.lastPosX=e.clientX;this.lastPosY=e.clientY;this.requestRenderAll();return;} const p=canvas.getPointer(e); if(currentTool==='compare'){const zoom=canvas.getZoom();previewLine.set({x1:p.x,y1:0,x2:p.x,y2:canvas.getHeight(),stroke:'#555',strokeWidth:1.5/zoom,strokeDashArray:[10/zoom,7/zoom],visible:true});canvas.bringToFront(previewLine);canvas.renderAll();} else {previewLine.visible=false;}});
+canvas.on('mouse:up',function(){if(this.isDragging){this.isDragging=false;this.selection=currentTool==='select';}});
+canvas.on('mouse:wheel',function(opt){let z=canvas.getZoom();z*=0.999**opt.e.deltaY;z=Math.min(10,Math.max(.2,z));canvas.zoomToPoint({x:opt.e.offsetX,y:opt.e.offsetY},z);opt.e.preventDefault();opt.e.stopPropagation();});
+window.addEventListener('keydown',e=>{if(e.code==='Space'&&!spaceDown){e.preventDefault();spaceDown=true;previousTool=currentTool;setTool('select');return;} const map={'1':'match','2':'nomatch','3':'key','4':'compare','5':'circle','6':'cross'};if(map[e.key]&&!spaceDown)setTool(map[e.key]);if(e.key==='Delete'||e.key==='Backspace')deleteSelected();});
+window.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;setTool(previousTool);}});
+function deleteSelected(){const objs=canvas.getActiveObjects();if(objs.length){canvas.discardActiveObject();objs.forEach(o=>{if(o!==imageObj&&o!==previewLine)canvas.remove(o)});canvas.renderAll();}}
+document.getElementById('deleteBtn').onclick=deleteSelected;
+function clearMarks(render=true){canvas.getObjects().slice().forEach(o=>{if(o.mark||o.isCompare)canvas.remove(o)});canvas.add(previewLine);canvas.bringToFront(previewLine);if(render)canvas.renderAll();}
+document.getElementById('clearBtn').onclick=()=>clearMarks(true);
+document.getElementById('resetBtn').onclick=()=>fitImage();
+document.getElementById('saveBtn').onclick=()=>{previewLine.visible=false;const hidden=[];canvas.getObjects().forEach(o=>{if(o.isCompare){hidden.push(o);o.visible=false;}});canvas.discardActiveObject();canvas.renderAll();const url=canvas.toDataURL({format:'png',multiplier:2});hidden.forEach(o=>o.visible=true);canvas.renderAll();const a=document.createElement('a');a.download='raman_peak_marked.png';a.href=url;a.click();};
+setTool('match');
+</script>
+</body>
+</html>

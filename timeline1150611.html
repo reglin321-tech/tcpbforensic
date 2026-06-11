@@ -30,7 +30,7 @@
 
     button, input, select, textarea { font-family: inherit; }
 
-    .app { width: 100%; max-width: 1920px; margin: 0 auto; padding: 18px; }
+    .app { width: 100%; max-width: none; margin: 0 auto; padding: 14px; }
 
     .topbar {
       display: grid;
@@ -104,13 +104,16 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(280px, 320px) minmax(980px, 1fr);
-      gap: 16px;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 12px;
       align-items: start;
+
+      height: calc(100vh - 88px);
+      overflow: hidden;
     }
 
     .layout.vertical-layout {
-      grid-template-columns: minmax(300px, 340px) minmax(720px, 1fr);
+      grid-template-columns: 300px minmax(0, 1fr);
     }
 
     .horizontal-layout .stage {
@@ -131,28 +134,26 @@
     }
 
     .panel {
-      padding: 16px;
+      padding: 14px;
       position: sticky;
       top: 14px;
-      max-height: calc(100vh - 32px);
-      overflow: auto;
-    }
-
-    .horizontal-layout .panel {
-      position: static;
-      max-height: none;
-      overflow: visible;
+      width: 300px;
+      max-height: calc(100vh - 104px);
+      overflow-y: auto;
     }
 
     .stage {
-      padding: 18px;
-      min-height: calc(100vh - 112px);
+      padding: 12px;
+      width: 100%;
+      min-width: 0;
+      height: calc(100vh - 104px);
       overflow: auto;
       display: block;
     }
 
     .vertical-layout .stage {
-      min-height: calc(100vh - 112px);
+      height: calc(100vh - 104px);
+      min-height: 0;
     }
 
     .section { border-bottom: 1px solid #edf1f7; padding-bottom: 16px; margin-bottom: 16px; }
@@ -213,7 +214,21 @@
     }
 
     .control-row input[type="range"] { padding: 0; }
+    .control-row input[type="number"] { padding: 7px 9px; text-align: center; }
     .control-value { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+    .setting-group-title {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #edf1f7;
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .setting-group-title:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+    .setting-divider { height: 1px; background: #edf1f7; margin: 14px 0 4px; }
 
     .color-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
 
@@ -230,17 +245,18 @@
 
     .canvas-area {
       position: relative;
-      min-width: 940px;
+      width: 100%;
+      min-width: 0;
       min-height: 620px;
       background: #fff;
       border-radius: 8px;
       border: 1px solid #dbe3ef;
       overflow: visible;
-      margin: 0 auto;
+      margin: 0;
     }
 
     .vertical-layout .canvas-area {
-      min-width: 700px;
+      min-width: 0;
     }
 
     .title-box {
@@ -266,7 +282,7 @@
       color: var(--primary-dark);
     }
 
-    .title-main { font-size: 19px; font-weight: 900; color: var(--primary-dark); }
+    .title-main { font-size: var(--title-font-size, 24px); font-weight: 900; color: var(--primary-dark); }
     .title-sub { margin-top: 4px; color: #334155; }
 
     .zoom-box {
@@ -363,19 +379,19 @@
 
     .event-name {
       font-weight: 900;
-      font-size: 14px;
+      font-size: var(--event-font-size, 14px);
       margin-bottom: 5px;
       line-height: 1.35;
       white-space: normal;
       word-break: break-word;
       overflow-wrap: anywhere;
     }
-    .event-date { font-size: 12px; color: #475569; }
+    .event-date { font-size: var(--event-date-font-size, 12px); color: #475569; }
     .event-desc {
       margin-top: 6px;
       padding-top: 6px;
       border-top: 1px dashed rgba(100,116,139,.35);
-      font-size: 12px;
+      font-size: var(--event-desc-font-size, 12px);
       line-height: 1.4;
       color: #475569;
       white-space: normal;
@@ -495,8 +511,20 @@
     .tip span { color: #64748b; font-size: 12px; line-height: 1.5; }
 
     @media (max-width: 1200px) {
-      .layout, .layout.vertical-layout { grid-template-columns: 318px minmax(760px, 1fr); }
-      .panel { position: static; max-height: none; }
+      .layout, .layout.vertical-layout { grid-template-columns: 280px minmax(0, 1fr); }
+      .panel {
+        width: 280px;
+        position: sticky;
+        top: 14px;
+        max-height: calc(100vh - 104px);
+        overflow-y: auto;
+      }
+      .stage {
+        width: 100%;
+        min-width: 0;
+        height: calc(100vh - 104px);
+        overflow: auto;
+      }
       .tips { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
     }
   </style>
@@ -596,14 +624,42 @@
 
         <div class="section">
           <div class="section-title"><span class="num">4</span>排版調整</div>
+
+          <div class="setting-group-title">標題</div>
+          <div class="control-row">
+            <span>標題字體</span>
+            <input id="titleFontSizeInput" type="range" min="16" max="40" step="1" value="24" oninput="updateLayoutSetting('titleFontSize', this.value)">
+            <span id="titleFontSizeValue" class="control-value">24</span>
+          </div>
+
+          <div class="setting-divider"></div>
+          <div class="setting-group-title">事件卡片</div>
           <div class="control-row">
             <span>卡片寬度</span>
-            <input id="cardWidthInput" type="range" min="130" max="230" step="10" value="170" oninput="updateLayoutSetting('cardWidth', this.value)">
+            <input id="cardWidthInput" type="range" min="130" max="260" step="10" value="170" oninput="updateLayoutSetting('cardWidth', this.value)">
             <span id="cardWidthValue" class="control-value">170</span>
           </div>
           <div class="control-row">
+            <span>事件標題</span>
+            <input id="eventFontSizeInput" type="range" min="10" max="28" step="1" value="14" oninput="updateLayoutSetting('eventFontSize', this.value)">
+            <span id="eventFontSizeValue" class="control-value">14</span>
+          </div>
+          <div class="control-row">
+            <span>事件日期</span>
+            <input id="dateFontSizeInput" type="range" min="9" max="22" step="1" value="12" oninput="updateLayoutSetting('dateFontSize', this.value)">
+            <span id="dateFontSizeValue" class="control-value">12</span>
+          </div>
+          <div class="control-row">
+            <span>事件說明</span>
+            <input id="eventDescFontSizeInput" type="range" min="9" max="24" step="1" value="12" oninput="updateLayoutSetting('eventDescFontSize', this.value)">
+            <span id="eventDescFontSizeValue" class="control-value">12</span>
+          </div>
+
+          <div class="setting-divider"></div>
+          <div class="setting-group-title">時間軸間距</div>
+          <div class="control-row">
             <span>層距</span>
-            <input id="laneGapInput" type="range" min="54" max="110" step="4" value="76" oninput="updateLayoutSetting('laneGap', this.value)">
+            <input id="laneGapInput" type="range" min="54" max="130" step="4" value="76" oninput="updateLayoutSetting('laneGap', this.value)">
             <span id="laneGapValue" class="control-value">76</span>
           </div>
           <div class="control-row">
@@ -611,19 +667,19 @@
             <input id="timeScaleInput" type="range" min="50" max="300" step="5" value="100" oninput="updateLayoutSetting('timeScale', this.value)">
             <span id="timeScaleValue" class="control-value">100%</span>
           </div>
-          <div class="control-row">
-            <span>說明字體</span>
-            <input id="noteFontSizeInput" type="number" min="10" max="36" step="1" value="14" oninput="updateLayoutSetting('noteFontSize', this.value)">
-            <span id="noteFontSizeValue" class="control-value">14</span>
-          </div>
-          <div class="hint">時間寬度改為百分比縮放：100% 為基準，50% 壓縮、200% 放大。PNG 會使用同一組排版設定與完整文字換行。</div>
+          <div class="hint">排版設定皆會同步影響畫面與 PNG；事件卡片的文字大小改為拉桿，較適合快速微調。</div>
         </div>
 
         <div class="section">
           <div class="section-title"><span class="num">5</span>時間軸說明</div>
           <label>整體說明</label>
           <textarea id="timelineNote" placeholder="可輸入此時間軸的整體說明，會顯示在圖面下方並一併匯出 PNG。" oninput="render()"></textarea>
-          <div class="hint">此欄位會儲存在 JSON；讀取舊版 JSON 時若沒有說明欄位，會自動留白。</div>
+          <div class="control-row">
+            <span>說明字體</span>
+            <input id="noteFontSizeInput" type="number" min="10" max="36" step="1" value="14" oninput="updateLayoutSetting('noteFontSize', this.value)">
+            <span id="noteFontSizeValue" class="control-value">14</span>
+          </div>
+          <div class="hint">說明字體放在說明欄位旁邊；此欄位會儲存在 JSON，讀取舊版 JSON 時若沒有說明欄位會自動留白。</div>
         </div>
       </aside>
 
@@ -668,7 +724,7 @@
     let orientation = 'horizontal';
     let axisX = 90;
     let axisY = 280;
-    const layoutSettings = { cardWidth: 170, laneGap: 76, timeScale: 100, noteFontSize: 14 };
+    const layoutSettings = { cardWidth: 170, laneGap: 76, timeScale: 100, titleFontSize: 24, eventFontSize: 14, dateFontSize: 12, eventDescFontSize: 12, noteFontSize: 14 };
     let canvasW = 980;
     let canvasH = 720;
     let lastLayout = [];
@@ -714,8 +770,12 @@
 
     function syncLayoutControls() {
       const pairs = [
+        ['titleFontSize', 'titleFontSizeInput', 'titleFontSizeValue'],
         ['cardWidth', 'cardWidthInput', 'cardWidthValue'],
         ['laneGap', 'laneGapInput', 'laneGapValue'],
+        ['eventFontSize', 'eventFontSizeInput', 'eventFontSizeValue'],
+        ['dateFontSize', 'dateFontSizeInput', 'dateFontSizeValue'],
+        ['eventDescFontSize', 'eventDescFontSizeInput', 'eventDescFontSizeValue'],
         ['timeScale', 'timeScaleInput', 'timeScaleValue'],
         ['noteFontSize', 'noteFontSizeInput', 'noteFontSizeValue']
       ];
@@ -845,13 +905,29 @@
       return Math.max(1, Math.min(maxLines, Math.ceil(len / maxChars)));
     }
 
+    function boundedNumber(value, min, max, fallback) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function titleFontSize() { return boundedNumber(layoutSettings.titleFontSize, 16, 40, 24); }
+    function eventFontSize() { return boundedNumber(layoutSettings.eventFontSize, 10, 28, 14); }
+    function dateFontSize() { return boundedNumber(layoutSettings.dateFontSize, 9, 22, 12); }
+    function eventDescFontSize() { return boundedNumber(layoutSettings.eventDescFontSize, 9, 24, 12); }
+
     function cardHeightFor(ev, cardW = layoutSettings.cardWidth) {
       // 與 HTML 卡片的左右 padding / 右上角按鈕保留區一致，避免畫面展開但匯出 PNG 被截斷。
       const textW = Math.max(56, cardW - 62);
-      const nameLines = estimateLines(ev.name, Math.max(4, Math.floor(textW / 14)), 99);
+      const nameSize = eventFontSize();
+      const dateSize = dateFontSize();
+      const descSize = eventDescFontSize();
+      const nameLineHeight = Math.ceil(nameSize * 1.35);
+      const descLineHeight = Math.ceil(descSize * 1.4);
+      const nameLines = estimateLines(ev.name, Math.max(4, Math.floor(textW / nameSize)), 99);
       const hasDesc = ev.showDesc !== false && ev.desc;
-      const descLines = hasDesc ? estimateLines(ev.desc, Math.max(5, Math.floor(textW / 12)), 99) : 0;
-      return 24 + nameLines * 19 + 18 + (hasDesc ? 12 + descLines * 17 : 0);
+      const descLines = hasDesc ? estimateLines(ev.desc, Math.max(5, Math.floor(textW / descSize)), 99) : 0;
+      return 24 + nameLines * nameLineHeight + dateSize + 14 + (hasDesc ? 12 + descLines * descLineHeight : 0);
     }
 
     function laneSequence(limit = 18) {
@@ -869,8 +945,7 @@
     }
 
     function noteFontSize() {
-      const n = Number(layoutSettings.noteFontSize);
-      return Number.isFinite(n) ? Math.max(10, Math.min(36, n)) : 14;
+      return boundedNumber(layoutSettings.noteFontSize, 10, 36, 14);
     }
 
     function wrapPlainTextByChars(text, maxChars) {
@@ -913,7 +988,8 @@
       const scaleFactor = layoutSettings.timeScale / 100;
       const timeLength = Math.max(360, monthCount * baseMonthWidth * scaleFactor, events.length * 72);
       const crossSize = Math.max(520, maxAbsLane * layoutSettings.laneGap + 300);
-      const preliminaryW = orientation === 'horizontal' ? Math.max(760, timeLength + 150) : Math.max(700, Math.min(860, stageInnerWidth()), crossSize + 160);
+      const availableStageW = stageInnerWidth();
+      const preliminaryW = orientation === 'horizontal' ? Math.max(availableStageW, 760, timeLength + 150) : Math.max(availableStageW, 700, crossSize + 160);
 
       if (orientation === 'horizontal') {
         canvasW = preliminaryW;
@@ -1033,6 +1109,7 @@
 
       document.getElementById('titleMain').textContent = title;
       const titleBox = document.getElementById('titleBox');
+      titleBox.style.setProperty('--title-font-size', `${titleFontSize()}px`);
       titleBox.style.left = `${titlePos.x}px`;
       titleBox.style.top = `${titlePos.y}px`;
 
@@ -1169,6 +1246,9 @@
       card.style.top = `${top}px`;
       card.style.width = `${width}px`;
       card.style.minHeight = `${height}px`;
+      card.style.setProperty('--event-font-size', `${eventFontSize()}px`);
+      card.style.setProperty('--event-date-font-size', `${dateFontSize()}px`);
+      card.style.setProperty('--event-desc-font-size', `${eventDescFontSize()}px`);
       card.onpointerdown = e => startDragEvent(e, ev.id, card);
       const showDesc = ev.showDesc !== false && ev.desc;
       const descHtml = showDesc ? `<div class="event-desc">${escapeHtml(ev.desc)}</div>` : '';
@@ -1295,6 +1375,10 @@
           orientation = data.orientation || 'horizontal';
           zoom = data.zoom || 1;
           Object.assign(layoutSettings, data.layoutSettings || {});
+          if (!layoutSettings.titleFontSize) layoutSettings.titleFontSize = 24;
+          if (!layoutSettings.eventFontSize) layoutSettings.eventFontSize = 14;
+          if (!layoutSettings.dateFontSize) layoutSettings.dateFontSize = 12;
+          if (!layoutSettings.eventDescFontSize) layoutSettings.eventDescFontSize = 12;
           if (!layoutSettings.noteFontSize) layoutSettings.noteFontSize = 14;
           syncLayoutControls();
           events = (data.events || []).map(item => {
@@ -1423,8 +1507,8 @@
     function drawTitle(ctx, range) {
       ctx.textAlign = 'center';
       ctx.fillStyle = getCss('--primary-dark');
-      ctx.font = '900 24px Microsoft JhengHei, Arial';
-      ctx.fillText(document.getElementById('timelineTitle').value || '事件時間軸', titlePos.x + 180, titlePos.y + 34);
+      ctx.font = `900 ${titleFontSize()}px Microsoft JhengHei, Arial`;
+      ctx.fillText(document.getElementById('timelineTitle').value || '事件時間軸', titlePos.x + 180, titlePos.y + Math.max(34, titleFontSize() + 10));
       /*匯出不要時間範圍ctx.font = '16px Microsoft JhengHei, Arial';
       ctx.fillStyle = '#334155';
       ctx.fillText(`${range.start.roc} ~ ${range.end.roc}`, titlePos.x + 180, titlePos.y + 62);*/
@@ -1507,21 +1591,27 @@
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
 
-      ctx.fillStyle = color;
-      ctx.font = '900 14px Microsoft JhengHei, Arial';
+      const nameSize = eventFontSize();
+      const dateSize = dateFontSize();
+      const descSize = eventDescFontSize();
+      const nameLineHeight = Math.ceil(nameSize * 1.35);
+      const descLineHeight = Math.ceil(descSize * 1.4);
       const exportTextW = Math.max(56, cardW - 62);
+
+      ctx.fillStyle = color;
+      ctx.font = `900 ${nameSize}px Microsoft JhengHei, Arial`;
       const nameLines = wrapCanvasText(ctx, ev.name, exportTextW, 99);
       nameLines.forEach((line, index) => {
-        ctx.fillText(line, x + 12, y + 11 + index * 18);
+        ctx.fillText(line, x + 12, y + 11 + index * nameLineHeight);
       });
 
-      const dateY = y + 13 + nameLines.length * 18;
+      const dateY = y + 13 + nameLines.length * nameLineHeight;
       ctx.fillStyle = '#334155';
-      ctx.font = '12px Microsoft JhengHei, Arial';
+      ctx.font = `${dateSize}px Microsoft JhengHei, Arial`;
       ctx.fillText(ev.roc, x + 12, dateY);
 
       if (showDesc) {
-        const descY = dateY + 20;
+        const descY = dateY + dateSize + 8;
         ctx.strokeStyle = 'rgba(100,116,139,.35)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -1530,10 +1620,10 @@
         ctx.stroke();
 
         ctx.fillStyle = '#475569';
-        ctx.font = '12px Microsoft JhengHei, Arial';
+        ctx.font = `${descSize}px Microsoft JhengHei, Arial`;
         const descLines = wrapCanvasText(ctx, ev.desc, exportTextW, 99);
         descLines.forEach((line, index) => {
-          ctx.fillText(line, x + 12, descY + index * 16);
+          ctx.fillText(line, x + 12, descY + index * descLineHeight);
         });
       }
     }
@@ -1589,7 +1679,7 @@
     }
 
     function loadSample() {
-      document.getElementById('timelineTitle').value = '專案進度與里程碑時間軸';
+      document.getElementById('timelineTitle').value = '可以直接刪除--專案進度與里程碑時間軸';
       document.getElementById('startDate').value = '1130101';
       document.getElementById('endDate').value = '1141231';
       const samples = [
