@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>民國日期時間軸產生器</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #64748b;
+      --border: #d8e0ec;
+      --primary: #4f6df5;
+      --primary-dark: #243b86;
+      --danger: #ef4444;
+      --axis: #334155;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .07);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    button, input, select, textarea { font-family: inherit; }
+
+    .app { width: 100%; max-width: none; margin: 0 auto; padding: 14px; }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .brand { display: flex; gap: 14px; align-items: center; }
+
+    .logo {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      box-shadow: 0 10px 22px rgba(79, 109, 245, .28);
+    }
+
+    h1 { margin: 0; font-size: 28px; letter-spacing: .04em; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 14px; }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-danger { color: var(--danger); border-color: #fecaca; background: #fff7f7; }
+    .btn-block { width: 100%; }
+    .btn-small { padding: 7px 9px; font-size: 13px; }
+
+    .theme-dots {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, .05);
+    }
+
+    .dot-theme {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .dot-blue { background: #2563eb; }
+    .dot-green { background: #16a34a; }
+    .dot-purple { background: #8b5cf6; }
+    .dot-orange { background: #f97316; }
+    .dot-gray { background: #475569; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+
+      height: calc(100vh - 88px);
+      overflow: hidden;
+    }
+
+    .layout.vertical-layout {
+      grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    .horizontal-layout .stage {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+
+    .vertical-layout .stage {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .panel, .stage {
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid rgba(216, 224, 236, .9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 14px;
+      position: sticky;
+      top: 14px;
+      width: 300px;
+      max-height: calc(100vh - 104px);
+      overflow-y: auto;
+    }
+
+    .stage {
+      padding: 12px;
+      width: 100%;
+      min-width: 0;
+      height: calc(100vh - 104px);
+      overflow: auto;
+      display: block;
+    }
+
+    .vertical-layout .stage {
+      height: calc(100vh - 104px);
+      min-height: 0;
+    }
+
+    .section { border-bottom: 1px solid #edf1f7; padding-bottom: 16px; margin-bottom: 16px; }
+    .section:last-child { border-bottom: 0; margin-bottom: 0; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: var(--primary-dark);
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+
+    .num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+    }
+
+    label { display: block; font-size: 13px; font-weight: 800; margin: 10px 0 6px; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 11px;
+      outline: none;
+      background: #fff;
+      font-size: 14px;
+    }
+
+    textarea { resize: vertical; min-height: 58px; }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(79, 109, 245, .12);
+    }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 6px; }
+    .quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 96px 1fr 42px;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .control-row input[type="range"] { padding: 0; }
+    .control-row input[type="number"] { padding: 7px 9px; text-align: center; }
+    .control-value { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+    .setting-group-title {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #edf1f7;
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .setting-group-title:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+    .setting-divider { height: 1px; background: #edf1f7; margin: 14px 0 4px; }
+
+    .color-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+
+    .event-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--border);
+      cursor: pointer;
+    }
+
+    .event-color.active { box-shadow: 0 0 0 3px rgba(79, 109, 245, .35); }
+
+    .canvas-area {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      min-height: 620px;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #dbe3ef;
+      overflow: visible;
+      margin: 0;
+    }
+
+    .vertical-layout .canvas-area {
+      min-width: 0;
+    }
+
+    .title-box {
+      position: absolute;
+      min-width: 340px;
+      background: rgba(255,255,255,.94);
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 14px 48px 12px 48px;
+      text-align: center;
+      box-shadow: 0 12px 26px rgba(124, 58, 237, .09);
+      cursor: move;
+      user-select: none;
+      z-index: 30;
+    }
+
+    .title-box .move-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 24px;
+      color: var(--primary-dark);
+    }
+
+    .title-main { font-size: var(--title-font-size, 24px); font-weight: 900; color: var(--primary-dark); }
+    .title-sub { margin-top: 4px; color: #334155; }
+
+    .zoom-box {
+      position: absolute;
+      right: 28px;
+      top: 42px;
+      display: flex;
+      gap: 8px;
+      z-index: 18;
+    }
+
+    .timeline-zone {
+      position: absolute;
+      left: 48px;
+      top: 128px;
+      transform-origin: top left;
+    }
+
+    .axis-line {
+      position: absolute;
+      background: var(--axis);
+      border-radius: 999px;
+      z-index: 2;
+    }
+
+    .axis-line.horizontal { height: 4px; }
+    .axis-line.vertical { width: 4px; }
+
+    .tick {
+      position: absolute;
+      background: #cbd5e1;
+      z-index: 2;
+    }
+
+    .tick.major { background: #94a3b8; }
+    .tick-label, .year-label, .lane-number, .lane-title {
+      position: absolute;
+      color: #334155;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .tick-label { font-size: 12px; }
+    .year-label { font-size: 15px; font-weight: 900; color: #0f172a; }
+    .lane-number {
+      font-size: 11px;
+      color: #94a3b8;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 1px 6px;
+      z-index: 3;
+    }
+    .lane-title { font-size: 12px; color: #64748b; font-weight: 800; }
+    .lane-guide {
+      position: absolute;
+      z-index: 1;
+      pointer-events: none;
+      border-color: #e8eef6;
+    }
+    .lane-guide.horizontal {
+      border-top: 1px dashed #e8eef6;
+      height: 1px;
+    }
+    .lane-guide.vertical {
+      border-left: 1px dashed #e8eef6;
+      width: 1px;
+    }
+
+    .event-card {
+      position: absolute;
+      width: 150px;
+      min-height: 62px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1.5px solid currentColor;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, .09);
+      cursor: grab;
+      z-index: 20;
+      user-select: none;
+      touch-action: none;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      padding-right: 48px;
+    }
+
+    .event-card.dragging {
+      opacity: .82;
+      z-index: 99;
+      box-shadow: 0 18px 36px rgba(15, 23, 42, .18);
+    }
+
+    .event-name {
+      font-weight: 900;
+      font-size: var(--event-font-size, 14px);
+      margin-bottom: 5px;
+      line-height: 1.35;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .event-date { font-size: var(--event-date-font-size, 12px); color: #475569; }
+    .event-desc {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(100,116,139,.35);
+      font-size: var(--event-desc-font-size, 12px);
+      line-height: 1.4;
+      color: #475569;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+
+    .event-image-box {
+      position: absolute;
+      border: 1.5px dashed rgba(100, 116, 139, .42);
+      border-radius: 8px;
+      background: #f8fafc;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      cursor: pointer;
+      color: #64748b;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, .08);
+      z-index: 19;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .event-image-box:hover {
+      border-color: currentColor;
+      background: #f1f5f9;
+    }
+
+    .event-image-box.drag-over {
+      border-color: currentColor;
+      box-shadow: inset 0 0 0 3px rgba(79, 109, 245, .14);
+    }
+
+    .event-image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #ffffff;
+    }
+
+    .event-image-placeholder {
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 8px;
+      color: #64748b;
+    }
+
+    .event-image-delete {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      width: 24px;
+      height: 24px;
+      border: 1px solid #fecaca;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .92);
+      color: var(--danger);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .event-card-actions {
+      position: absolute;
+      right: 7px;
+      top: 7px;
+      display: flex;
+      gap: 4px;
+      opacity: .34;
+      transition: opacity .12s ease;
+    }
+
+    .event-card:hover .event-card-actions { opacity: 1; }
+
+    .event-icon-btn {
+      width: 24px;
+      height: 24px;
+      border: 1px solid #dbe3ef;
+      border-radius: 7px;
+      background: #fff;
+      color: #334155;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, .08);
+      font-size: 12px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .event-icon-btn:hover { border-color: currentColor; }
+    .event-icon-btn.danger { color: var(--danger); border-color: #fecaca; }
+
+    .event-line { position: absolute; z-index: 5; background: currentColor; pointer-events: none; }
+    .event-line-elbow { position: absolute; z-index: 5; background: currentColor; pointer-events: none; }
+    .event-point {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 8;
+      background: currentColor;
+      box-shadow: 0 0 0 4px #fff, 0 0 0 5px currentColor;
+    }
+
+    .mini-map {
+      position: absolute;
+      left: 54px;
+      right: 36px;
+      bottom: 16px;
+      height: 72px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255,255,255,.8);
+      overflow: hidden;
+      display: none;
+    }
+
+    .mini-axis { position: absolute; background: #94a3b8; }
+    .mini-axis.horizontal { left: 22px; right: 22px; top: 35px; height: 2px; }
+    .mini-axis.vertical { top: 10px; bottom: 10px; left: 50%; width: 2px; }
+    .mini-dot { position: absolute; width: 5px; height: 5px; transform: translate(-50%, -50%); border-radius: 50%; }
+
+    .timeline-note-box {
+      position: absolute;
+      left: 90px;
+      right: 90px;
+      bottom: 28px;
+      padding: 12px 16px;
+      border-top: 1px solid #cbd5e1;
+      color: #334155;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      background: rgba(255,255,255,.9);
+      z-index: 16;
+      display: none;
+    }
+
+
+    .message { display: none; margin-top: 10px; padding: 9px 11px; border-radius: 10px; font-size: 13px; }
+    .message.show { display: block; }
+    .ok { color: #065f46; background: #d1fae5; }
+    .error { color: #991b1b; background: #fee2e2; }
+    .hidden { display: none; }
+
+    .tips {
+      grid-column: 1 / -1;
+      margin-top: 16px;
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .vertical-layout .tips { display: none; }
+
+    .tip {
+      background: rgba(255,255,255,.88);
+      border: 1px solid #ddd6fe;
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: #312e81;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .04);
+    }
+
+    .tip b { display: block; margin-bottom: 4px; }
+    .tip span { color: #64748b; font-size: 12px; line-height: 1.5; }
+
+    @media (max-width: 1200px) {
+      .layout, .layout.vertical-layout { grid-template-columns: 280px minmax(0, 1fr); }
+      .panel {
+        width: 280px;
+        position: sticky;
+        top: 14px;
+        max-height: calc(100vh - 104px);
+        overflow-y: auto;
+      }
+      .stage {
+        width: 100%;
+        min-width: 0;
+        height: calc(100vh - 104px);
+        overflow: auto;
+      }
+      .tips { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">⬡</div>
+        <div>
+          <h1>民國日期時間軸產生器</h1>
+          <div class="subtitle">建立、編輯並視覺化重要事件時間軸</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn" onclick="saveProjectJson()">💾 儲存檔案</button>
+        <button class="btn" onclick="document.getElementById('loadJsonInput').click()">📂 讀取檔案</button>
+        <button class="btn btn-primary" onclick="exportTimelinePng()">🖼 匯出 PNG</button>
+        <button class="btn" onclick="toggleOrientation()">↕ 垂直/水平</button>
+        <button class="btn" onclick="showHelp()">？ 使用說明</button>
+        <div class="theme-dots">
+          <b>主題配色</b>
+          <span class="dot-theme dot-blue" onclick="setTheme('#2563eb')"></span>
+          <span class="dot-theme dot-green" onclick="setTheme('#16a34a')"></span>
+          <span class="dot-theme dot-purple" onclick="setTheme('#8b5cf6')"></span>
+          <span class="dot-theme dot-orange" onclick="setTheme('#f97316')"></span>
+          <span class="dot-theme dot-gray" onclick="setTheme('#475569')"></span>
+        </div>
+      </div>
+    </header>
+
+    <input id="loadJsonInput" class="hidden" type="file" accept="application/json,.json" onchange="loadProjectJson(event)">
+    <input id="eventImageInput" class="hidden" type="file" accept="image/*" onchange="handleEventImageInput(event)">
+
+    <section id="layoutRoot" class="layout horizontal-layout">
+      <aside class="panel">
+        <div class="section">
+          <div class="section-title"><span class="num">1</span>設定時間軸</div>
+          <label>時間軸標題</label>
+          <input id="timelineTitle" value="專案進度與里程碑時間軸" oninput="render()">
+
+          <div class="row2">
+            <div>
+              <label>開始日期（民國）</label>
+              <input id="startDate" value="1130101" onblur="normalizeDateInput(this)">
+            </div>
+            <div>
+              <label>結束日期（民國）</label>
+              <input id="endDate" value="1141231" onblur="normalizeDateInput(this)">
+            </div>
+          </div>
+          <div class="hint">支援：113/01/01、1130101、113-01-01。時間軸長度會依日期區間與事件數自動產生。</div>
+
+          <div class="quick">
+            <button class="btn btn-small" onclick="setQuickRange('thisYear')">今年</button>
+            <button class="btn btn-small" onclick="setQuickRange('lastYear')">去年</button>
+            <button class="btn btn-small" onclick="setQuickRange('futureYear')">未來一年</button>
+            <button class="btn btn-small" onclick="render()">更新</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="num">2</span><span id="formTitle">新增事件</span></div>
+          <label>事件名稱</label>
+          <input id="eventName" placeholder="例如：專案啟動會議">
+          <label>事件日期（民國）</label>
+          <input id="eventDate" placeholder="例如：1130315" onblur="normalizeDateInput(this)">
+          <label>事件描述（選填）</label>
+          <textarea id="eventDesc" placeholder="輸入事件補充說明..."></textarea>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+            <input id="eventShowDesc" type="checkbox" checked style="width:auto;">
+            此事件顯示描述
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+            <input id="eventShowImage" type="checkbox" checked style="width:auto;">
+            此事件顯示圖片框
+          </label>
+          <label>事件顏色</label>
+          <div id="eventColorRow" class="color-row"></div>
+          <button id="eventSubmitBtn" class="btn btn-primary btn-block" onclick="submitEvent()">新增事件</button>
+          <div class="row2" style="margin-top:10px;">
+            <button class="btn" onclick="cancelEdit()">取消編輯</button>
+            <button class="btn" onclick="loadSample()">載入範例</button>
+          </div>
+          <div id="msg" class="message"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="num">3</span>其他功能</div>
+          <div class="row2">
+            <button class="btn btn-danger" onclick="clearEvents()">清空事件</button>
+            <button class="btn" onclick="resetTitlePosition()">重置標題</button>
+          </div>
+          
+          <div class="row2" style="margin-top:10px;">
+            <button class="btn" onclick="toggleOrientation()">切換水平/垂直</button>
+            <button class="btn" onclick="resetView()">重設縮放</button>
+          </div>
+          <div class="hint">拖曳事件時不會即時重畫，放開滑鼠才更新，避免抖動。</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="num">4</span>排版調整</div>
+
+          <div class="setting-group-title">標題</div>
+          <div class="control-row">
+            <span>標題字體</span>
+            <input id="titleFontSizeInput" type="range" min="16" max="40" step="1" value="24" oninput="updateLayoutSetting('titleFontSize', this.value)">
+            <span id="titleFontSizeValue" class="control-value">24</span>
+          </div>
+
+          <div class="setting-divider"></div>
+          <div class="setting-group-title">事件卡片</div>
+          <div class="control-row">
+            <span>卡片寬度</span>
+            <input id="cardWidthInput" type="range" min="130" max="260" step="10" value="170" oninput="updateLayoutSetting('cardWidth', this.value)">
+            <span id="cardWidthValue" class="control-value">170</span>
+          </div>
+          <div class="control-row">
+            <span>事件標題</span>
+            <input id="eventFontSizeInput" type="range" min="10" max="28" step="1" value="14" oninput="updateLayoutSetting('eventFontSize', this.value)">
+            <span id="eventFontSizeValue" class="control-value">14</span>
+          </div>
+          <div class="control-row">
+            <span>事件日期</span>
+            <input id="dateFontSizeInput" type="range" min="9" max="22" step="1" value="12" oninput="updateLayoutSetting('dateFontSize', this.value)">
+            <span id="dateFontSizeValue" class="control-value">12</span>
+          </div>
+          <div class="control-row">
+            <span>事件說明</span>
+            <input id="eventDescFontSizeInput" type="range" min="9" max="24" step="1" value="12" oninput="updateLayoutSetting('eventDescFontSize', this.value)">
+            <span id="eventDescFontSizeValue" class="control-value">12</span>
+          </div>
+
+          <div class="setting-divider"></div>
+          <div class="setting-group-title">時間軸間距</div>
+          <div class="control-row">
+            <span>層距</span>
+            <input id="laneGapInput" type="range" min="54" max="130" step="4" value="76" oninput="updateLayoutSetting('laneGap', this.value)">
+            <span id="laneGapValue" class="control-value">76</span>
+          </div>
+          <div class="control-row">
+            <span>時間寬度</span>
+            <input id="timeScaleInput" type="range" min="50" max="300" step="5" value="100" oninput="updateLayoutSetting('timeScale', this.value)">
+            <span id="timeScaleValue" class="control-value">100%</span>
+          </div>
+          <div class="hint">排版設定皆會同步影響畫面與 PNG；事件卡片的文字大小改為拉桿，較適合快速微調。</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="num">5</span>時間軸說明</div>
+          <label>整體說明</label>
+          <textarea id="timelineNote" placeholder="可輸入此時間軸的整體說明，會顯示在圖面下方並一併匯出 PNG。" oninput="render()"></textarea>
+          <div class="control-row">
+            <span>說明字體</span>
+            <input id="noteFontSizeInput" type="number" min="10" max="36" step="1" value="14" oninput="updateLayoutSetting('noteFontSize', this.value)">
+            <span id="noteFontSizeValue" class="control-value">14</span>
+          </div>
+          <div class="hint">說明字體放在說明欄位旁邊；此欄位會儲存在 JSON，讀取舊版 JSON 時若沒有說明欄位會自動留白。</div>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div id="canvasArea" class="canvas-area">
+          <div id="titleBox" class="title-box" onpointerdown="startDragTitle(event)">
+            <div class="move-icon">✥</div>
+            <div id="titleMain" class="title-main"></div>
+            <div id="titleSub" class="title-sub"></div>
+          </div>
+
+          <div class="zoom-box">
+            <button class="btn btn-small" onclick="changeZoom(-.1)">－</button>
+            <button class="btn btn-small"><span id="zoomLabel">100%</span></button>
+            <button class="btn btn-small" onclick="changeZoom(.1)">＋</button>
+            <button class="btn btn-small" onclick="resetView()">重設位置</button>
+          </div>
+
+          <div id="timelineZone" class="timeline-zone"></div>
+          <div id="miniMap" class="mini-map"></div>
+          <div id="timelineNoteBox" class="timeline-note-box"></div>
+        </div>
+      </section>
+
+      <section class="tips">
+        <div class="tip">✋ <div><b>拖曳穩定</b><span>拖曳時只移動卡片，放開後才重排。</span></div></div>
+        <div class="tip">↕ <div><b>垂直時間軸</b><span>可切換水平或垂直方向。</span></div></div>
+        <div class="tip">📏 <div><b>自動長度</b><span>依日期區間、事件數量自動拉長。</span></div></div>
+        <div class="tip">📅 <div><b>刻度修正</b><span>月份與層級刻度分離，避免混在一起。</span></div></div>
+        <div class="tip">🖼 <div><b>匯出 PNG</b><span>Canvas 重畫，橫線與刻度都會保留。</span></div></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const eventColors = ['#2563eb', '#16a34a', '#f97316', '#ef4444', '#8b5cf6', '#0f8b8d', '#334155'];
+    let selectedColor = eventColors[0];
+    let events = [];
+    let editingId = null;
+    let imageTargetId = null;
+    const imageCache = new Map();
+    let zoom = 1;
+    let titlePos = { x: 320, y: 24 };
+    let orientation = 'horizontal';
+    let axisX = 90;
+    let axisY = 280;
+    const layoutSettings = { cardWidth: 170, laneGap: 76, timeScale: 100, titleFontSize: 24, eventFontSize: 14, dateFontSize: 12, eventDescFontSize: 12, noteFontSize: 14 };
+    let canvasW = 980;
+    let canvasH = 720;
+    let lastLayout = [];
+
+    function uid() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
+
+    function msg(text, type='ok') {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = `message show ${type}`;
+      setTimeout(() => el.className = 'message', 2600);
+    }
+
+    function setTheme(color) {
+      document.documentElement.style.setProperty('--primary', color);
+      document.documentElement.style.setProperty('--primary-dark', shade(color, -35));
+      render();
+    }
+
+    function shade(hex, percent) {
+      const f = parseInt(hex.slice(1),16), t = percent < 0 ? 0 : 255, p = Math.abs(percent)/100;
+      const R = f >> 16, G = f >> 8 & 0x00FF, B = f & 0x0000FF;
+      return '#' + (0x1000000 + (Math.round((t-R)*p)+R)*0x10000 + (Math.round((t-G)*p)+G)*0x100 + (Math.round((t-B)*p)+B)).toString(16).slice(1);
+    }
+
+    function renderColorPicker() {
+      const row = document.getElementById('eventColorRow');
+      row.innerHTML = '';
+      eventColors.forEach(c => {
+        const d = document.createElement('span');
+        d.className = 'event-color' + (c === selectedColor ? ' active' : '');
+        d.style.background = c;
+        d.onclick = () => { selectedColor = c; renderColorPicker(); };
+        row.appendChild(d);
+      });
+    }
+
+    function updateLayoutSetting(key, value) {
+      layoutSettings[key] = Number(value);
+      syncLayoutControls();
+      render();
+    }
+
+    function syncLayoutControls() {
+      const pairs = [
+        ['titleFontSize', 'titleFontSizeInput', 'titleFontSizeValue'],
+        ['cardWidth', 'cardWidthInput', 'cardWidthValue'],
+        ['laneGap', 'laneGapInput', 'laneGapValue'],
+        ['eventFontSize', 'eventFontSizeInput', 'eventFontSizeValue'],
+        ['dateFontSize', 'dateFontSizeInput', 'dateFontSizeValue'],
+        ['eventDescFontSize', 'eventDescFontSizeInput', 'eventDescFontSizeValue'],
+        ['timeScale', 'timeScaleInput', 'timeScaleValue'],
+        ['noteFontSize', 'noteFontSizeInput', 'noteFontSizeValue']
+      ];
+      pairs.forEach(([key, inputId, valueId]) => {
+        const input = document.getElementById(inputId);
+        const value = document.getElementById(valueId);
+        if (input) input.value = layoutSettings[key];
+        if (value) value.textContent = key === 'timeScale' ? `${layoutSettings[key]}%` : layoutSettings[key];
+      });
+    }
+
+    function normalizeRawDate(value) {
+      let raw = String(value || '').trim().replace(/[年月.\-]/g, '/').replace(/日/g, '');
+      if (/^\d{7}$/.test(raw)) raw = `${raw.slice(0,3)}/${raw.slice(3,5)}/${raw.slice(5,7)}`;
+      if (/^\d{6}$/.test(raw)) raw = `${raw.slice(0,2)}/${raw.slice(2,4)}/${raw.slice(4,6)}`;
+      return raw;
+    }
+
+    function parseRocDate(value) {
+      const raw = normalizeRawDate(value);
+      const m = raw.match(/^(\d{2,3})\/(\d{1,2})\/(\d{1,2})$/);
+      if (!m) return null;
+      const ry = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+      const wy = ry + 1911;
+      const date = new Date(wy, mo - 1, da);
+      if (date.getFullYear() !== wy || date.getMonth() !== mo - 1 || date.getDate() !== da) return null;
+      return { date, roc: `${ry}/${String(mo).padStart(2,'0')}/${String(da).padStart(2,'0')}`, western: `${wy}-${String(mo).padStart(2,'0')}-${String(da).padStart(2,'0')}` };
+    }
+
+    function normalizeDateInput(input) { const p = parseRocDate(input.value); if (p) input.value = p.roc; }
+
+    function daysBetween(a, b) {
+      return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000);
+    }
+
+    function getRange() {
+      const start = parseRocDate(document.getElementById('startDate').value);
+      const end = parseRocDate(document.getElementById('endDate').value);
+      if (!start || !end || end.date <= start.date) return null;
+      return { start, end };
+    }
+
+
+    function triggerEventImageUpload(id) {
+      imageTargetId = id;
+      const input = document.getElementById('eventImageInput');
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+    }
+
+    function handleEventImageInput(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !imageTargetId) return;
+      setEventImageFromFile(imageTargetId, file);
+      e.target.value = '';
+    }
+
+    function setEventImageFromFile(id, file) {
+      if (!file || !file.type || !file.type.startsWith('image/')) {
+        msg('請上傳圖片檔。', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const ev = events.find(item => item.id === id);
+        if (!ev) return;
+        ev.imageData = reader.result;
+        ev.imageName = file.name || '';
+        imageCache.delete(ev.imageData);
+        msg('事件圖片已加入。');
+        render();
+      };
+      reader.onerror = () => msg('圖片讀取失敗。', 'error');
+      reader.readAsDataURL(file);
+    }
+
+    function handleEventImageDrop(e, id) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      setEventImageFromFile(id, file);
+    }
+
+    function removeEventImage(id) {
+      const ev = events.find(item => item.id === id);
+      if (!ev) return;
+      ev.imageData = null;
+      ev.imageName = '';
+      msg('事件圖片已移除。');
+      render();
+    }
+
+    function eventHasImage(ev) {
+      return Boolean(ev && ev.imageData);
+    }
+
+    function eventShowsImage(ev) {
+      return Boolean(ev && ev.showImage !== false);
+    }
+
+    function eventImageSize(cardW = layoutSettings.cardWidth) {
+      return Math.max(88, Math.round(cardW));
+    }
+
+    function eventImageGap() { return 12; }
+
+    function submitEvent() {
+      const range = getRange();
+      if (!range) return msg('時間區段格式錯誤。', 'error');
+      const name = document.getElementById('eventName').value.trim();
+      const date = parseRocDate(document.getElementById('eventDate').value);
+      const desc = document.getElementById('eventDesc').value.trim();
+      const showDesc = document.getElementById('eventShowDesc').checked;
+      const showImage = document.getElementById('eventShowImage').checked;
+      if (!name) return msg('請輸入事件名稱。', 'error');
+      if (!date) return msg('事件日期格式錯誤。', 'error');
+      if (date.date < range.start.date || date.date > range.end.date) return msg('事件不在時間軸區間內。', 'error');
+
+      if (editingId) {
+        const ev = events.find(e => e.id === editingId);
+        if (ev) Object.assign(ev, { name, date: date.date, roc: date.roc, western: date.western, desc, showDesc, showImage, color: selectedColor });
+        cancelEdit(false);
+        msg('事件已更新。');
+      } else {
+        events.push({ id: uid(), name, date: date.date, roc: date.roc, western: date.western, desc, showDesc, showImage, color: selectedColor, lane: null, imageData: null, imageName: '' });
+        msg('事件已新增。');
+      }
+      clearForm();
+      sortEvents(false);
+      render();
+    }
+
+    function clearForm() {
+      document.getElementById('eventName').value = '';
+      document.getElementById('eventDate').value = '';
+      document.getElementById('eventDesc').value = '';
+      document.getElementById('eventShowDesc').checked = true;
+      document.getElementById('eventShowImage').checked = true;
+    }
+
+    function editEvent(id) {
+      const ev = events.find(e => e.id === id);
+      if (!ev) return;
+      editingId = id;
+      selectedColor = ev.color || eventColors[0];
+      document.getElementById('eventName').value = ev.name;
+      document.getElementById('eventDate').value = ev.roc;
+      document.getElementById('eventDesc').value = ev.desc || '';
+      document.getElementById('eventShowDesc').checked = ev.showDesc !== false;
+      document.getElementById('eventShowImage').checked = ev.showImage !== false;
+      document.getElementById('formTitle').textContent = '編輯事件';
+      document.getElementById('eventSubmitBtn').textContent = '儲存修改';
+      renderColorPicker();
+    }
+
+    function cancelEdit(clear=true) {
+      editingId = null;
+      document.getElementById('formTitle').textContent = '新增事件';
+      document.getElementById('eventSubmitBtn').textContent = '新增事件';
+      if (clear) clearForm();
+    }
+
+    function deleteEvent(id, ask=false) {
+      if (ask && !confirm('確定刪除此事件？')) return;
+      events = events.filter(e => e.id !== id);
+      if (editingId === id) cancelEdit();
+      render();
+    }
+    function sortEvents(refresh=true) { events.sort((a,b) => a.date - b.date); if (refresh) render(); }
+    function clearEvents() { if (!confirm('確定清空所有事件？')) return; events = []; cancelEdit(); render(); }
+
+    function toggleOrientation() {
+      orientation = orientation === 'horizontal' ? 'vertical' : 'horizontal';
+      titlePos = orientation === 'horizontal' ? { x: 320, y: 24 } : { x: 160, y: 24 };
+      render();
+    }
+
+    function stageInnerWidth() {
+      const stage = document.querySelector('.stage');
+      if (!stage) return 980;
+      return Math.max(620, stage.clientWidth - 44);
+    }
+
+    function applyOrientationLayout() {
+      const root = document.getElementById('layoutRoot');
+      if (!root) return;
+      root.classList.toggle('horizontal-layout', orientation === 'horizontal');
+      root.classList.toggle('vertical-layout', orientation === 'vertical');
+    }
+
+    function estimateLines(text, maxChars, maxLines = 99) {
+      const len = String(text || '').trim().length;
+      if (!len) return 1;
+      return Math.max(1, Math.min(maxLines, Math.ceil(len / maxChars)));
+    }
+
+    function boundedNumber(value, min, max, fallback) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function titleFontSize() { return boundedNumber(layoutSettings.titleFontSize, 16, 40, 24); }
+    function eventFontSize() { return boundedNumber(layoutSettings.eventFontSize, 10, 28, 14); }
+    function dateFontSize() { return boundedNumber(layoutSettings.dateFontSize, 9, 22, 12); }
+    function eventDescFontSize() { return boundedNumber(layoutSettings.eventDescFontSize, 9, 24, 12); }
+
+    function cardHeightFor(ev, cardW = layoutSettings.cardWidth) {
+      // 與 HTML 卡片的左右 padding / 右上角按鈕保留區一致，避免畫面展開但匯出 PNG 被截斷。
+      const textW = Math.max(56, cardW - 62);
+      const nameSize = eventFontSize();
+      const dateSize = dateFontSize();
+      const descSize = eventDescFontSize();
+      const nameLineHeight = Math.ceil(nameSize * 1.35);
+      const descLineHeight = Math.ceil(descSize * 1.4);
+      const nameLines = estimateLines(ev.name, Math.max(4, Math.floor(textW / nameSize)), 99);
+      const hasDesc = ev.showDesc !== false && ev.desc;
+      const descLines = hasDesc ? estimateLines(ev.desc, Math.max(5, Math.floor(textW / descSize)), 99) : 0;
+      return 24 + nameLines * nameLineHeight + dateSize + 14 + (hasDesc ? 12 + descLines * descLineHeight : 0);
+    }
+
+    function laneSequence(limit = 18) {
+      const lanes = [];
+      for (let i = 1; i <= limit; i++) lanes.push(i, -i);
+      return lanes;
+    }
+
+    function laneOf(ev) { return ev.lane != null ? ev.lane : (ev.autoLane != null ? ev.autoLane : 1); }
+
+
+    function getTimelineNote() {
+      const el = document.getElementById('timelineNote');
+      return el ? el.value.trim() : '';
+    }
+
+    function noteFontSize() {
+      return boundedNumber(layoutSettings.noteFontSize, 10, 36, 14);
+    }
+
+    function wrapPlainTextByChars(text, maxChars) {
+      const source = String(text || '').replace(/\r\n/g, '\n');
+      const lines = [];
+      source.split('\n').forEach(part => {
+        let buf = '';
+        for (const ch of part) {
+          if (buf.length >= maxChars) {
+            lines.push(buf);
+            buf = ch;
+          } else {
+            buf += ch;
+          }
+        }
+        lines.push(buf);
+      });
+      return lines.length ? lines : [''];
+    }
+
+    function estimateTimelineNoteHeight(width = canvasW) {
+      const note = getTimelineNote();
+      if (!note) return 0;
+      const fontSize = noteFontSize();
+      const noteW = Math.max(160, width - 180 - 32);
+      const maxChars = Math.max(8, Math.floor(noteW / (fontSize * 0.95)));
+      const lines = wrapPlainTextByChars(note, maxChars).length;
+      return Math.ceil(24 + lines * fontSize * 1.7 + 18);
+    }
+
+    function layoutMetrics(range) {
+      const totalDays = daysBetween(range.start.date, range.end.date) + 1;
+      const monthCount = Math.max(1, makeMonthTicks(range.start.date, range.end.date).length);
+      const sorted = [...events].sort((a,b)=>a.date-b.date);
+
+      const maxAbsLane = Math.max(4, ...sorted.map(e => Math.abs(laneOf(e))));
+      // timeScale 改為百分比縮放，不再是「每月像素」。
+      // 這樣不管時間軸是半年、兩年或五年，滑桿調整都會呈現一致的放大/縮小感。
+      const baseMonthWidth = 60;
+      const scaleFactor = layoutSettings.timeScale / 100;
+      const timeLength = Math.max(360, monthCount * baseMonthWidth * scaleFactor, events.length * 72);
+      const crossSize = Math.max(520, maxAbsLane * layoutSettings.laneGap + 300);
+      const availableStageW = stageInnerWidth();
+      const preliminaryW = orientation === 'horizontal' ? Math.max(availableStageW, 760, timeLength + 150) : Math.max(availableStageW, 700, crossSize + 160);
+
+      if (orientation === 'horizontal') {
+        canvasW = preliminaryW;
+        canvasH = Math.max(700, crossSize + 170);
+        axisX = 90;
+        axisY = Math.round(canvasH / 2) - 10;
+      } else {
+        canvasW = preliminaryW;
+        canvasH = Math.max(900, timeLength + 260);
+        axisX = Math.round(canvasW / 2);
+        axisY = 170;
+      }
+      return { sorted, totalDays, timeLength, crossSize };
+    }
+
+    function timeToPercent(date, range) {
+      const total = daysBetween(range.start.date, range.end.date);
+      return total ? daysBetween(range.start.date, date) / total : 0;
+    }
+
+    function axisPositionFor(ev, range) {
+      const p = timeToPercent(ev.date, range);
+      if (orientation === 'horizontal') {
+        const leftPad = 130, rightPad = 130;
+        const x = leftPad + (canvasW - leftPad - rightPad) * p;
+        return { x, y: axisY };
+      } else {
+        const topPad = 80, bottomPad = 90;
+        const y = axisY + (canvasH - axisY - bottomPad) * p;
+        return { x: axisX, y };
+      }
+    }
+
+
+    function itemBoundsWithImage(item) {
+      const bounds = {
+        left: item.left,
+        top: item.top,
+        right: item.left + item.cardW,
+        bottom: item.top + item.cardH
+      };
+      const img = imagePositionForItem(item);
+      if (img) {
+        bounds.left = Math.min(bounds.left, img.left);
+        bounds.top = Math.min(bounds.top, img.top);
+        bounds.right = Math.max(bounds.right, img.left + img.size);
+        bounds.bottom = Math.max(bounds.bottom, img.top + img.size);
+      }
+      return bounds;
+    }
+
+    function buildEventLayout(sorted, range) {
+      const cardW = layoutSettings.cardWidth;
+      const used = [];
+      const candidates = laneSequence(18);
+      const items = sorted.map(ev => ({ ev, cardW, cardH: cardHeightFor(ev, cardW), ...axisPositionFor(ev, range) }));
+
+      items.forEach((item, index) => {
+        const manualLane = item.ev.lane != null ? item.ev.lane : null;
+        const choices = manualLane !== null ? [manualLane] : candidates;
+        let chosen = choices[0] || (index % 2 ? -1 : 1);
+
+        for (const lane of choices) {
+          const conflict = used.some(other => {
+            if (other.lane !== lane) return false;
+            if (orientation === 'horizontal') return Math.abs(other.x - item.x) < (cardW + 24);
+            return Math.abs(other.y - item.y) < (Math.max(other.cardH, item.cardH) + 22);
+          });
+          if (!conflict) { chosen = lane; break; }
+        }
+
+        item.lane = chosen;
+        item.ev.autoLane = chosen;
+        if (orientation === 'horizontal') {
+          item.left = Math.round(item.x - cardW / 2);
+          item.top = Math.round(axisY - chosen * layoutSettings.laneGap - (chosen > 0 ? item.cardH : 0));
+          item.attachX = Math.round(item.x);
+          item.attachY = chosen > 0 ? item.top + item.cardH : item.top;
+        } else {
+          item.left = Math.round(axisX + chosen * layoutSettings.laneGap - (chosen < 0 ? cardW : 0));
+          item.top = Math.round(item.y - item.cardH / 2);
+          item.attachX = chosen < 0 ? item.left + cardW : item.left;
+          item.attachY = Math.round(item.y);
+        }
+        used.push(item);
+      });
+
+      const maxAbsLane = Math.max(4, ...items.map(item => Math.abs(item.lane)));
+      if (orientation === 'horizontal') {
+        const neededTop = Math.max(24, ...items.filter(i => i.lane > 0).map(i => axisY - itemBoundsWithImage(i).top + 120));
+        const neededBottom = Math.max(240, ...items.filter(i => i.lane < 0).map(i => itemBoundsWithImage(i).bottom - axisY + 130));
+        canvasH = Math.max(canvasH, neededTop + neededBottom);
+        axisY = Math.max(250, neededTop);
+      } else {
+        const neededLeft = Math.max(230, ...items.filter(i => i.lane < 0).map(i => axisX - itemBoundsWithImage(i).left + 110));
+        const neededRight = Math.max(230, ...items.filter(i => i.lane > 0).map(i => itemBoundsWithImage(i).right - axisX + 120));
+        canvasW = Math.max(canvasW, neededLeft + neededRight);
+        axisX = Math.max(260, neededLeft);
+      }
+
+      const noteReserveAfterLayout = estimateTimelineNoteHeight(canvasW);
+      if (noteReserveAfterLayout > 0) {
+        canvasH += noteReserveAfterLayout;
+      }
+
+      return items.map(item => {
+        const refreshed = { ...item, ...axisPositionFor(item.ev, range) };
+        if (orientation === 'horizontal') {
+          refreshed.left = Math.round(refreshed.x - refreshed.cardW / 2);
+          refreshed.top = Math.round(axisY - refreshed.lane * layoutSettings.laneGap - (refreshed.lane > 0 ? refreshed.cardH : 0));
+          refreshed.attachX = Math.round(refreshed.x);
+          refreshed.attachY = refreshed.lane > 0 ? refreshed.top + refreshed.cardH : refreshed.top;
+        } else {
+          refreshed.left = Math.round(axisX + refreshed.lane * layoutSettings.laneGap - (refreshed.lane < 0 ? refreshed.cardW : 0));
+          refreshed.top = Math.round(refreshed.y - refreshed.cardH / 2);
+          refreshed.attachX = refreshed.lane < 0 ? refreshed.left + refreshed.cardW : refreshed.left;
+          refreshed.attachY = Math.round(refreshed.y);
+        }
+        return refreshed;
+      });
+    }
+
+    function render() {
+      const range = getRange();
+      if (!range) return;
+      applyOrientationLayout();
+      const { sorted } = layoutMetrics(range);
+      const title = document.getElementById('timelineTitle').value.trim() || '事件時間軸';
+
+      const area = document.getElementById('canvasArea');
+      area.style.width = `${canvasW}px`;
+      area.style.height = `${canvasH}px`;
+      area.style.minWidth = `${canvasW}px`;
+      area.style.minHeight = `${canvasH}px`;
+
+      document.getElementById('titleMain').textContent = title;
+      const titleBox = document.getElementById('titleBox');
+      titleBox.style.setProperty('--title-font-size', `${titleFontSize()}px`);
+      titleBox.style.left = `${titlePos.x}px`;
+      titleBox.style.top = `${titlePos.y}px`;
+
+      const zone = document.getElementById('timelineZone');
+      zone.style.width = `${canvasW - 90}px`;
+      zone.style.height = `${canvasH - 150}px`;
+      zone.style.transform = `scale(${zoom})`;
+      zone.innerHTML = '';
+
+      lastLayout = buildEventLayout(sorted, range);
+      area.style.width = `${canvasW}px`;
+      area.style.height = `${canvasH}px`;
+      area.style.minWidth = `${canvasW}px`;
+      area.style.minHeight = `${canvasH}px`;
+      zone.style.width = `${canvasW - 90}px`;
+      zone.style.height = `${canvasH - 150}px`;
+
+      renderAxisAndTicks(zone, range);
+      lastLayout.forEach(item => renderEvent(zone, item));
+      renderMiniMap(range, sorted);
+      renderTimelineNoteBox();
+      document.getElementById('zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+      syncLayoutControls();
+    }
+
+    function renderTimelineNoteBox() {
+      const noteBox = document.getElementById('timelineNoteBox');
+      if (!noteBox) return;
+      const note = getTimelineNote();
+      noteBox.textContent = note;
+      noteBox.style.fontSize = `${noteFontSize()}px`;
+      noteBox.style.display = note ? 'block' : 'none';
+    }
+
+    function renderAxisAndTicks(zone, range) {
+      const leftPad = 130, rightPad = 130, topPad = axisY, bottomPad = 90;
+      const usedLanes = [...new Set(lastLayout.map(item => item.lane))].sort((a, b) => b - a);
+      if (orientation === 'horizontal') {
+        addDiv(zone, 'axis-line horizontal', { left: `${leftPad}px`, top: `${axisY}px`, width: `${canvasW - leftPad - rightPad}px` });
+        addText(zone, 'lane-title', '上方事件', 18, axisY - layoutSettings.laneGap - 18);
+        addText(zone, 'lane-title', '下方事件', 18, axisY + layoutSettings.laneGap + 6);
+        usedLanes.forEach(l => {
+          const y = axisY - l * layoutSettings.laneGap;
+          addDiv(zone, 'lane-guide horizontal', { left: `${leftPad}px`, top: `${y}px`, width: `${canvasW - leftPad - rightPad}px` });
+          addText(zone, 'lane-number', `L${Math.abs(l)}`, 30, y - 10);
+        });
+        makeMonthTicks(range.start.date, range.end.date).forEach(t => {
+          const p = timeToPercent(t.date, range);
+          const x = leftPad + (canvasW - leftPad - rightPad) * p;
+          addDiv(zone, 'tick' + (t.month === 1 ? ' major' : ''), { left: `${x}px`, top: `${axisY - (t.month === 1 ? 18 : 10)}px`, width: '1px', height: `${t.month === 1 ? 42 : 24}px` });
+          if (t.month === 1) addText(zone, 'year-label', `${t.rocYear}年`, x - 16, axisY - 52);
+          addText(zone, 'tick-label', `${t.month}月`, x - 10, axisY + 30);
+        });
+      } else {
+        addDiv(zone, 'axis-line vertical', { left: `${axisX}px`, top: `${topPad}px`, height: `${canvasH - topPad - bottomPad}px` });
+        addText(zone, 'lane-title', '左側事件', axisX - layoutSettings.laneGap - 84, 98);
+        addText(zone, 'lane-title', '右側事件', axisX + layoutSettings.laneGap + 18, 98);
+        usedLanes.forEach(l => {
+          const x = axisX + l * layoutSettings.laneGap;
+          addDiv(zone, 'lane-guide vertical', { left: `${x}px`, top: `${topPad}px`, height: `${canvasH - topPad - bottomPad}px` });
+          addText(zone, 'lane-number', `L${Math.abs(l)}`, x - 14, 122);
+        });
+        makeMonthTicks(range.start.date, range.end.date).forEach(t => {
+          const p = timeToPercent(t.date, range);
+          const y = topPad + (canvasH - topPad - bottomPad) * p;
+          addDiv(zone, 'tick' + (t.month === 1 ? ' major' : ''), { left: `${axisX - (t.month === 1 ? 20 : 11)}px`, top: `${y}px`, width: `${t.month === 1 ? 42 : 24}px`, height: '1px' });
+          if (t.month === 1) addText(zone, 'year-label', `${t.rocYear}年`, axisX - 72, y - 8);
+          addText(zone, 'tick-label', `${t.month}月`, axisX + 30, y - 8);
+        });
+      }
+    }
+
+    function addDiv(parent, cls, styles) {
+      const el = document.createElement('div');
+      el.className = cls;
+      Object.assign(el.style, styles);
+      parent.appendChild(el);
+      return el;
+    }
+
+    function addText(parent, cls, text, x, y) {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.textContent = text;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      parent.appendChild(el);
+      return el;
+    }
+
+    function makeMonthTicks(start, end) {
+      const arr = [];
+      const d = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (d <= end) {
+        arr.push({ date: new Date(d), month: d.getMonth() + 1, rocYear: d.getFullYear() - 1911 });
+        d.setMonth(d.getMonth() + 1);
+      }
+      return arr;
+    }
+
+    function renderEvent(zone, item) {
+      const { ev, x, y, left, top, cardW, cardH, attachX, attachY } = item;
+      const color = ev.color || eventColors[0];
+
+      if (orientation === 'horizontal') {
+        addDiv(zone, 'event-line', {
+          color,
+          left: `${x}px`,
+          top: `${Math.min(axisY, attachY)}px`,
+          width: '2px',
+          height: `${Math.abs(axisY - attachY) || 1}px`
+        });
+        addDiv(zone, 'event-point', { color, left: `${x}px`, top: `${axisY}px` });
+        makeCard(zone, ev, left, top, cardW, cardH);
+        makeEventImageBox(zone, item);
+      } else {
+        addDiv(zone, 'event-line', {
+          color,
+          left: `${Math.min(axisX, attachX)}px`,
+          top: `${y}px`,
+          height: '2px',
+          width: `${Math.abs(axisX - attachX) || 1}px`
+        });
+        addDiv(zone, 'event-point', { color, left: `${axisX}px`, top: `${y}px` });
+        makeCard(zone, ev, left, top, cardW, cardH);
+        makeEventImageBox(zone, item);
+      }
+    }
+
+    function imagePositionForItem(item) {
+      const { ev, left, top, cardW, cardH, lane } = item;
+      if (!eventShowsImage(ev)) return null;
+      const size = eventImageSize(cardW);
+      const gap = eventImageGap();
+      if (orientation === 'horizontal') {
+        return {
+          left: Math.round(left + (cardW - size) / 2),
+          top: Math.round(lane > 0 ? top - gap - size : top + cardH + gap),
+          size
+        };
+      }
+      return {
+        left: Math.round(lane < 0 ? left - gap - size : left + cardW + gap),
+        top: Math.round(top + (cardH - size) / 2),
+        size
+      };
+    }
+
+    function makeEventImageBox(zone, item) {
+      const pos = imagePositionForItem(item);
+      if (!pos) return;
+      const ev = item.ev;
+      const box = document.createElement('div');
+      box.className = 'event-image-box';
+      box.style.color = ev.color || eventColors[0];
+      box.style.left = `${pos.left}px`;
+      box.style.top = `${pos.top}px`;
+      box.style.width = `${pos.size}px`;
+      box.style.height = `${pos.size}px`;
+      box.title = eventHasImage(ev) ? '點擊更換圖片，也可拖曳圖片到此' : '點擊上傳圖片，也可拖曳圖片到此';
+      box.onpointerdown = e => e.stopPropagation();
+      box.onclick = e => { e.stopPropagation(); triggerEventImageUpload(ev.id); };
+      box.ondragover = e => { e.preventDefault(); e.stopPropagation(); box.classList.add('drag-over'); };
+      box.ondragleave = e => { e.preventDefault(); e.stopPropagation(); box.classList.remove('drag-over'); };
+      box.ondrop = e => handleEventImageDrop(e, ev.id);
+      if (eventHasImage(ev)) {
+        box.innerHTML = `<img src="${ev.imageData}" alt="${escapeHtml(ev.imageName || ev.name)}"><button class="event-image-delete" title="移除圖片" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); removeEventImage('${ev.id}')">×</button>`;
+      } else {
+        box.innerHTML = `<div class="event-image-placeholder">＋<br>拖曳或點擊<br>加入圖片</div>`;
+      }
+      zone.appendChild(box);
+    }
+
+    function makeCard(zone, ev, left, top, width, height) {
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.dataset.id = ev.id;
+      card.style.color = ev.color || eventColors[0];
+      card.style.left = `${left}px`;
+      card.style.top = `${top}px`;
+      card.style.width = `${width}px`;
+      card.style.minHeight = `${height}px`;
+      card.style.setProperty('--event-font-size', `${eventFontSize()}px`);
+      card.style.setProperty('--event-date-font-size', `${dateFontSize()}px`);
+      card.style.setProperty('--event-desc-font-size', `${eventDescFontSize()}px`);
+      card.onpointerdown = e => startDragEvent(e, ev.id, card);
+      const showDesc = ev.showDesc !== false && ev.desc;
+      const descHtml = showDesc ? `<div class="event-desc">${escapeHtml(ev.desc)}</div>` : '';
+      card.innerHTML = `<div class="event-card-actions" onpointerdown="event.stopPropagation()"><button class="event-icon-btn" title="編輯事件" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); editEvent('${ev.id}')">✎</button><button class="event-icon-btn danger" title="刪除事件" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); deleteEvent('${ev.id}', true)">×</button></div><div class="event-name">${escapeHtml(ev.name)}</div><div class="event-date">${ev.roc}</div>${descHtml}`;
+      zone.appendChild(card);
+    }
+
+    function renderMiniMap(range, sorted) {
+      const box = document.getElementById('miniMap');
+      box.innerHTML = `<div class="mini-axis ${orientation}"></div>`;
+      sorted.forEach(ev => {
+        const p = timeToPercent(ev.date, range);
+        const d = document.createElement('div');
+        d.className = 'mini-dot';
+        d.style.background = ev.color || eventColors[0];
+        if (orientation === 'horizontal') {
+          d.style.left = `calc(22px + (100% - 44px) * ${p})`;
+          d.style.top = '35px';
+        } else {
+          d.style.left = '50%';
+          d.style.top = `calc(10px + (100% - 20px) * ${p})`;
+        }
+        box.appendChild(d);
+      });
+    }
+
+    function startDragEvent(e, id, card) {
+      e.preventDefault();
+      e.stopPropagation();
+      const zone = document.getElementById('timelineZone');
+      const rect = zone.getBoundingClientRect();
+      const startX = (e.clientX - rect.left) / zoom;
+      const startY = (e.clientY - rect.top) / zoom;
+      const startLeft = parseFloat(card.style.left);
+      const startTop = parseFloat(card.style.top);
+      card.classList.add('dragging');
+      card.setPointerCapture?.(e.pointerId);
+
+      function move(ev) {
+        const x = (ev.clientX - rect.left) / zoom;
+        const y = (ev.clientY - rect.top) / zoom;
+        card.style.left = `${startLeft + x - startX}px`;
+        card.style.top = `${startTop + y - startY}px`;
+      }
+
+      function up(ev) {
+        const currentLeft = parseFloat(card.style.left);
+        const currentTop = parseFloat(card.style.top);
+        const item = events.find(x => x.id === id);
+        if (item) {
+          if (orientation === 'horizontal') {
+            const cardCenterY = currentTop + card.offsetHeight / 2;
+            let lane = Math.round((axisY - cardCenterY) / layoutSettings.laneGap);
+            if (lane === 0) lane = cardCenterY < axisY ? 1 : -1;
+            item.lane = Math.max(-12, Math.min(12, lane));
+          } else {
+            const cardCenterX = currentLeft + card.offsetWidth / 2;
+            let lane = Math.round((cardCenterX - axisX) / layoutSettings.laneGap);
+            if (lane === 0) lane = cardCenterX > axisX ? 1 : -1;
+            item.lane = Math.max(-12, Math.min(12, lane));
+          }
+        }
+        card.classList.remove('dragging');
+        try { card.releasePointerCapture?.(ev.pointerId); } catch {}
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        render();
+      }
+
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    }
+
+    function startDragTitle(e) {
+      e.preventDefault();
+      const startX = e.clientX, startY = e.clientY, ox = titlePos.x, oy = titlePos.y;
+      function move(ev) {
+        titlePos.x = Math.max(0, ox + ev.clientX - startX);
+        titlePos.y = Math.max(0, oy + ev.clientY - startY);
+        const box = document.getElementById('titleBox');
+        box.style.left = `${titlePos.x}px`;
+        box.style.top = `${titlePos.y}px`;
+      }
+      function up() { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    }
+
+    function changeZoom(delta) { zoom = Math.max(.6, Math.min(1.6, zoom + delta)); render(); }
+    function resetView() { zoom = 1; render(); }
+    function resetTitlePosition() { titlePos = orientation === 'horizontal' ? { x: 320, y: 24 } : { x: 160, y: 24 }; render(); }
+
+    function saveProjectJson() {
+      const data = {
+        version: 'roc-timeline-html-v7-detached-event-images',
+        title: document.getElementById('timelineTitle').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        timelineNote: getTimelineNote(),
+        titlePos,
+        orientation,
+        zoom,
+        layoutSettings: { ...layoutSettings },
+        theme: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
+        events: events.map(e => ({ ...e, date: e.roc }))
+      };
+      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }), `${safeName(data.title)}_時間軸暫存.json`);
+    }
+
+    function loadProjectJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const data = JSON.parse(r.result);
+          document.getElementById('timelineTitle').value = data.title || '事件時間軸';
+          document.getElementById('startDate').value = data.startDate || '113/01/01';
+          document.getElementById('endDate').value = data.endDate || '114/12/31';
+          const noteEl = document.getElementById('timelineNote');
+          if (noteEl) noteEl.value = data.timelineNote || data.note || '';
+          if (data.theme) setTheme(data.theme);
+          titlePos = data.titlePos || { x: 320, y: 24 };
+          orientation = data.orientation || 'horizontal';
+          zoom = data.zoom || 1;
+          Object.assign(layoutSettings, data.layoutSettings || {});
+          if (!layoutSettings.titleFontSize) layoutSettings.titleFontSize = 24;
+          if (!layoutSettings.eventFontSize) layoutSettings.eventFontSize = 14;
+          if (!layoutSettings.dateFontSize) layoutSettings.dateFontSize = 12;
+          if (!layoutSettings.eventDescFontSize) layoutSettings.eventDescFontSize = 12;
+          if (!layoutSettings.noteFontSize) layoutSettings.noteFontSize = 14;
+          syncLayoutControls();
+          events = (data.events || []).map(item => {
+            const p = parseRocDate(item.date || item.roc);
+            if (!p) return null;
+            return { id: item.id || uid(), name: item.name || '未命名事件', date: p.date, roc: p.roc, western: p.western, desc: item.desc || '', showDesc: item.showDesc !== false, color: item.color || eventColors[0], lane: item.lane != null ? item.lane : null, showImage: item.showImage !== false, imageData: item.imageData || null, imageName: item.imageName || '' };
+          }).filter(Boolean);
+          render();
+          msg('暫存檔已讀取。');
+        } catch { msg('讀取失敗，請確認 JSON 格式。', 'error'); }
+      };
+      r.readAsText(file, 'utf-8');
+      e.target.value = '';
+    }
+
+    async function exportTimelinePng() {
+      const range = getRange();
+      if (!range) return msg('時間區段格式錯誤。', 'error');
+      applyOrientationLayout();
+      render();
+      const { sorted } = layoutMetrics(range);
+      const exportLayout = buildEventLayout(sorted, range);
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasW * scale;
+      canvas.height = canvasH * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      await drawExport(ctx, range, exportLayout);
+      canvas.toBlob(blob => downloadBlob(blob, `${safeName(document.getElementById('timelineTitle').value)}.png`), 'image/png');
+    }
+
+    function drawRoundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+    }
+
+    async function drawExport(ctx, range, items = null) {
+      const layoutItems = items || buildEventLayout([...events].sort((a,b)=>a.date-b.date), range);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,canvasW,canvasH);
+      drawRoundRect(ctx, 10, 10, canvasW-20, canvasH-20, 8, '#ffffff', '#d8e0ec');
+      drawTitle(ctx, range);
+      drawAxisCanvas(ctx, range);
+      for (const item of layoutItems) await drawEventCanvas(ctx, item);
+      drawTimelineNoteCanvas(ctx);
+    }
+
+    function drawTimelineNoteCanvas(ctx) {
+      const note = getTimelineNote();
+      if (!note) return;
+      const fontSize = noteFontSize();
+      const left = 90;
+      const right = 90;
+      const width = canvasW - left - right;
+      const paddingX = 16;
+      const paddingY = 12;
+      const lineHeight = fontSize * 1.7;
+      const maxTextWidth = width - paddingX * 2;
+
+      ctx.save();
+      ctx.font = `${fontSize}px Microsoft JhengHei, Noto Sans TC, Arial`;
+      const rawLines = String(note).replace(/\r\n/g, '\n').split('\n');
+      const lines = [];
+      rawLines.forEach(line => {
+        wrapCanvasText(ctx, line, maxTextWidth, 999).forEach(w => lines.push(w));
+      });
+      const boxHeight = paddingY * 2 + lines.length * lineHeight;
+      const y = canvasH - 28 - boxHeight;
+
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.fillRect(left, y, width, boxHeight);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(left + width, y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#334155';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      lines.forEach((line, index) => {
+        ctx.fillText(line, left + paddingX, y + paddingY + index * lineHeight);
+      });
+      ctx.restore();
+    }
+
+    function drawLaneGuidesCanvas(ctx, items) {
+      const usedLanes = [...new Set(items.map(item => item.lane))];
+      ctx.save();
+      ctx.strokeStyle = '#e8eef6';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px Microsoft JhengHei, Arial';
+      ctx.setLineDash([5, 5]);
+      if (orientation === 'horizontal') {
+        usedLanes.forEach(l => {
+          const y = axisY - l * layoutSettings.laneGap;
+          ctx.beginPath();
+          ctx.moveTo(130, y);
+          ctx.lineTo(canvasW - 130, y);
+          ctx.stroke();
+          ctx.fillText(`L${Math.abs(l)}`, 30, y + 4);
+        });
+      } else {
+        usedLanes.forEach(l => {
+          const x = axisX + l * layoutSettings.laneGap;
+          ctx.beginPath();
+          ctx.moveTo(x, axisY);
+          ctx.lineTo(x, canvasH - 90);
+          ctx.stroke();
+          ctx.fillText(`L${Math.abs(l)}`, x - 12, 126);
+        });
+      }
+      ctx.restore();
+    }
+
+    function drawTitle(ctx, range) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = getCss('--primary-dark');
+      ctx.font = `900 ${titleFontSize()}px Microsoft JhengHei, Arial`;
+      ctx.fillText(document.getElementById('timelineTitle').value || '事件時間軸', titlePos.x + 180, titlePos.y + Math.max(34, titleFontSize() + 10));
+      /*匯出不要時間範圍ctx.font = '16px Microsoft JhengHei, Arial';
+      ctx.fillStyle = '#334155';
+      ctx.fillText(`${range.start.roc} ~ ${range.end.roc}`, titlePos.x + 180, titlePos.y + 62);*/
+    }
+
+    function drawAxisCanvas(ctx, range) {
+      ctx.strokeStyle = '#18365e';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      if (orientation === 'horizontal') {
+        ctx.moveTo(130, axisY);
+        ctx.lineTo(canvasW - 130, axisY);
+      } else {
+        ctx.moveTo(axisX, axisY);
+        ctx.lineTo(axisX, canvasH - 90);
+      }
+      ctx.stroke();
+      makeMonthTicks(range.start.date, range.end.date).forEach(t => drawTickCanvas(ctx, t, range));
+    }
+
+    function drawTickCanvas(ctx, t, range) {
+      const p = timeToPercent(t.date, range);
+      ctx.strokeStyle = t.month === 1 ? '#94a3b8' : '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#334155';
+      ctx.textAlign = 'center';
+      if (orientation === 'horizontal') {
+        const x = 130 + (canvasW - 260) * p;
+        ctx.beginPath();
+        ctx.moveTo(x, axisY - (t.month === 1 ? 18 : 10));
+        ctx.lineTo(x, axisY + (t.month === 1 ? 24 : 14));
+        ctx.stroke();
+        ctx.font = t.month === 1 ? '900 16px Microsoft JhengHei, Arial' : '13px Microsoft JhengHei, Arial';
+        ctx.fillText(t.month === 1 ? `${t.rocYear}年` : `${t.month}月`, x, axisY + (t.month === 1 ? -34 : 36));
+      } else {
+        const y = axisY + (canvasH - axisY - 90) * p;
+        ctx.beginPath();
+        ctx.moveTo(axisX - (t.month === 1 ? 20 : 11), y);
+        ctx.lineTo(axisX + (t.month === 1 ? 22 : 13), y);
+        ctx.stroke();
+        ctx.font = t.month === 1 ? '900 16px Microsoft JhengHei, Arial' : '13px Microsoft JhengHei, Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(t.month === 1 ? `${t.rocYear}年` : `${t.month}月`, axisX + 30, y + 4);
+      }
+    }
+
+    async function drawEventCanvas(ctx, item) {
+      const { ev, x, y, left, top, cardW, cardH, attachX, attachY } = item;
+      const color = ev.color || eventColors[0];
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      if (orientation === 'horizontal') {
+        ctx.moveTo(x, axisY);
+        ctx.lineTo(x, attachY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, axisY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        await drawEventImageCanvas(ctx, item);
+        await drawCardCanvas(ctx, ev, left, top, color, cardW, cardH);
+      } else {
+        ctx.moveTo(axisX, y);
+        ctx.lineTo(attachX, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(axisX, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        await drawEventImageCanvas(ctx, item);
+        await drawCardCanvas(ctx, ev, left, top, color, cardW, cardH);
+      }
+    }
+
+    async function drawEventImageCanvas(ctx, item) {
+      const pos = imagePositionForItem(item);
+      if (!pos) return;
+      const ev = item.ev;
+      const color = ev.color || eventColors[0];
+      const img = eventHasImage(ev) ? await loadImageForCanvas(ev.imageData) : null;
+      drawRoundRect(ctx, pos.left, pos.top, pos.size, pos.size, 8, '#f8fafc', 'rgba(100,116,139,.42)');
+      if (img) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pos.left + 8, pos.top);
+        ctx.arcTo(pos.left + pos.size, pos.top, pos.left + pos.size, pos.top + pos.size, 8);
+        ctx.arcTo(pos.left + pos.size, pos.top + pos.size, pos.left, pos.top + pos.size, 8);
+        ctx.arcTo(pos.left, pos.top + pos.size, pos.left, pos.top, 8);
+        ctx.arcTo(pos.left, pos.top, pos.left + 8, pos.top, 8);
+        ctx.closePath();
+        ctx.clip();
+        drawContainImage(ctx, img, pos.left, pos.top, pos.size, pos.size);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px Microsoft JhengHei, Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('拖曳或點擊', pos.left + pos.size / 2, pos.top + pos.size / 2 - 8);
+        ctx.fillText('加入圖片', pos.left + pos.size / 2, pos.top + pos.size / 2 + 10);
+      }
+    }
+
+
+    function loadImageForCanvas(src) {
+      if (!src) return Promise.resolve(null);
+      if (imageCache.has(src)) return imageCache.get(src);
+      const promise = new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+      imageCache.set(src, promise);
+      return promise;
+    }
+
+    function drawContainImage(ctx, img, x, y, w, h) {
+      const ratio = Math.min(w / img.width, h / img.height);
+      const dw = img.width * ratio;
+      const dh = img.height * ratio;
+      const dx = x + (w - dw) / 2;
+      const dy = y + (h - dh) / 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, h);
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    async function drawCardCanvas(ctx, ev, x, y, color, cardW = 150, cardH = 68) {
+      const showDesc = ev.showDesc !== false && ev.desc;
+
+      drawRoundRect(ctx, x, y, cardW, cardH, 8, '#ffffff', color);
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      let contentY = y + 11;
+
+      const nameSize = eventFontSize();
+      const dateSize = dateFontSize();
+      const descSize = eventDescFontSize();
+      const nameLineHeight = Math.ceil(nameSize * 1.35);
+      const descLineHeight = Math.ceil(descSize * 1.4);
+      const exportTextW = Math.max(56, cardW - 62);
+
+      ctx.fillStyle = color;
+      ctx.font = `900 ${nameSize}px Microsoft JhengHei, Arial`;
+      const nameLines = wrapCanvasText(ctx, ev.name, exportTextW, 99);
+      nameLines.forEach((line, index) => {
+        ctx.fillText(line, x + 12, contentY + index * nameLineHeight);
+      });
+
+      const dateY = contentY + 2 + nameLines.length * nameLineHeight;
+      ctx.fillStyle = '#334155';
+      ctx.font = `${dateSize}px Microsoft JhengHei, Arial`;
+      ctx.fillText(ev.roc, x + 12, dateY);
+
+      if (showDesc) {
+        const descY = dateY + dateSize + 8;
+        ctx.strokeStyle = 'rgba(100,116,139,.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 12, descY - 6);
+        ctx.lineTo(x + 12 + exportTextW, descY - 6);
+        ctx.stroke();
+
+        ctx.fillStyle = '#475569';
+        ctx.font = `${descSize}px Microsoft JhengHei, Arial`;
+        const descLines = wrapCanvasText(ctx, ev.desc, exportTextW, 99);
+        descLines.forEach((line, index) => {
+          ctx.fillText(line, x + 12, descY + index * descLineHeight);
+        });
+      }
+    }
+
+    function wrapCanvasText(ctx, text, maxWidth, maxLines = 2) {
+      const source = String(text || '').trim();
+      if (!source) return [''];
+
+      const chars = source.split('');
+      const lines = [];
+      let line = '';
+
+      chars.forEach(ch => {
+        const test = line + ch;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = ch;
+        } else {
+          line = test;
+        }
+      });
+
+      if (line) lines.push(line);
+
+      if (lines.length > maxLines) {
+        const limited = lines.slice(0, maxLines);
+        limited[maxLines - 1] = limited[maxLines - 1].slice(0, Math.max(0, limited[maxLines - 1].length - 1)) + '…';
+        return limited;
+      }
+
+      return lines;
+    }
+
+    function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function downloadBlob(blob, filename) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000); }
+    function safeName(s) { return String(s || '事件時間軸').replace(/[\\/:*?"<>|]/g, '_').slice(0, 50); }
+    function escapeHtml(s) { return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
+    function trim(s, n) { s = String(s || ''); return s.length > n ? s.slice(0,n) + '…' : s; }
+
+    function setQuickRange(type) {
+      const now = new Date();
+      let y = now.getFullYear() - 1911;
+      if (type === 'lastYear') y -= 1;
+      if (type === 'futureYear') {
+        const next = new Date(now); next.setFullYear(now.getFullYear() + 1);
+        document.getElementById('startDate').value = `${y}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+        document.getElementById('endDate').value = `${next.getFullYear()-1911}/${String(next.getMonth()+1).padStart(2,'0')}/${String(next.getDate()).padStart(2,'0')}`;
+      } else {
+        document.getElementById('startDate').value = `${y}/01/01`;
+        document.getElementById('endDate').value = `${y}/12/31`;
+      }
+      render();
+    }
+
+    function makeSampleImageData(title, color, shape = 'wide') {
+      const size = 260;
+      const svgW = shape === 'tall' ? 180 : (shape === 'wide' ? 360 : 260);
+      const svgH = shape === 'tall' ? 360 : (shape === 'wide' ? 180 : 260);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+        <rect width="100%" height="100%" rx="18" fill="#f8fafc"/>
+        <rect x="10" y="10" width="${svgW - 20}" height="${svgH - 20}" rx="16" fill="${color}" opacity="0.14" stroke="${color}" stroke-width="5"/>
+        <circle cx="${svgW * 0.24}" cy="${svgH * 0.34}" r="${Math.min(svgW, svgH) * 0.14}" fill="${color}" opacity="0.9"/>
+        <path d="M ${svgW * 0.08} ${svgH * 0.82} L ${svgW * 0.38} ${svgH * 0.52} L ${svgW * 0.55} ${svgH * 0.68} L ${svgW * 0.72} ${svgH * 0.46} L ${svgW * 0.94} ${svgH * 0.82} Z" fill="${color}" opacity="0.42"/>
+        <text x="50%" y="${svgH - 24}" text-anchor="middle" font-family="Microsoft JhengHei, Noto Sans TC, Arial" font-size="24" font-weight="900" fill="#334155">${escapeHtml(title)}</text>
+      </svg>`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+
+    function loadSample() {
+      document.getElementById('timelineTitle').value = '可以直接刪除--專案進度與里程碑時間軸';
+      document.getElementById('startDate').value = '1130101';
+      document.getElementById('endDate').value = '1141231';
+      const samples = [
+        ['專案啟動會議','1130215','#2563eb', true, makeSampleImageData('啟動會議', '#2563eb', 'wide')],
+        ['需求分析完成','1130320','#16a34a', false, null],
+        ['系統設計審核','1130510','#f97316', true, makeSampleImageData('設計審核', '#f97316', 'tall')],
+        ['原型開發完成','1130630','#8b5cf6', false, null],
+        ['期中檢討會議','1130915','#ef4444', true, makeSampleImageData('期中檢討', '#ef4444', 'square')],
+        ['系統測試開始','1131020','#2563eb', false, null],
+        ['使用者測試','1140205','#16a34a', true, makeSampleImageData('使用者測試', '#16a34a', 'wide')],
+        ['教育訓練','1140315','#f97316', false, null],
+        ['專案上線','1140601','#8b5cf6', true, makeSampleImageData('專案上線', '#8b5cf6', 'tall')],
+        ['專案結案','1140930','#0f8b8d', false, null]
+      ];
+      events = samples.map(s => { const p = parseRocDate(s[1]); return { id: uid(), name: s[0], date: p.date, roc: p.roc, western: p.western, color: s[2], desc: '可在左側編輯事件描述，並指定是否顯示。', showDesc: false, lane: null, showImage: Boolean(s[3]), imageData: s[4] || null, imageName: s[3] ? `${s[0]}示意圖.svg` : '' }; });
+      render();
+    }
+
+    function showHelp() { alert('操作方式：\n1. 輸入民國日期區間。\n2. 新增事件。\n3. 拖曳事件卡片可調整層級，放開後才會重新排版。\n4. 可切換水平或垂直時間軸。\n5. 可在事件卡片點擊或拖曳加入圖片，並儲存 JSON 或匯出 PNG。'); }
+
+    window.addEventListener('resize', () => {
+      clearTimeout(window.__timelineResizeTimer);
+      window.__timelineResizeTimer = setTimeout(render, 120);
+    });
+
+    if (new URLSearchParams(location.search).get('mode') === 'vertical') {
+      orientation = 'vertical';
+      titlePos = { x: 160, y: 24 };
+    }
+
+    renderColorPicker();
+    loadSample();
+  </script>
+</body>
+</html>
