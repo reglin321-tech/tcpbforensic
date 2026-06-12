@@ -15,6 +15,10 @@
       --primary-dark: #243b86;
       --danger: #ef4444;
       --axis: #334155;
+      --axis-soft: #cbd5e1;
+      --timeline-label: #334155;
+      --timeline-border: #d8e0ec;
+      --timeline-bg-soft: #f8fafc;
       --shadow: 0 12px 30px rgba(15, 23, 42, .07);
       --radius: 8px;
     }
@@ -317,31 +321,31 @@
       z-index: 2;
     }
 
-    .tick.major { background: #94a3b8; }
+    .tick.major { background: var(--axis-soft); }
     .tick-label, .year-label, .lane-number, .lane-title {
       position: absolute;
-      color: #334155;
+      color: var(--timeline-label);
       white-space: nowrap;
       user-select: none;
     }
 
     .tick-label { font-size: 12px; }
-    .year-label { font-size: 15px; font-weight: 900; color: #0f172a; }
+    .year-label { font-size: 15px; font-weight: 900; color: var(--axis); }
     .lane-number {
       font-size: 11px;
-      color: #94a3b8;
+      color: var(--axis-soft);
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 999px;
       padding: 1px 6px;
       z-index: 3;
     }
-    .lane-title { font-size: 12px; color: #64748b; font-weight: 800; }
+    .lane-title { font-size: 12px; color: var(--timeline-label); font-weight: 800; }
     .lane-guide {
       position: absolute;
       z-index: 1;
       pointer-events: none;
-      border-color: #e8eef6;
+      border-color: var(--axis-soft);
     }
     .lane-guide.horizontal {
       border-top: 1px dashed #e8eef6;
@@ -368,7 +372,6 @@
       white-space: normal;
       word-break: break-word;
       overflow-wrap: anywhere;
-      padding-right: 48px;
     }
 
     .event-card.dragging {
@@ -398,13 +401,62 @@
       word-break: break-word;
       overflow-wrap: anywhere;
     }
+    .event-inline-edit {
+      display: grid;
+      gap: 7px;
+      cursor: default;
+    }
+
+    .event-inline-edit input,
+    .event-inline-edit textarea {
+      width: 100%;
+      border: 1px solid #d8e0ec;
+      border-radius: 7px;
+      padding: 6px 7px;
+      font-size: 12px;
+      background: #fff;
+      color: #1f2937;
+      box-shadow: none;
+    }
+
+    .event-inline-edit textarea {
+      min-height: 58px;
+      resize: vertical;
+    }
+
+    .event-inline-actions {
+      display: flex;
+      gap: 7px;
+      justify-content: flex-end;
+    }
+
+    .event-inline-actions button {
+      border: 1px solid #d8e0ec;
+      border-radius: 7px;
+      background: #fff;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .event-inline-actions .save {
+      color: #065f46;
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .event-inline-actions .cancel {
+      color: #475569;
+    }
+
 
 
     .event-image-box {
       position: absolute;
       border: 1.5px dashed rgba(100, 116, 139, .42);
       border-radius: 8px;
-      background: #f8fafc;
+      background: var(--timeline-bg-soft);
       display: grid;
       place-items: center;
       overflow: hidden;
@@ -418,7 +470,7 @@
 
     .event-image-box:hover {
       border-color: currentColor;
-      background: #f1f5f9;
+      background: var(--timeline-bg-soft);
     }
 
     .event-image-box.drag-over {
@@ -460,35 +512,63 @@
       padding: 0;
     }
 
-    .event-card-actions {
+    .event-floating-actions {
       position: absolute;
-      right: 7px;
-      top: 7px;
-      display: flex;
-      gap: 4px;
-      opacity: .34;
-      transition: opacity .12s ease;
+      z-index: 28;
+      opacity: .58;
+      transition: opacity .12s ease, transform .12s ease;
+      pointer-events: auto;
     }
 
-    .event-card:hover .event-card-actions { opacity: 1; }
+    .event-floating-actions:hover,
+    .event-floating-actions.open {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
 
+    .event-action-trigger,
     .event-icon-btn {
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       border: 1px solid #dbe3ef;
-      border-radius: 7px;
+      border-radius: 8px;
       background: #fff;
       color: #334155;
       display: grid;
       place-items: center;
       cursor: pointer;
       box-shadow: 0 6px 14px rgba(15, 23, 42, .08);
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1;
       padding: 0;
     }
 
-    .event-icon-btn:hover { border-color: currentColor; }
+    .event-action-trigger {
+      color: currentColor;
+      font-weight: 900;
+      border-color: currentColor;
+    }
+
+    .event-action-menu {
+      position: absolute;
+      left: 32px;
+      top: 0;
+      display: none;
+      grid-template-columns: repeat(4, 26px);
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, .14);
+      white-space: nowrap;
+    }
+
+    .event-floating-actions.open .event-action-menu { display: grid; }
+    .event-floating-actions.menu-left .event-action-menu { left: auto; right: 32px; }
+
+    .event-icon-btn:hover { border-color: currentColor; color: currentColor; }
+    .event-icon-btn.active { color: currentColor; border-color: currentColor; background: #f8fafc; }
     .event-icon-btn.danger { color: var(--danger); border-color: #fecaca; }
 
     .event-line { position: absolute; z-index: 5; background: currentColor; pointer-events: none; }
@@ -517,7 +597,7 @@
       display: none;
     }
 
-    .mini-axis { position: absolute; background: #94a3b8; }
+    .mini-axis { position: absolute; background: var(--axis-soft); }
     .mini-axis.horizontal { left: 22px; right: 22px; top: 35px; height: 2px; }
     .mini-axis.vertical { top: 10px; bottom: 10px; left: 50%; width: 2px; }
     .mini-dot { position: absolute; width: 5px; height: 5px; transform: translate(-50%, -50%); border-radius: 50%; }
@@ -528,8 +608,8 @@
       right: 90px;
       bottom: 28px;
       padding: 12px 16px;
-      border-top: 1px solid #cbd5e1;
-      color: #334155;
+      border-top: 1px solid var(--axis-soft);
+      color: var(--timeline-label);
       font-size: 14px;
       line-height: 1.7;
       white-space: pre-wrap;
@@ -786,6 +866,7 @@
     let selectedColor = eventColors[0];
     let events = [];
     let editingId = null;
+    let inlineEditingId = null;
     let imageTargetId = null;
     const imageCache = new Map();
     let zoom = 1;
@@ -808,8 +889,16 @@
     }
 
     function setTheme(color) {
-      document.documentElement.style.setProperty('--primary', color);
-      document.documentElement.style.setProperty('--primary-dark', shade(color, -35));
+      const root = document.documentElement;
+      const dark = shade(color, -35);
+      const axis = shade(color, -22);
+      root.style.setProperty('--primary', color);
+      root.style.setProperty('--primary-dark', dark);
+      root.style.setProperty('--axis', axis);
+      root.style.setProperty('--axis-soft', hexToRgba(color, .34));
+      root.style.setProperty('--timeline-label', dark);
+      root.style.setProperty('--timeline-border', hexToRgba(color, .28));
+      root.style.setProperty('--timeline-bg-soft', hexToRgba(color, .055));
       render();
     }
 
@@ -817,6 +906,17 @@
       const f = parseInt(hex.slice(1),16), t = percent < 0 ? 0 : 255, p = Math.abs(percent)/100;
       const R = f >> 16, G = f >> 8 & 0x00FF, B = f & 0x0000FF;
       return '#' + (0x1000000 + (Math.round((t-R)*p)+R)*0x10000 + (Math.round((t-G)*p)+G)*0x100 + (Math.round((t-B)*p)+B)).toString(16).slice(1);
+    }
+
+
+    function hexToRgba(hex, alpha = 1) {
+      const value = String(hex || '#334155').replace('#', '');
+      const full = value.length === 3 ? value.split('').map(ch => ch + ch).join('') : value;
+      const n = parseInt(full, 16);
+      const r = n >> 16 & 255;
+      const g = n >> 8 & 255;
+      const b = n & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     function renderColorPicker() {
@@ -954,6 +1054,51 @@
 
     function eventImageGap() { return 12; }
 
+    function displayModeLabel(ev) {
+      const descOn = ev && ev.showDesc !== false;
+      const imageOn = ev && ev.showImage !== false;
+      if (descOn && imageOn) return '文字＋圖片';
+      if (descOn && !imageOn) return '只顯示文字';
+      if (!descOn && imageOn) return '只顯示圖片';
+      return '簡潔模式';
+    }
+
+    function toggleEventDesc(id) {
+      const ev = events.find(item => item.id === id);
+      if (!ev) return;
+      ev.showDesc = ev.showDesc === false;
+      if (editingId === id) {
+        const input = document.getElementById('eventShowDesc');
+        if (input) input.checked = ev.showDesc !== false;
+      }
+      msg(ev.showDesc !== false ? '已顯示事件描述。' : '已隱藏事件描述。');
+      render();
+    }
+
+    function toggleEventImageVisibility(id) {
+      const ev = events.find(item => item.id === id);
+      if (!ev) return;
+      ev.showImage = ev.showImage === false;
+      if (editingId === id) {
+        const input = document.getElementById('eventShowImage');
+        if (input) input.checked = ev.showImage !== false;
+      }
+      msg(ev.showImage !== false ? '已顯示圖片框。' : '已隱藏圖片框。');
+      render();
+    }
+
+    function toggleEventActionMenu(id) {
+      document.querySelectorAll('.event-floating-actions.open').forEach(el => {
+        if (el.dataset.id !== id) el.classList.remove('open');
+      });
+      const el = document.querySelector(`.event-floating-actions[data-id="${CSS.escape(id)}"]`);
+      if (el) el.classList.toggle('open');
+    }
+
+    function closeEventActionMenus() {
+      document.querySelectorAll('.event-floating-actions.open').forEach(el => el.classList.remove('open'));
+    }
+
     function submitEvent() {
       const range = getRange();
       if (!range) return msg('時間區段格式錯誤。', 'error');
@@ -988,19 +1133,43 @@
       document.getElementById('eventShowImage').checked = true;
     }
 
-    function editEvent(id) {
+    function startInlineEdit(id) {
       const ev = events.find(e => e.id === id);
       if (!ev) return;
-      editingId = id;
-      selectedColor = ev.color || eventColors[0];
-      document.getElementById('eventName').value = ev.name;
-      document.getElementById('eventDate').value = ev.roc;
-      document.getElementById('eventDesc').value = ev.desc || '';
-      document.getElementById('eventShowDesc').checked = ev.showDesc !== false;
-      document.getElementById('eventShowImage').checked = ev.showImage !== false;
-      document.getElementById('formTitle').textContent = '編輯事件';
-      document.getElementById('eventSubmitBtn').textContent = '儲存修改';
-      renderColorPicker();
+      inlineEditingId = id;
+      closeEventActionMenus();
+      cancelEdit(false);
+      render();
+    }
+
+    function cancelInlineEdit() {
+      inlineEditingId = null;
+      render();
+    }
+
+    function saveInlineEdit(id) {
+      const ev = events.find(e => e.id === id);
+      if (!ev) return;
+      const nameEl = document.getElementById(`inlineName_${id}`);
+      const dateEl = document.getElementById(`inlineDate_${id}`);
+      const descEl = document.getElementById(`inlineDesc_${id}`);
+      const range = getRange();
+      if (!range) return msg('時間區段格式錯誤。', 'error');
+      const name = nameEl ? nameEl.value.trim() : '';
+      const parsed = dateEl ? parseRocDate(dateEl.value) : null;
+      const desc = descEl ? descEl.value.trim() : '';
+      if (!name) return msg('請輸入事件名稱。', 'error');
+      if (!parsed) return msg('事件日期格式錯誤。', 'error');
+      if (parsed.date < range.start.date || parsed.date > range.end.date) return msg('事件不在時間軸區間內。', 'error');
+      Object.assign(ev, { name, date: parsed.date, roc: parsed.roc, western: parsed.western, desc });
+      inlineEditingId = null;
+      sortEvents(false);
+      msg('事件已更新。');
+      render();
+    }
+
+    function editEvent(id) {
+      startInlineEdit(id);
     }
 
     function cancelEdit(clear=true) {
@@ -1014,6 +1183,7 @@
       if (ask && !confirm('確定刪除此事件？')) return;
       events = events.filter(e => e.id !== id);
       if (editingId === id) cancelEdit();
+      if (inlineEditingId === id) inlineEditingId = null;
       render();
     }
     function sortEvents(refresh=true) { events.sort((a,b) => a.date - b.date); if (refresh) render(); }
@@ -1056,8 +1226,8 @@
     function eventDescFontSize() { return boundedNumber(layoutSettings.eventDescFontSize, 9, 24, 12); }
 
     function cardHeightFor(ev, cardW = layoutSettings.cardWidth) {
-      // 與 HTML 卡片的左右 padding / 右上角按鈕保留區一致，避免畫面展開但匯出 PNG 被截斷。
-      const textW = Math.max(56, cardW - 62);
+      // 與 HTML 卡片左右 padding 一致；操作按鈕已移到標籤外，不再占用文字區。
+      const textW = Math.max(56, cardW - 24);
       const nameSize = eventFontSize();
       const dateSize = dateFontSize();
       const descSize = eventDescFontSize();
@@ -1382,6 +1552,7 @@
         addDiv(zone, 'event-point', { color, left: `${x}px`, top: `${axisY}px` });
         makeCard(zone, ev, left, top, cardW, cardH);
         makeEventImageBox(zone, item);
+        makeEventActions(zone, item);
       } else {
         addDiv(zone, 'event-line', {
           color,
@@ -1393,6 +1564,7 @@
         addDiv(zone, 'event-point', { color, left: `${axisX}px`, top: `${y}px` });
         makeCard(zone, ev, left, top, cardW, cardH);
         makeEventImageBox(zone, item);
+        makeEventActions(zone, item);
       }
     }
 
@@ -1413,6 +1585,48 @@
         top: Math.round(top + (cardH - size) / 2),
         size
       };
+    }
+
+    function actionPositionForItem(item) {
+      const { left, top, cardW, lane } = item;
+      const actionW = 26;
+      const gap = 8;
+      if (orientation === 'horizontal') {
+        return {
+          left: Math.round(left + cardW + gap),
+          top: Math.round(top - 2),
+          side: 'right'
+        };
+      }
+      return {
+        left: Math.round(lane < 0 ? left - actionW - gap : left + cardW + gap),
+        top: Math.round(top - 2),
+        side: lane < 0 ? 'left' : 'right'
+      };
+    }
+
+    function makeEventActions(zone, item) {
+      const ev = item.ev;
+      const pos = actionPositionForItem(item);
+      const actions = document.createElement('div');
+      actions.className = `event-floating-actions ${pos.side === 'left' ? 'menu-left' : ''}`;
+      actions.dataset.id = ev.id;
+      actions.style.left = `${pos.left}px`;
+      actions.style.top = `${pos.top}px`;
+      actions.style.color = ev.color || eventColors[0];
+      actions.onpointerdown = e => e.stopPropagation();
+      const descActive = ev.showDesc !== false ? ' active' : '';
+      const imageActive = ev.showImage !== false ? ' active' : '';
+      actions.innerHTML = `
+        <button class="event-action-trigger" title="事件功能" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventActionMenu('${ev.id}')">⋯</button>
+        <div class="event-action-menu">
+          <button class="event-icon-btn" title="編輯名稱、日期與描述" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); startInlineEdit('${ev.id}');">✎</button>
+          <button class="event-icon-btn${descActive}" title="切換事件描述顯示與否" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventDesc('${ev.id}')">文</button>
+          <button class="event-icon-btn${imageActive}" title="切換圖片顯示與否" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventImageVisibility('${ev.id}')">圖</button>
+          <button class="event-icon-btn danger" title="刪除事件" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); deleteEvent('${ev.id}', true)">×</button>
+        </div>
+      `;
+      zone.appendChild(actions);
     }
 
     function makeEventImageBox(zone, item) {
@@ -1443,6 +1657,7 @@
     function makeCard(zone, ev, left, top, width, height) {
       const card = document.createElement('div');
       card.className = 'event-card';
+      if (inlineEditingId === ev.id) card.classList.add('editing');
       card.dataset.id = ev.id;
       card.style.color = ev.color || eventColors[0];
       card.style.left = `${left}px`;
@@ -1452,10 +1667,25 @@
       card.style.setProperty('--event-font-size', `${eventFontSize()}px`);
       card.style.setProperty('--event-date-font-size', `${dateFontSize()}px`);
       card.style.setProperty('--event-desc-font-size', `${eventDescFontSize()}px`);
-      card.onpointerdown = e => startDragEvent(e, ev.id, card);
-      const showDesc = ev.showDesc !== false && ev.desc;
-      const descHtml = showDesc ? `<div class="event-desc">${escapeHtml(ev.desc)}</div>` : '';
-      card.innerHTML = `<div class="event-card-actions" onpointerdown="event.stopPropagation()"><button class="event-icon-btn" title="編輯事件" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); editEvent('${ev.id}')">✎</button><button class="event-icon-btn danger" title="刪除事件" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); deleteEvent('${ev.id}', true)">×</button></div><div class="event-name">${escapeHtml(ev.name)}</div><div class="event-date">${ev.roc}</div>${descHtml}`;
+
+      if (inlineEditingId === ev.id) {
+        card.onpointerdown = e => e.stopPropagation();
+        card.innerHTML = `
+          <div class="event-inline-edit" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
+            <input id="inlineName_${ev.id}" value="${escapeHtml(ev.name)}" placeholder="事件名稱">
+            <input id="inlineDate_${ev.id}" value="${escapeHtml(ev.roc)}" placeholder="民國日期，例如 1130315" onblur="normalizeDateInput(this)">
+            <textarea id="inlineDesc_${ev.id}" placeholder="事件描述">${escapeHtml(ev.desc || '')}</textarea>
+            <div class="event-inline-actions">
+              <button class="cancel" type="button" onclick="event.stopPropagation(); cancelInlineEdit();">取消</button>
+              <button class="save" type="button" onclick="event.stopPropagation(); saveInlineEdit('${ev.id}');">確認修改</button>
+            </div>
+          </div>`;
+      } else {
+        card.onpointerdown = e => startDragEvent(e, ev.id, card);
+        const showDesc = ev.showDesc !== false && ev.desc;
+        const descHtml = showDesc ? `<div class="event-desc">${escapeHtml(ev.desc)}</div>` : '';
+        card.innerHTML = `<div class="event-name">${escapeHtml(ev.name)}</div><div class="event-date">${ev.roc}</div>${descHtml}`;
+      }
       zone.appendChild(card);
     }
 
@@ -1479,6 +1709,7 @@
     }
 
     function startDragEvent(e, id, card) {
+      if (inlineEditingId === id || e.target.closest('input, textarea, button, .event-inline-edit')) return;
       e.preventDefault();
       e.stopPropagation();
       const zone = document.getElementById('timelineZone');
@@ -1546,7 +1777,7 @@
 
     function saveProjectJson() {
       const data = {
-        version: 'roc-timeline-html-v7-detached-event-images',
+        version: 'roc-timeline-html-v10-inline-event-edit',
         title: document.getElementById('timelineTitle').value,
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value,
@@ -1631,7 +1862,7 @@
       const layoutItems = items || buildEventLayout([...events].sort((a,b)=>a.date-b.date), range);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0,0,canvasW,canvasH);
-      drawRoundRect(ctx, 10, 10, canvasW-20, canvasH-20, 8, '#ffffff', '#d8e0ec');
+      drawRoundRect(ctx, 10, 10, canvasW-20, canvasH-20, 8, '#ffffff', getCss('--timeline-border') || '#d8e0ec');
       drawTitle(ctx, range);
       drawAxisCanvas(ctx, range);
       for (const item of layoutItems) await drawEventCanvas(ctx, item);
@@ -1662,14 +1893,14 @@
 
       ctx.fillStyle = 'rgba(255,255,255,.9)';
       ctx.fillRect(left, y, width, boxHeight);
-      ctx.strokeStyle = '#cbd5e1';
+      ctx.strokeStyle = getCss('--axis-soft') || '#cbd5e1';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(left, y);
       ctx.lineTo(left + width, y);
       ctx.stroke();
 
-      ctx.fillStyle = '#334155';
+      ctx.fillStyle = getCss('--timeline-label') || '#334155';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       lines.forEach((line, index) => {
@@ -1681,8 +1912,8 @@
     function drawLaneGuidesCanvas(ctx, items) {
       const usedLanes = [...new Set(items.map(item => item.lane))];
       ctx.save();
-      ctx.strokeStyle = '#e8eef6';
-      ctx.fillStyle = '#94a3b8';
+      ctx.strokeStyle = getCss('--axis-soft') || '#e8eef6';
+      ctx.fillStyle = getCss('--timeline-label') || '#94a3b8';
       ctx.font = '11px Microsoft JhengHei, Arial';
       ctx.setLineDash([5, 5]);
       if (orientation === 'horizontal') {
@@ -1718,7 +1949,7 @@
     }
 
     function drawAxisCanvas(ctx, range) {
-      ctx.strokeStyle = '#18365e';
+      ctx.strokeStyle = getCss('--axis') || '#18365e';
       ctx.lineWidth = 4;
       ctx.beginPath();
       if (orientation === 'horizontal') {
@@ -1734,9 +1965,9 @@
 
     function drawTickCanvas(ctx, t, range) {
       const p = timeToPercent(t.date, range);
-      ctx.strokeStyle = t.month === 1 ? '#94a3b8' : '#cbd5e1';
+      ctx.strokeStyle = t.month === 1 ? (getCss('--axis') || '#94a3b8') : (getCss('--axis-soft') || '#cbd5e1');
       ctx.lineWidth = 1;
-      ctx.fillStyle = '#334155';
+      ctx.fillStyle = getCss('--timeline-label') || '#334155';
       ctx.textAlign = 'center';
       if (orientation === 'horizontal') {
         const x = 130 + (canvasW - 260) * p;
@@ -1794,7 +2025,7 @@
       const ev = item.ev;
       const color = ev.color || eventColors[0];
       const img = eventHasImage(ev) ? await loadImageForCanvas(ev.imageData) : null;
-      drawRoundRect(ctx, pos.left, pos.top, pos.size, pos.size, 8, '#f8fafc', 'rgba(100,116,139,.42)');
+      drawRoundRect(ctx, pos.left, pos.top, pos.size, pos.size, 8, getCss('--timeline-bg-soft') || '#f8fafc', getCss('--timeline-border') || 'rgba(100,116,139,.42)');
       if (img) {
         ctx.save();
         ctx.beginPath();
@@ -1808,7 +2039,7 @@
         drawContainImage(ctx, img, pos.left, pos.top, pos.size, pos.size);
         ctx.restore();
       } else {
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = getCss('--timeline-label') || '#64748b';
         ctx.font = '12px Microsoft JhengHei, Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1857,7 +2088,7 @@
       const descSize = eventDescFontSize();
       const nameLineHeight = Math.ceil(nameSize * 1.35);
       const descLineHeight = Math.ceil(descSize * 1.4);
-      const exportTextW = Math.max(56, cardW - 62);
+      const exportTextW = Math.max(56, cardW - 24);
 
       ctx.fillStyle = color;
       ctx.font = `900 ${nameSize}px Microsoft JhengHei, Arial`;
@@ -1974,6 +2205,11 @@
     }
 
     function showHelp() { alert('操作方式：\n1. 輸入民國日期區間。\n2. 新增事件。\n3. 拖曳事件卡片可調整層級，放開後才會重新排版。\n4. 可切換水平或垂直時間軸。\n5. 可在事件卡片點擊或拖曳加入圖片，並儲存 JSON 或匯出 PNG。'); }
+
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.event-floating-actions')) closeEventActionMenus();
+    });
 
     window.addEventListener('resize', () => {
       clearTimeout(window.__timelineResizeTimer);
