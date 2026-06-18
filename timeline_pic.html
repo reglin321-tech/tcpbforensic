@@ -482,8 +482,19 @@
       width: 100%;
       height: 100%;
       object-fit: contain;
+      object-position: center center;
       display: block;
       background: #ffffff;
+    }
+
+    .event-image-content {
+      position: absolute;
+      inset: 0;
+      background-color: #ffffff;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: contain;
+      pointer-events: none;
     }
 
     .event-image-placeholder {
@@ -1016,8 +1027,21 @@
         ev.imageData = reader.result;
         ev.imageName = file.name || '';
         imageCache.delete(ev.imageData);
-        msg('事件圖片已加入。');
-        render();
+        // Load the image to compute its natural aspect ratio.  This helps us
+        // determine how tall or wide the image box should be.  If loading
+        // fails, default to square (ratio = 1).
+        const tmpImg = new Image();
+        tmpImg.onload = () => {
+          ev.imageRatio = (tmpImg.naturalWidth && tmpImg.naturalHeight) ? (tmpImg.naturalWidth / tmpImg.naturalHeight) : 1;
+          msg('事件圖片已加入。');
+          render();
+        };
+        tmpImg.onerror = () => {
+          ev.imageRatio = 1;
+          msg('事件圖片已加入。');
+          render();
+        };
+        tmpImg.src = reader.result;
       };
       reader.onerror = () => msg('圖片讀取失敗。', 'error');
       reader.readAsDataURL(file);
@@ -1048,8 +1072,18 @@
       return Boolean(ev && ev.showImage !== false);
     }
 
+    // Determine the image box size. Always return the current card width so the
+    // image container is a perfect square matching the card's width. This
+    // change removes the previous minimum size of 88px, ensuring that
+    // narrow cards don't force a larger image box than necessary. See
+    // https://developer.mozilla.org/en-US/docs/Web/CSS/aspect-ratio for
+    // details on keeping elements square via matching width and height.
+    // Return the desired image box width (and implicitly height) based on the card width.
+    // Previously this always returned a square size equal to the card width.  We now
+    // calculate the width only; the height will be derived from the image's aspect
+    // ratio stored on the event (ev.imageRatio) when positioning the image box.
     function eventImageSize(cardW = layoutSettings.cardWidth) {
-      return Math.max(88, Math.round(cardW));
+      return Math.round(cardW);
     }
 
     function eventImageGap() { return 12; }
@@ -1342,10 +1376,12 @@
       };
       const img = imagePositionForItem(item);
       if (img) {
+        // The image box is square: use size for both width and height.
+        const size = img.size;
         bounds.left = Math.min(bounds.left, img.left);
         bounds.top = Math.min(bounds.top, img.top);
-        bounds.right = Math.max(bounds.right, img.left + img.size);
-        bounds.bottom = Math.max(bounds.bottom, img.top + img.size);
+        bounds.right = Math.max(bounds.right, img.left + size);
+        bounds.bottom = Math.max(bounds.bottom, img.top + size);
       }
       return bounds;
     }
@@ -1571,6 +1607,9 @@
     function imagePositionForItem(item) {
       const { ev, left, top, cardW, cardH, lane } = item;
       if (!eventShowsImage(ev)) return null;
+      // Always use a square box equal to the card width.  The image itself will
+      // be scaled to fit within this square.  This ensures that wide images
+      // fill the width and tall images fill the height without cropping.
       const size = eventImageSize(cardW);
       const gap = eventImageGap();
       if (orientation === 'horizontal') {
@@ -1580,6 +1619,7 @@
           size
         };
       }
+      // vertical orientation
       return {
         left: Math.round(lane < 0 ? left - gap - size : left + cardW + gap),
         top: Math.round(top + (cardH - size) / 2),
@@ -1638,8 +1678,10 @@
       box.style.color = ev.color || eventColors[0];
       box.style.left = `${pos.left}px`;
       box.style.top = `${pos.top}px`;
-      box.style.width = `${pos.size}px`;
-      box.style.height = `${pos.size}px`;
+      // Use pos.size for both width and height to keep the image box square.
+      const size = pos.size;
+      box.style.width = `${size}px`;
+      box.style.height = `${size}px`;
       box.title = eventHasImage(ev) ? '點擊更換圖片，也可拖曳圖片到此' : '點擊上傳圖片，也可拖曳圖片到此';
       box.onpointerdown = e => e.stopPropagation();
       box.onclick = e => { e.stopPropagation(); triggerEventImageUpload(ev.id); };
@@ -1647,7 +1689,22 @@
       box.ondragleave = e => { e.preventDefault(); e.stopPropagation(); box.classList.remove('drag-over'); };
       box.ondrop = e => handleEventImageDrop(e, ev.id);
       if (eventHasImage(ev)) {
-        box.innerHTML = `<img src="${ev.imageData}" alt="${escapeHtml(ev.imageName || ev.name)}"><button class="event-image-delete" title="移除圖片" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); removeEventImage('${ev.id}')">×</button>`;
+        const imageLayer = document.createElement('div');
+        imageLayer.className = 'event-image-content';
+        imageLayer.style.backgroundImage = `url("${String(ev.imageData).replace(/"/g, '\\\"')}")`;
+        box.appendChild(imageLayer);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'event-image-delete';
+        deleteBtn.type = 'button';
+        deleteBtn.title = '移除圖片';
+        deleteBtn.textContent = '×';
+        deleteBtn.onpointerdown = e => e.stopPropagation();
+        deleteBtn.onclick = e => {
+          e.stopPropagation();
+          removeEventImage(ev.id);
+        };
+        box.appendChild(deleteBtn);
       } else {
         box.innerHTML = `<div class="event-image-placeholder">＋<br>拖曳或點擊<br>加入圖片</div>`;
       }
@@ -1818,7 +1875,32 @@
           events = (data.events || []).map(item => {
             const p = parseRocDate(item.date || item.roc);
             if (!p) return null;
-            return { id: item.id || uid(), name: item.name || '未命名事件', date: p.date, roc: p.roc, western: p.western, desc: item.desc || '', showDesc: item.showDesc !== false, color: item.color || eventColors[0], lane: item.lane != null ? item.lane : null, showImage: item.showImage !== false, imageData: item.imageData || null, imageName: item.imageName || '' };
+            const imageData = item.imageData || null;
+            let imageRatio = 1;
+            if (imageData) {
+              // Attempt to parse ratio from embedded SVG width/height attributes or use 1
+              const match = String(imageData).match(/width=\"(\d+)\".*height=\"(\d+)\"/);
+              if (match && match[1] && match[2]) {
+                const w = Number(match[1]);
+                const h = Number(match[2]);
+                if (h) imageRatio = w / h;
+              }
+            }
+            return {
+              id: item.id || uid(),
+              name: item.name || '未命名事件',
+              date: p.date,
+              roc: p.roc,
+              western: p.western,
+              desc: item.desc || '',
+              showDesc: item.showDesc !== false,
+              color: item.color || eventColors[0],
+              lane: item.lane != null ? item.lane : null,
+              showImage: item.showImage !== false,
+              imageData,
+              imageName: item.imageName || '',
+              imageRatio
+            };
           }).filter(Boolean);
           render();
           msg('暫存檔已讀取。');
@@ -2025,26 +2107,28 @@
       const ev = item.ev;
       const color = ev.color || eventColors[0];
       const img = eventHasImage(ev) ? await loadImageForCanvas(ev.imageData) : null;
-      drawRoundRect(ctx, pos.left, pos.top, pos.size, pos.size, 8, getCss('--timeline-bg-soft') || '#f8fafc', getCss('--timeline-border') || 'rgba(100,116,139,.42)');
+      // Use a square size for drawing the rounded rectangle and image.
+      const size = pos.size;
+      drawRoundRect(ctx, pos.left, pos.top, size, size, 8, getCss('--timeline-bg-soft') || '#f8fafc', getCss('--timeline-border') || 'rgba(100,116,139,.42)');
       if (img) {
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(pos.left + 8, pos.top);
-        ctx.arcTo(pos.left + pos.size, pos.top, pos.left + pos.size, pos.top + pos.size, 8);
-        ctx.arcTo(pos.left + pos.size, pos.top + pos.size, pos.left, pos.top + pos.size, 8);
-        ctx.arcTo(pos.left, pos.top + pos.size, pos.left, pos.top, 8);
+        ctx.arcTo(pos.left + size, pos.top, pos.left + size, pos.top + size, 8);
+        ctx.arcTo(pos.left + size, pos.top + size, pos.left, pos.top + size, 8);
+        ctx.arcTo(pos.left, pos.top + size, pos.left, pos.top, 8);
         ctx.arcTo(pos.left, pos.top, pos.left + 8, pos.top, 8);
         ctx.closePath();
         ctx.clip();
-        drawContainImage(ctx, img, pos.left, pos.top, pos.size, pos.size);
+        drawContainImage(ctx, img, pos.left, pos.top, size, size);
         ctx.restore();
       } else {
         ctx.fillStyle = getCss('--timeline-label') || '#64748b';
         ctx.font = '12px Microsoft JhengHei, Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('拖曳或點擊', pos.left + pos.size / 2, pos.top + pos.size / 2 - 8);
-        ctx.fillText('加入圖片', pos.left + pos.size / 2, pos.top + pos.size / 2 + 10);
+        ctx.fillText('拖曳或點擊', pos.left + size / 2, pos.top + size / 2 - 8);
+        ctx.fillText('加入圖片', pos.left + size / 2, pos.top + size / 2 + 10);
       }
     }
 
@@ -2063,9 +2147,24 @@
     }
 
     function drawContainImage(ctx, img, x, y, w, h) {
-      const ratio = Math.min(w / img.width, h / img.height);
-      const dw = img.width * ratio;
-      const dh = img.height * ratio;
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      if (!iw || !ih) return;
+
+      let ratio;
+      if (iw > ih) {
+        // 寬圖：寬度塞進正方框，上下留白。
+        ratio = w / iw;
+      } else if (ih > iw) {
+        // 高圖：高度塞進正方框，左右留白。
+        ratio = h / ih;
+      } else {
+        // 正方圖：寬高都可，剛好填滿正方框。
+        ratio = Math.min(w / iw, h / ih);
+      }
+
+      const dw = iw * ratio;
+      const dh = ih * ratio;
       const dx = x + (w - dw) / 2;
       const dy = y + (h - dh) / 2;
       ctx.fillStyle = '#ffffff';
@@ -2200,7 +2299,35 @@
         ['專案上線','1140601','#8b5cf6', true, makeSampleImageData('專案上線', '#8b5cf6', 'tall')],
         ['專案結案','1140930','#0f8b8d', false, null]
       ];
-      events = samples.map(s => { const p = parseRocDate(s[1]); return { id: uid(), name: s[0], date: p.date, roc: p.roc, western: p.western, color: s[2], desc: '可在左側編輯事件描述，並指定是否顯示。', showDesc: false, lane: null, showImage: Boolean(s[3]), imageData: s[4] || null, imageName: s[3] ? `${s[0]}示意圖.svg` : '' }; });
+      events = samples.map(s => {
+        const p = parseRocDate(s[1]);
+        const imageData = s[4] || null;
+        let imageRatio = 1;
+        if (imageData) {
+          // Attempt to parse width and height from the SVG header embedded in the data URI.
+          const match = String(imageData).match(/width=\"(\d+)\".*height=\"(\d+)\"/);
+          if (match && match[1] && match[2]) {
+            const w = Number(match[1]);
+            const h = Number(match[2]);
+            if (h) imageRatio = w / h;
+          }
+        }
+        return {
+          id: uid(),
+          name: s[0],
+          date: p.date,
+          roc: p.roc,
+          western: p.western,
+          color: s[2],
+          desc: '可在左側編輯事件描述，並指定是否顯示。',
+          showDesc: false,
+          lane: null,
+          showImage: Boolean(s[3]),
+          imageData,
+          imageName: s[3] ? `${s[0]}示意圖.svg` : '',
+          imageRatio
+        };
+      });
       render();
     }
 
