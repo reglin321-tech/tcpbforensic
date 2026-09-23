@@ -21,6 +21,7 @@ const contactData = [
     { "dept": "第二股", "name": "彭樹庭", "title": "組員", "ext": "2414" },
     { "dept": "第二股", "name": "江冠遠", "title": "組員", "ext": "2415" },
     { "dept": "第二股", "name": "乃卓康", "title": "組員", "ext": "2416" },
+    { "dept": "第二股", "name": "曾品祥", "title": "組員", "ext": "2395" },
     { "dept": "第二股", "name": "羅雅秀", "title": "組員", "ext": "2417" },
 
     // --- 第三股 ---

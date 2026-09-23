@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>互動模擬實驗室</title>
+<style>
+  :root{
+    --bg:#070914; --panel:#111827dd; --panel2:#0b1020e8; --text:#e5e7eb; --muted:#94a3b8;
+    --line:#263044; --accent:#38bdf8; --accent2:#a78bfa; --good:#34d399; --warn:#fbbf24; --danger:#fb7185;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  body{margin:0; min-height:100vh; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif; background: radial-gradient(circle at 30% 10%, #1e293b 0%, #0f172a 35%, #020617 100%); color:var(--text); overflow:hidden;}
+  .app{height:100vh; display:grid; grid-template-rows:auto 1fr;}
+  header{padding:14px 16px 10px; border-bottom:1px solid #ffffff16; background:linear-gradient(180deg,#0f172acc,#020617aa); backdrop-filter: blur(12px); z-index:10;}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  h1{font-size:20px; margin:0; letter-spacing:.04em; display:flex; align-items:center; gap:10px;}
+  .badge{font-size:12px; color:#cffafe; border:1px solid #38bdf84d; border-radius:999px; padding:4px 9px; background:#07598544;}
+  .tabs{display:flex; gap:8px; overflow-x:auto; padding-top:12px; scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  button{border:1px solid #ffffff1c; background:#0f172acc; color:var(--text); border-radius:12px; padding:9px 12px; cursor:pointer; font-weight:700; transition:.15s transform,.15s background,.15s border; white-space:nowrap;}
+  button:hover{transform:translateY(-1px); border-color:#38bdf866; background:#172554cc;}
+  button.active{background:linear-gradient(135deg,#0ea5e944,#8b5cf644); border-color:#7dd3fc99; box-shadow:0 0 24px #38bdf822 inset;}
+  main{display:grid; grid-template-columns:310px 1fr; min-height:0;}
+  aside{border-right:1px solid #ffffff16; background:linear-gradient(180deg,#020617dd,#0f172add); padding:14px; overflow:auto;}
+  .card{background:var(--panel); border:1px solid #ffffff15; border-radius:18px; padding:14px; margin-bottom:12px; box-shadow:0 10px 30px #00000038;}
+  .title{font-size:15px; font-weight:900; margin-bottom:6px; color:#e0f2fe;}
+  .desc{font-size:13px; line-height:1.55; color:var(--muted);}
+  .controls{display:grid; gap:10px; margin-top:10px;}
+  .row{display:grid; gap:6px;}
+  label{font-size:12px; color:#cbd5e1; display:flex; justify-content:space-between; gap:8px;}
+  input[type=range]{width:100%; accent-color:#38bdf8;}
+  select{background:#0f172a; color:var(--text); border:1px solid #ffffff1c; border-radius:10px; padding:8px;}
+  .btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
+  .btns.three{grid-template-columns:1fr 1fr 1fr;}
+  .hint{font-size:12px; line-height:1.5; color:#a5b4fc; margin-top:8px; padding:8px 10px; border:1px dashed #818cf855; border-radius:12px; background:#312e812b;}
+  .stage{position:relative; min-width:0; min-height:0; overflow:hidden;}
+  canvas{display:block; width:100%; height:100%; background:radial-gradient(circle at center,#0b1228,#020617 65%); touch-action:none;}
+  .hud{position:absolute; left:14px; bottom:14px; right:14px; display:flex; justify-content:space-between; gap:10px; pointer-events:none; align-items:flex-end;}
+  .pill{background:#020617bb; border:1px solid #ffffff1a; border-radius:999px; padding:8px 12px; color:#cbd5e1; font-size:12px; backdrop-filter:blur(8px); box-shadow:0 10px 24px #0008;}
+  .pill strong{color:#67e8f9;}
+  @media(max-width:860px){body{overflow:auto}.app{height:auto; min-height:100vh} main{grid-template-columns:1fr; grid-template-rows:auto 70vh} aside{border-right:0; border-bottom:1px solid #ffffff16; max-height:42vh}.stage{min-height:70vh} h1{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="top">
+      <h1>🧪 互動模擬實驗室 <span class="badge">單檔 HTML / Canvas</span></h1>
+      <div class="badge" id="fpsBadge">FPS --</div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+  <main>
+    <aside>
+      <div class="card">
+        <div class="title" id="simTitle">模擬</div>
+        <div class="desc" id="simDesc"></div>
+        <div class="hint" id="simHint"></div>
+      </div>
+      <div class="card">
+        <div class="title">控制</div>
+        <div class="btns three">
+          <button id="pauseBtn">暫停</button>
+          <button id="resetBtn">重置</button>
+          <button id="clearBtn">清除</button>
+        </div>
+        <div class="controls" id="controlBox"></div>
+      </div>
+      <div class="card">
+        <div class="title">玩法提示</div>
+        <div class="desc" id="extraInfo">切換分頁後，只會運行目前的模擬，避免全部同時吃效能。</div>
+      </div>
+    </aside>
+    <section class="stage">
+      <canvas id="canvas"></canvas>
+      <div class="hud">
+        <div class="pill" id="statusPill"><strong>狀態</strong> 準備中</div>
+        <div class="pill">滑鼠 / 觸控可互動</div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const tabsEl = document.getElementById('tabs');
+  const controlBox = document.getElementById('controlBox');
+  const titleEl = document.getElementById('simTitle');
+  const descEl = document.getElementById('simDesc');
+  const hintEl = document.getElementById('simHint');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const statusPill = document.getElementById('statusPill');
+  const fpsBadge = document.getElementById('fpsBadge');
+
+  let W=1,H=1,DPR=1, active=null, running=true, last=performance.now(), fpsT=0, frames=0;
+  const pointer = {x:0,y:0,down:false,id:null,button:0};
+  const TAU=Math.PI*2;
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const dist=(a,b,c,d)=>Math.hypot(a-c,b-d);
+  function resize(){
+    const r=canvas.getBoundingClientRect(); DPR=Math.min(devicePixelRatio||1,2);
+    W=Math.max(320,Math.floor(r.width)); H=Math.max(320,Math.floor(r.height));
+    canvas.width=Math.floor(W*DPR); canvas.height=Math.floor(H*DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    active?.resize?.();
+  }
+  window.addEventListener('resize', resize);
+
+  function bg(){
+    const g=ctx.createRadialGradient(W*.5,H*.45,10,W*.5,H*.5,Math.max(W,H)*.75);
+    g.addColorStop(0,'#10203d'); g.addColorStop(.55,'#071123'); g.addColorStop(1,'#020617');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+  function glowLine(points, color, width=2, blur=16){
+    if(points.length<2) return;
+    ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.shadowBlur=blur; ctx.shadowColor=color; ctx.strokeStyle=color; ctx.lineWidth=width;
+    ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+    for(let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.stroke(); ctx.restore();
+  }
+  function circle(x,y,r,fill,stroke){
+    ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fillStyle=fill; ctx.fill(); if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}
+  }
+  function makeSlider(key,label,min,max,step,value,oninput){
+    const row=document.createElement('div'); row.className='row';
+    const lab=document.createElement('label'); const val=document.createElement('span'); val.textContent=value;
+    lab.innerHTML=`<span>${label}</span>`; lab.appendChild(val);
+    const input=document.createElement('input'); input.type='range'; input.min=min; input.max=max; input.step=step; input.value=value;
+    input.addEventListener('input',()=>{val.textContent=input.value; oninput(parseFloat(input.value));});
+    row.append(lab,input); controlBox.appendChild(row); return input;
+  }
+  function setStatus(s){statusPill.innerHTML=`<strong>狀態</strong> ${s}`;}
+
+  class DoublePendulum{
+    constructor(){this.name='雙擺混沌軌跡';this.desc='拉動兩顆球設定初始姿勢，按開始後釋放。只差一點點角度，軌跡就可能完全不同。';this.hint='拖曳第一顆或第二顆球。暫停時可設定姿勢；開始後會記錄末端發光軌跡。'; this.reset();}
+    reset(){this.o={x:W/2,y:H*.22}; this.L1=Math.min(W,H)*.24; this.L2=Math.min(W,H)*.24; this.a1=-1.0; this.a2=1.35; this.v1=0; this.v2=0; this.g=.75; this.damp=.999; this.trail=[]; this.drag=0; this.play=false;}
+    resize(){this.o={x:W/2,y:H*.22}; this.L1=Math.min(W,H)*.24; this.L2=Math.min(W,H)*.24;}
+    controls(){makeSlider('g','重力',0.1,1.8,0.05,this.g,v=>this.g=v); makeSlider('d','阻尼',0.985,1,0.001,this.damp,v=>this.damp=v); makeSlider('trail','軌跡長度',80,1800,20,650,v=>this.maxTrail=v); this.maxTrail=650; const b=document.createElement('button'); b.textContent='開始擺動 / 重新釋放'; b.onclick=()=>{this.play=true; this.v1=0; this.v2=0; this.trail=[]; setStatus('雙擺釋放中');}; controlBox.appendChild(b);}
+    pos(){const x1=this.o.x+this.L1*Math.sin(this.a1), y1=this.o.y+this.L1*Math.cos(this.a1); const x2=x1+this.L2*Math.sin(this.a2), y2=y1+this.L2*Math.cos(this.a2); return {x1,y1,x2,y2};}
+    update(){ if(!this.play || this.drag) return; const m1=18,m2=18,L1=this.L1,L2=this.L2,g=this.g; let a1=this.a1,a2=this.a2,v1=this.v1,v2=this.v2; const num1=-g*(2*m1+m2)*Math.sin(a1); const num2=-m2*g*Math.sin(a1-2*a2); const num3=-2*Math.sin(a1-a2)*m2*(v2*v2*L2+v1*v1*L1*Math.cos(a1-a2)); const den=L1*(2*m1+m2-m2*Math.cos(2*a1-2*a2)); const acc1=(num1+num2+num3)/den; const n1=2*Math.sin(a1-a2); const n2=v1*v1*L1*(m1+m2)+g*(m1+m2)*Math.cos(a1)+v2*v2*L2*m2*Math.cos(a1-a2); const d2=L2*(2*m1+m2-m2*Math.cos(2*a1-2*a2)); const acc2=n1*n2/d2; this.v1=(v1+acc1)*this.damp; this.v2=(v2+acc2)*this.damp; this.a1+=this.v1; this.a2+=this.v2; const p=this.pos(); const speed=Math.hypot(this.v1*this.L1,this.v2*this.L2); this.trail.push({x:p.x2,y:p.y2,s:speed}); while(this.trail.length>(this.maxTrail||650)) this.trail.shift(); }
+    draw(){bg(); const p=this.pos(); for(let i=1;i<this.trail.length;i++){const t=i/this.trail.length; const prev=this.trail[i-1], cur=this.trail[i]; const hue=(190+cur.s*16+i*.18)%360; ctx.save(); ctx.globalAlpha=t*.9; ctx.shadowBlur=18*t; ctx.shadowColor=`hsl(${hue} 100% 65%)`; ctx.strokeStyle=`hsl(${hue} 100% 65%)`; ctx.lineWidth=1+3*t; ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(cur.x,cur.y); ctx.stroke(); ctx.restore();}
+      ctx.strokeStyle='#dbeafe'; ctx.lineWidth=4; ctx.shadowBlur=12; ctx.shadowColor='#38bdf8'; ctx.beginPath(); ctx.moveTo(this.o.x,this.o.y); ctx.lineTo(p.x1,p.y1); ctx.lineTo(p.x2,p.y2); ctx.stroke(); ctx.shadowBlur=0; circle(this.o.x,this.o.y,7,'#e0f2fe'); circle(p.x1,p.y1,18,'#38bdf8','#e0f2fe'); circle(p.x2,p.y2,20,'#a78bfa','#f5f3ff'); if(!this.play) setStatus('設定姿勢中');}
+    down(x,y){const p=this.pos(); if(dist(x,y,p.x2,p.y2)<34) this.drag=2; else if(dist(x,y,p.x1,p.y1)<32) this.drag=1; if(this.drag){this.play=false;this.trail=[];} }
+    move(x,y){ if(!this.drag)return; const p=this.pos(); if(this.drag===1){this.a1=Math.atan2(x-this.o.x,y-this.o.y);} else {this.a2=Math.atan2(x-p.x1,y-p.y1);} }
+    up(){this.drag=0;}
+    clear(){this.trail=[];}
+  }
+
+  class GravitySim{
+    constructor(){this.name='星球引力小宇宙';this.desc='拖曳新增星球，拖得越長初速度越高。星球會互相吸引、繞行、甩飛或合併。';this.hint='按住拖曳再放開：起點是星球位置，拖曳方向決定初速度。'; this.reset();}
+    reset(){this.G=.28; this.trailLen=180; this.bodies=[]; this.dragStart=null; const cx=W/2,cy=H/2; this.bodies.push({x:cx,y:cy,vx:0,vy:0,m:900,r:20,c:45,tr:[]}); for(let i=0;i<5;i++){const a=i/5*TAU; const rr=Math.min(W,H)*(.16+i*.035); const v=Math.sqrt(this.G*900/rr); this.bodies.push({x:cx+Math.cos(a)*rr,y:cy+Math.sin(a)*rr,vx:-Math.sin(a)*v,vy:Math.cos(a)*v,m:rand(18,55),r:rand(6,10),c:190+i*28,tr:[]});}}
+    controls(){makeSlider('G','引力',0.05,1.2,0.01,this.G,v=>this.G=v); makeSlider('tl','尾跡',20,500,10,this.trailLen,v=>this.trailLen=v); const b=document.createElement('button'); b.textContent='加入黑洞'; b.onclick=()=>this.bodies.push({x:rand(W*.25,W*.75),y:rand(H*.25,H*.75),vx:0,vy:0,m:1200,r:24,c:275,tr:[]}); controlBox.appendChild(b);}
+    update(){ const bs=this.bodies; for(let i=0;i<bs.length;i++){let ax=0,ay=0; for(let j=0;j<bs.length;j++) if(i!==j){const dx=bs[j].x-bs[i].x, dy=bs[j].y-bs[i].y; const d2=dx*dx+dy*dy+80; const f=this.G*bs[j].m/d2; const d=Math.sqrt(d2); ax+=dx/d*f; ay+=dy/d*f;} bs[i].vx+=ax; bs[i].vy+=ay; }
+      for(const b of bs){b.x+=b.vx; b.y+=b.vy; b.vx*=.999; b.vy*=.999; b.tr.push({x:b.x,y:b.y}); while(b.tr.length>this.trailLen)b.tr.shift(); if(b.x<-300||b.x>W+300||b.y<-300||b.y>H+300){b.x=rand(W*.2,W*.8); b.y=rand(H*.2,H*.8); b.vx=rand(-1,1); b.vy=rand(-1,1); b.tr=[];}}
+      for(let i=bs.length-1;i>=0;i--)for(let j=i-1;j>=0;j--){if(dist(bs[i].x,bs[i].y,bs[j].x,bs[j].y)<bs[i].r+bs[j].r){const a=bs[i],b=bs[j],m=a.m+b.m; b.vx=(a.vx*a.m+b.vx*b.m)/m; b.vy=(a.vy*a.m+b.vy*b.m)/m; b.m=m; b.r=clamp(Math.sqrt(m)*.72,5,34); b.c=(a.c+b.c)/2; bs.splice(i,1); break;}}
+    }
+    draw(){bg(); for(const b of this.bodies){glowLine(b.tr,`hsla(${b.c} 100% 65% / .45)`,1.5,14); ctx.save(); ctx.shadowBlur=24; ctx.shadowColor=`hsl(${b.c} 100% 65%)`; circle(b.x,b.y,b.r,`hsl(${b.c} 90% 60%)`,'#fff'); ctx.restore();} if(this.dragStart){ctx.strokeStyle='#fbbf24'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(this.dragStart.x,this.dragStart.y); ctx.lineTo(pointer.x,pointer.y); ctx.stroke(); ctx.setLineDash([]); circle(this.dragStart.x,this.dragStart.y,9,'#fbbf24');} setStatus(`${this.bodies.length} 顆星球`);}
+    down(x,y){this.dragStart={x,y};}
+    move(){}
+    up(x,y){ if(!this.dragStart)return; const dx=this.dragStart.x-x, dy=this.dragStart.y-y; this.bodies.push({x:this.dragStart.x,y:this.dragStart.y,vx:dx*.025,vy:dy*.025,m:rand(25,90),r:rand(7,12),c:rand(0,360),tr:[]}); this.dragStart=null;}
+    clear(){for(const b of this.bodies)b.tr=[];}
+  }
+
+  class ParticleField{
+    constructor(){this.name='粒子磁場';this.desc='滑鼠像磁鐵，粒子會被吸引或排斥，形成星雲、沙流、磁粉的視覺效果。';this.hint='按住左鍵吸引；按住右鍵或切換模式排斥。快速掃過會產生流線。'; this.reset();}
+    reset(){this.count=900; this.force=1.2; this.mode='吸引'; this.ps=[]; for(let i=0;i<this.count;i++)this.ps.push({x:rand(0,W),y:rand(0,H),vx:rand(-.3,.3),vy:rand(-.3,.3),c:rand(180,300)});}
+    controls(){makeSlider('n','粒子數',200,1800,50,this.count,v=>{this.count=v;this.reset();}); makeSlider('f','作用力',0.1,3,0.1,this.force,v=>this.force=v); const sel=document.createElement('select'); ['吸引','排斥','漩渦'].forEach(o=>{const op=document.createElement('option');op.textContent=o;sel.appendChild(op)}); sel.onchange=()=>this.mode=sel.value; controlBox.appendChild(sel);}
+    update(){ for(const p of this.ps){ if(pointer.down){let dx=pointer.x-p.x,dy=pointer.y-p.y,d2=dx*dx+dy*dy+100,d=Math.sqrt(d2); let f=this.force*90/d2; if(this.mode==='排斥'||pointer.button===2) f*=-1; if(this.mode==='漩渦'){const tx=-dy/d,ty=dx/d; p.vx+=tx*f*3; p.vy+=ty*f*3;} else {p.vx+=dx/d*f; p.vy+=dy/d*f;} p.c=(p.c+1.5)%360; } p.vx*=.985; p.vy*=.985; p.x+=p.vx; p.y+=p.vy; if(p.x<0){p.x=W;p.vx*=.4} if(p.x>W){p.x=0;p.vx*=.4} if(p.y<0){p.y=H;p.vy*=.4} if(p.y>H){p.y=0;p.vy*=.4} }}
+    draw(){ctx.fillStyle='rgba(2,6,23,.25)';ctx.fillRect(0,0,W,H); for(const p of this.ps){const sp=Math.hypot(p.vx,p.vy); ctx.fillStyle=`hsla(${p.c+sp*20} 100% 70% / ${clamp(.25+sp*.08,.25,.85)})`; ctx.fillRect(p.x,p.y,1.8+sp*.18,1.8+sp*.18);} if(pointer.down){ctx.save();ctx.globalAlpha=.5;ctx.strokeStyle=this.mode==='排斥'?'#fb7185':'#67e8f9';ctx.lineWidth=2;ctx.shadowBlur=24;ctx.shadowColor=ctx.strokeStyle;ctx.beginPath();ctx.arc(pointer.x,pointer.y,45+Math.sin(performance.now()/120)*8,0,TAU);ctx.stroke();ctx.restore();} setStatus(this.mode);}
+    down(x,y,e){pointer.button=e.button;}
+    clear(){ctx.fillStyle='#020617';ctx.fillRect(0,0,W,H);}
+  }
+
+  class SandBox{
+    constructor(){this.name='像素沙盒：沙、水、火';this.desc='每一格只有簡單規則：沙往下掉，水會流，火會燒，煙往上飄。簡單規則會長出很像遊戲的行為。';this.hint='拖曳畫畫。可切換材料：沙、水、木頭、火、橡皮擦。'; this.cell=4; this.reset();}
+    reset(){this.cols=Math.floor(W/this.cell);this.rows=Math.floor(H/this.cell);this.grid=new Uint8Array(this.cols*this.rows);this.mat=1;this.brush=5;}
+    resize(){this.reset();}
+    controls(){const sel=document.createElement('select'); [['沙',1],['水',2],['木頭',3],['火',4],['橡皮擦',0]].forEach(([n,v])=>{const op=document.createElement('option');op.textContent=n;op.value=v;sel.appendChild(op)}); sel.onchange=()=>this.mat=parseInt(sel.value); controlBox.appendChild(sel); makeSlider('b','筆刷大小',1,18,1,this.brush,v=>this.brush=v);}
+    idx(x,y){return y*this.cols+x} get(x,y){if(x<0||x>=this.cols||y<0||y>=this.rows)return 9;return this.grid[this.idx(x,y)]} set(x,y,v){if(x>=0&&x<this.cols&&y>=0&&y<this.rows)this.grid[this.idx(x,y)]=v}
+    update(){for(let y=this.rows-2;y>=1;y--){const dir=Math.random()<.5?-1:1; for(let xi=1;xi<this.cols-1;xi++){const x=dir>0?xi:this.cols-1-xi; const v=this.get(x,y); if(v===1){if(this.get(x,y+1)===0){this.set(x,y+1,1);this.set(x,y,0)} else if(this.get(x-1,y+1)===0){this.set(x-1,y+1,1);this.set(x,y,0)} else if(this.get(x+1,y+1)===0){this.set(x+1,y+1,1);this.set(x,y,0)}} else if(v===2){if(this.get(x,y+1)===0){this.set(x,y+1,2);this.set(x,y,0)} else {const d=Math.random()<.5?-1:1; if(this.get(x+d,y)===0){this.set(x+d,y,2);this.set(x,y,0)} else if(this.get(x-d,y)===0){this.set(x-d,y,2);this.set(x,y,0)}}} else if(v===4){if(Math.random()<.06)this.set(x,y,0); for(const [dx,dy] of [[0,-1],[-1,0],[1,0],[0,1]]){const t=this.get(x+dx,y+dy); if(t===3&&Math.random()<.2)this.set(x+dx,y+dy,4);} if(this.get(x,y-1)===0&&Math.random()<.25){this.set(x,y-1,4);this.set(x,y,0)}} }} }
+    draw(){ctx.fillStyle='#020617';ctx.fillRect(0,0,W,H); const colors=['transparent','#facc15','#38bdf8','#7c2d12','#fb7185']; for(let y=0;y<this.rows;y++)for(let x=0;x<this.cols;x++){const v=this.get(x,y); if(v){ctx.fillStyle=colors[v]; ctx.fillRect(x*this.cell,y*this.cell,this.cell,this.cell);}} setStatus(['橡皮擦','沙','水','木頭','火'][this.mat]);}
+    paint(x,y){const gx=Math.floor(x/this.cell), gy=Math.floor(y/this.cell); for(let yy=-this.brush;yy<=this.brush;yy++)for(let xx=-this.brush;xx<=this.brush;xx++) if(xx*xx+yy*yy<this.brush*this.brush){this.set(gx+xx,gy+yy,this.mat)}}
+    down(x,y){this.paint(x,y)} move(x,y){if(pointer.down)this.paint(x,y)} clear(){this.grid.fill(0)}
+  }
+
+  class ReactionDiffusion{
+    constructor(){this.name='反應擴散紋路';this.desc='兩種物質互相擴散與反應，會自然長出斑馬紋、珊瑚、指紋感的圖案。';this.hint='在畫面上拖曳可撒入反應物。按重置會重新播種。'; this.scale=3; this.reset();}
+    reset(){this.cols=Math.floor(W/this.scale);this.rows=Math.floor(H/this.scale); const n=this.cols*this.rows; this.A=new Float32Array(n);this.B=new Float32Array(n);this.nA=new Float32Array(n);this.nB=new Float32Array(n);this.feed=.055;this.kill=.062; for(let i=0;i<n;i++){this.A[i]=1;this.B[i]=0;} for(let k=0;k<8;k++)this.seed(rand(W*.2,W*.8),rand(H*.2,H*.8),rand(10,24));}
+    resize(){this.reset();}
+    controls(){makeSlider('f','Feed',0.02,0.09,0.001,this.feed,v=>this.feed=v); makeSlider('k','Kill',0.045,0.075,0.001,this.kill,v=>this.kill=v); const b=document.createElement('button'); b.textContent='隨機撒種'; b.onclick=()=>{for(let k=0;k<8;k++)this.seed(rand(0,W),rand(0,H),rand(8,22));}; controlBox.appendChild(b);}
+    idx(x,y){return y*this.cols+x} lap(arr,x,y){let s=arr[this.idx(x,y)]*-1; s+=arr[this.idx(x-1,y)]*.2+arr[this.idx(x+1,y)]*.2+arr[this.idx(x,y-1)]*.2+arr[this.idx(x,y+1)]*.2; s+=arr[this.idx(x-1,y-1)]*.05+arr[this.idx(x+1,y-1)]*.05+arr[this.idx(x-1,y+1)]*.05+arr[this.idx(x+1,y+1)]*.05; return s;}
+    update(){for(let step=0;step<5;step++){for(let y=1;y<this.rows-1;y++)for(let x=1;x<this.cols-1;x++){const i=this.idx(x,y), a=this.A[i], b=this.B[i], react=a*b*b; this.nA[i]=clamp(a+(1*this.lap(this.A,x,y)-react+this.feed*(1-a)),0,1); this.nB[i]=clamp(b+(.5*this.lap(this.B,x,y)+react-(this.kill+this.feed)*b),0,1);} [this.A,this.nA]=[this.nA,this.A]; [this.B,this.nB]=[this.nB,this.B];}}
+    draw(){const img=ctx.createImageData(this.cols,this.rows); for(let i=0;i<this.A.length;i++){const v=clamp((this.A[i]-this.B[i])*255,0,255); img.data[i*4]=25+v*.2; img.data[i*4+1]=210-v*.5; img.data[i*4+2]=255-v*.25; img.data[i*4+3]=255;} const off=document.createElement('canvas'); off.width=this.cols; off.height=this.rows; off.getContext('2d').putImageData(img,0,0); ctx.imageSmoothingEnabled=false; ctx.drawImage(off,0,0,W,H); setStatus('紋路生長中');}
+    seed(x,y,r=15){const gx=Math.floor(x/this.scale),gy=Math.floor(y/this.scale),rr=Math.floor(r/this.scale); for(let yy=-rr;yy<=rr;yy++)for(let xx=-rr;xx<=rr;xx++){const X=gx+xx,Y=gy+yy;if(X>1&&X<this.cols-1&&Y>1&&Y<this.rows-1&&xx*xx+yy*yy<rr*rr){this.B[this.idx(X,Y)]=1;this.A[this.idx(X,Y)]=0;}}}
+    down(x,y){this.seed(x,y,24)} move(x,y){if(pointer.down)this.seed(x,y,18)} clear(){this.reset()}
+  }
+
+  const sims=[new DoublePendulum(),new GravitySim(),new ParticleField(),new SandBox(),new ReactionDiffusion()];
+  function switchTo(i){active=sims[i]; [...tabsEl.children].forEach((b,k)=>b.classList.toggle('active',k===i)); controlBox.innerHTML=''; titleEl.textContent=active.name; descEl.textContent=active.desc; hintEl.textContent=active.hint; active.controls?.(); active.resize?.(); running=true; pauseBtn.textContent='暫停'; setStatus('已切換');}
+  sims.forEach((s,i)=>{const b=document.createElement('button'); b.textContent=s.name; b.onclick=()=>switchTo(i); tabsEl.appendChild(b);});
+  pauseBtn.onclick=()=>{running=!running; pauseBtn.textContent=running?'暫停':'繼續'; setStatus(running?'運行中':'已暫停');};
+  resetBtn.onclick=()=>{active.reset(); active.resize?.(); setStatus('已重置');};
+  clearBtn.onclick=()=>{active.clear?.(); setStatus('已清除');};
+
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  function ptr(e){const r=canvas.getBoundingClientRect(); return {x:(e.clientX-r.left), y:(e.clientY-r.top)};}
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId); const p=ptr(e); Object.assign(pointer,{x:p.x,y:p.y,down:true,id:e.pointerId,button:e.button}); active.down?.(p.x,p.y,e);});
+  canvas.addEventListener('pointermove',e=>{const p=ptr(e); pointer.x=p.x; pointer.y=p.y; active.move?.(p.x,p.y,e);});
+  canvas.addEventListener('pointerup',e=>{const p=ptr(e); pointer.x=p.x; pointer.y=p.y; pointer.down=false; active.up?.(p.x,p.y,e);});
+  canvas.addEventListener('pointercancel',()=>{pointer.down=false; active.up?.();});
+
+  function loop(t){requestAnimationFrame(loop); frames++; if(t-fpsT>500){fpsBadge.textContent=`FPS ${Math.round(frames*1000/(t-fpsT))}`; fpsT=t; frames=0;} if(running) active?.update?.((t-last)/16.67); active?.draw?.(); last=t;}
+  resize(); switchTo(0); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

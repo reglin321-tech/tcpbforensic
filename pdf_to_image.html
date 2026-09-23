@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PDF 高解析圖片匯出</title>
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --card:#ffffff;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#d8dee6;
+    --accent:#2563eb;
+    --accent-hover:#1d4ed8;
+    --ok:#15803d;
+    --error:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .app{
+    width:min(760px,100%);
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:28px;
+    box-shadow:0 10px 30px rgba(0,0,0,.06);
+  }
+  h1{
+    margin:0 0 8px;
+    font-size:28px;
+  }
+  .sub{
+    color:var(--muted);
+    margin-bottom:22px;
+    line-height:1.6;
+  }
+  .dropzone{
+    border:2px dashed #b8c2cf;
+    border-radius:16px;
+    min-height:220px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    cursor:pointer;
+    padding:28px;
+    transition:.2s;
+    background:#fafbfc;
+  }
+  .dropzone.dragover{
+    border-color:var(--accent);
+    background:#eff6ff;
+  }
+  .drop-title{
+    font-size:22px;
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .drop-desc{
+    color:var(--muted);
+    font-size:14px;
+  }
+  .files{
+    margin-top:18px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+    display:none;
+  }
+  .file{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:11px 14px;
+    border-bottom:1px solid #edf0f3;
+  }
+  .file:last-child{border-bottom:0}
+  .file-name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-weight:600;
+  }
+  .remove{
+    border:0;
+    background:transparent;
+    color:#9ca3af;
+    font-size:20px;
+    cursor:pointer;
+  }
+  .controls{
+    margin-top:20px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  select,button{
+    width:100%;
+    min-height:44px;
+    border-radius:10px;
+    font-size:15px;
+  }
+  select{
+    border:1px solid var(--border);
+    background:#fff;
+    padding:0 12px;
+  }
+  .folder-btn{
+    margin-top:14px;
+    border:1px solid var(--border);
+    background:#fff;
+    cursor:pointer;
+  }
+  .export-btn{
+    margin-top:16px;
+    border:0;
+    background:var(--accent);
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .export-btn:hover{background:var(--accent-hover)}
+  .export-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+  .status{
+    margin-top:16px;
+    min-height:24px;
+    font-size:14px;
+    color:var(--muted);
+    white-space:pre-line;
+  }
+  .status.ok{color:var(--ok)}
+  .status.error{color:var(--error)}
+  .progress-wrap{
+    margin-top:14px;
+    background:#e5e7eb;
+    border-radius:999px;
+    height:10px;
+    overflow:hidden;
+    display:none;
+  }
+  .progress{
+    width:0%;
+    height:100%;
+    background:var(--accent);
+    transition:width .15s;
+  }
+  .note{
+    margin-top:18px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.6;
+  }
+  @media(max-width:600px){
+    .controls{grid-template-columns:1fr}
+    .app{padding:20px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>PDF 高解析圖片匯出</h1>
+  <div class="sub">將 PDF 拖曳進來，或點擊選擇檔案。按一次即可逐頁匯出成高解析 PNG。</div>
+
+  <div id="dropzone" class="dropzone">
+    <div>
+      <div class="drop-title">將 PDF 拖曳到這裡</div>
+      <div class="drop-desc">或點擊選擇 PDF，可一次選擇多個檔案</div>
+    </div>
+  </div>
+  <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden />
+
+  <div id="files" class="files"></div>
+
+  <div class="controls">
+    <div>
+      <label for="dpi">輸出解析度</label>
+      <select id="dpi">
+        <option value="150">150 DPI</option>
+        <option value="300" selected>300 DPI（建議）</option>
+        <option value="400">400 DPI</option>
+        <option value="600">600 DPI</option>
+      </select>
+    </div>
+    <div>
+      <label for="format">輸出格式</label>
+      <select id="format">
+        <option value="png" selected>PNG</option>
+        <option value="jpeg">JPEG</option>
+      </select>
+    </div>
+  </div>
+
+  <button id="folderBtn" class="folder-btn">選擇輸出資料夾（Chrome / Edge）</button>
+  <button id="exportBtn" class="export-btn" disabled>匯出高解析圖片</button>
+
+  <div id="progressWrap" class="progress-wrap">
+    <div id="progress" class="progress"></div>
+  </div>
+  <div id="status" class="status">尚未載入 PDF。</div>
+
+  <div class="note">
+    若瀏覽器支援 File System Access API，可先選擇輸出資料夾；否則每張圖片會使用瀏覽器下載方式存檔。
+    600 DPI 會大量使用記憶體，頁數多時建議使用 300 DPI。
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+
+<script type="module">
+  import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("fileInput");
+  const filesBox = document.getElementById("files");
+  const dpiSelect = document.getElementById("dpi");
+  const formatSelect = document.getElementById("format");
+  const folderBtn = document.getElementById("folderBtn");
+  const exportBtn = document.getElementById("exportBtn");
+  const statusEl = document.getElementById("status");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressEl = document.getElementById("progress");
+
+  let selectedFiles = [];
+  let outputDirHandle = null;
+
+  function setStatus(text, cls="") {
+    statusEl.textContent = text;
+    statusEl.className = "status" + (cls ? " " + cls : "");
+  }
+
+  function renderFiles() {
+    filesBox.innerHTML = "";
+    filesBox.style.display = selectedFiles.length ? "block" : "none";
+    exportBtn.disabled = selectedFiles.length === 0;
+
+    selectedFiles.forEach((file, index) => {
+      const row = document.createElement("div");
+      row.className = "file";
+
+      const name = document.createElement("div");
+      name.className = "file-name";
+      name.textContent = file.name;
+
+      const remove = document.createElement("button");
+      remove.className = "remove";
+      remove.type = "button";
+      remove.title = "移除";
+      remove.textContent = "×";
+      remove.addEventListener("click", () => {
+        selectedFiles.splice(index, 1);
+        renderFiles();
+        setStatus(selectedFiles.length ? `已載入 ${selectedFiles.length} 個 PDF。` : "尚未載入 PDF。");
+      });
+
+      row.append(name, remove);
+      filesBox.appendChild(row);
+    });
+  }
+
+  function addFiles(fileList) {
+    const incoming = [...fileList].filter(f =>
+      f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+
+    if (!incoming.length) {
+      setStatus("未偵測到 PDF 檔案。", "error");
+      return;
+    }
+
+    const existingKeys = new Set(selectedFiles.map(f => `${f.name}|${f.size}|${f.lastModified}`));
+    incoming.forEach(f => {
+      const key = `${f.name}|${f.size}|${f.lastModified}`;
+      if (!existingKeys.has(key)) {
+        selectedFiles.push(f);
+        existingKeys.add(key);
+      }
+    });
+
+    renderFiles();
+    setStatus(`已載入 ${selectedFiles.length} 個 PDF。`, "ok");
+  }
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", e => addFiles(e.target.files));
+
+  ["dragenter","dragover"].forEach(evt => {
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+  });
+  ["dragleave","drop"].forEach(evt => {
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+    });
+  });
+  dropzone.addEventListener("drop", e => addFiles(e.dataTransfer.files));
+
+  folderBtn.addEventListener("click", async () => {
+    if (!window.showDirectoryPicker) {
+      setStatus("目前瀏覽器不支援直接選擇輸出資料夾，將改用一般下載方式。", "error");
+      return;
+    }
+    try {
+      outputDirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+      folderBtn.textContent = `輸出資料夾：${outputDirHandle.name}`;
+      setStatus("已選擇輸出資料夾。", "ok");
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setStatus("選擇輸出資料夾失敗：" + err.message, "error");
+      }
+    }
+  });
+
+  function safeBaseName(name) {
+    return name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]/g, "_");
+  }
+
+  async function canvasToBlob(canvas, format) {
+    const mime = format === "jpeg" ? "image/jpeg" : "image/png";
+    const quality = format === "jpeg" ? 0.95 : undefined;
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error("圖片轉換失敗"));
+      }, mime, quality);
+    });
+  }
+
+  async function saveBlob(blob, fileName) {
+    if (outputDirHandle) {
+      const handle = await outputDirHandle.getFileHandle(fileName, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  exportBtn.addEventListener("click", async () => {
+    if (!selectedFiles.length) return;
+
+    exportBtn.disabled = true;
+    folderBtn.disabled = true;
+    progressWrap.style.display = "block";
+    progressEl.style.width = "0%";
+    setStatus("正在讀取 PDF...");
+
+    try {
+      const dpi = Number(dpiSelect.value);
+      const format = formatSelect.value;
+      const ext = format === "jpeg" ? "jpg" : "png";
+      const scale = dpi / 72;
+
+      let jobs = [];
+      let docs = [];
+
+      for (const file of selectedFiles) {
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+        docs.push({ file, pdf });
+        for (let p = 1; p <= pdf.numPages; p++) {
+          jobs.push({ file, pdf, pageNumber: p });
+        }
+      }
+
+      let done = 0;
+
+      for (const job of jobs) {
+        const page = await job.pdf.getPage(job.pageNumber);
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { alpha: false });
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        if (format === "jpeg") {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        setStatus(
+          `正在轉換：${job.file.name}\n第 ${job.pageNumber} / ${job.pdf.numPages} 頁`
+        );
+
+        await page.render({
+          canvasContext: ctx,
+          viewport
+        }).promise;
+
+        const blob = await canvasToBlob(canvas, format);
+        const digits = Math.max(3, String(job.pdf.numPages).length);
+        const num = String(job.pageNumber).padStart(digits, "0");
+        const fileName = `${safeBaseName(job.file.name)}_${num}.${ext}`;
+
+        await saveBlob(blob, fileName);
+
+        canvas.width = 1;
+        canvas.height = 1;
+
+        done++;
+        progressEl.style.width = `${Math.round((done / jobs.length) * 100)}%`;
+
+        await new Promise(r => setTimeout(r, 0));
+      }
+
+      setStatus(`完成，共輸出 ${jobs.length} 張圖片。`, "ok");
+    } catch (err) {
+      console.error(err);
+      setStatus("處理失敗：" + (err?.message || err), "error");
+    } finally {
+      exportBtn.disabled = selectedFiles.length === 0;
+      folderBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
