@@ -1,31 +1,201 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta charset="UTF-8">
-    <title>刑事鑑識工具箱</title>
-    <link rel="stylesheet" href="assets/css/global_light.css">
-    <style>
-        #navbar { background-color: var(--accent-color); padding: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; display: flex; gap: 15px; overflow-x: auto; border-bottom: 1px solid var(--border-color); }
-        #navbar a { color: var(--text-main); text-decoration: none; white-space: nowrap; font-size: 16px; font-weight: bold; }
-        #content-frame { margin-top: 60px; width: 100%; height: calc(100vh - 60px); border: none; }
-    </style>
+<meta charset="UTF-8">
+<title>鑑識工具箱</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+        background: #f3f5f7;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* ===== 上方標頭 ===== */
+    #navbar {
+        min-height: 64px;
+        padding: 10px 18px;
+
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        background: #263746;
+        border-bottom: 1px solid #182631;
+
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* 系統名稱 */
+    .navbar-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        margin-right: 12px;
+        padding-right: 18px;
+
+        color: white;
+        font-size: 18px;
+        font-weight: 700;
+
+        border-right: 1px solid rgba(255,255,255,.25);
+        flex-shrink: 0;
+    }
+
+    .navbar-title .icon {
+        font-size: 22px;
+    }
+
+    /* 功能按鈕 */
+    #navbar a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        height: 38px;
+        padding: 0 14px;
+
+        color: #e8eef3;
+        text-decoration: none;
+
+        font-size: 14px;
+        font-weight: 500;
+
+        border-radius: 7px;
+
+        transition:
+            background-color .15s ease,
+            color .15s ease,
+            transform .15s ease;
+    }
+
+    /* 滑鼠移入 */
+    #navbar a:hover {
+        background: rgba(255,255,255,.14);
+        color: #ffffff;
+    }
+
+    /* 點選中的功能 */
+    #navbar a.active {
+        background: #ffffff;
+        color: #263746;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(0,0,0,.18);
+    }
+
+    /* iframe */
+    #content-frame {
+        flex: 1;
+        width: 100%;
+        border: none;
+        background: white;
+    }
+
+    /* scrollbar */
+    #navbar::-webkit-scrollbar {
+        height: 5px;
+    }
+
+    #navbar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,.25);
+        border-radius: 10px;
+    }
+</style>
 </head>
+
+
 <body>
-    <div id="navbar">
-<!--        <a href="physics/projectile.html" target="contentFrame">拋體計算</a>-->
-<!--        <a href="physics/kinetic.html" target="contentFrame">動能計算</a>-->
-        <a href="duty/equipment.html" target="contentFrame">裝備檢查</a>
-        <a href="contacts/phonebook.html" target="contentFrame">分機查詢</a>
-<!--        <a href="lab_dispatch.html" target="contentFrame">毒品分工表</a> -->
-        <a href="LABELPRINT/labelprint.html" target="contentFrame">標籤列印</a>
-        <a href="timeline_pic.html" target="contentFrame">時間線</a>
-        <a href="ramanspec.html" target="contentFrame">光譜標記</a>
-        <a href="mindmap.html" target="contentFrame">心智圖</a>
-        <a href="pdf_to_image.html" target="contentFrame">PDF轉JPG</a>
-        <a href="image_to_pdf.html" target="contentFrame">JPG彙整為PDF</a>
-        <a href="pdf_to_ppt.html" target="contentFrame">PDF回去PPT</a>
+
+<div id="navbar">
+
+    <div class="navbar-title">
+        <span class="icon">🧰</span>
+        <span>鑑識工具箱</span>
     </div>
-    <iframe id="content-frame" name="contentFrame" src="duty/equipment.html"></iframe>
+
+    <a href="duty/equipment.html"
+       target="contentFrame"
+       class="active">
+        裝備檢查
+    </a>
+
+    <a href="contacts/phonebook.html"
+       target="contentFrame">
+        分機查詢
+    </a>
+
+    <a href="LABELPRINT/labelprint.html"
+       target="contentFrame">
+        標籤列印
+    </a>
+
+    <a href="timeline_pic.html"
+       target="contentFrame">
+        時間線
+    </a>
+
+    <a href="ramanspec.html"
+       target="contentFrame">
+        光譜標記
+    </a>
+
+    <a href="mindmap.html"
+       target="contentFrame">
+        心智圖
+    </a>
+
+    <a href="pdf_to_image.html"
+       target="contentFrame">
+        PDF轉JPG
+    </a>
+
+    <a href="image_to_pdf.html"
+       target="contentFrame">
+        JPG彙整為PDF
+    </a>
+
+    <a href="pdf_to_ppt_v4.html"
+       target="contentFrame">
+        PDF回復PPT/PNG
+    </a>
+
+</div>
+
+
+<iframe
+    id="content-frame"
+    name="contentFrame"
+    src="duty/equipment.html">
+</iframe>
+
+
+<script>
+    const navLinks = document.querySelectorAll("#navbar a");
+
+    navLinks.forEach(link => {
+        link.addEventListener("click", function () {
+
+            navLinks.forEach(item => {
+                item.classList.remove("active");
+            });
+
+            this.classList.add("active");
+        });
+    });
+</script>
+
 </body>
 </html>
