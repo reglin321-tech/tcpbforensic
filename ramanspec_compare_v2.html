@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>拉曼圖譜標註與比較工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<style>
+:root{
+  --red:#e74c3c;--blue:#1976d2;--green:#16a34a;--gray:#5f6b76;--purple:#8e44ad;
+  --dark:#263747;--line:#dfe5e9;--bg:#f5f7f9;--panel:#fff;--accent:#2563eb;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{display:flex;font-family:"Microsoft JhengHei","Segoe UI",sans-serif;background:var(--bg);color:#1f2d3d;user-select:none}
+.sidebar{width:328px;min-width:328px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;box-shadow:2px 0 12px rgba(30,45,60,.06);z-index:10}
+.head{padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.head h2{margin:0 0 10px;font-size:1.15rem;color:var(--dark)}
+.modeTabs{display:grid;grid-template-columns:1fr 1fr;background:#eef2f5;border-radius:9px;padding:4px;gap:4px}
+.modeTab{border:0;background:transparent;padding:9px 8px;border-radius:7px;font-weight:800;cursor:pointer;color:#586775}
+.modeTab.active{background:#fff;color:var(--accent);box-shadow:0 1px 5px rgba(30,45,60,.15)}
+.content{flex:1;overflow-y:auto;padding:14px 16px 18px}
+.section{margin-bottom:15px}.sectionTitle{font-size:.82rem;font-weight:800;color:#72808c;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.fileBox{border:1px dashed #aeb8c0;border-radius:8px;padding:10px;background:#fbfcfd}
+.fileBox input{width:100%}
+.toolGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{border:1px solid #d8e0e5;background:#fff;border-radius:8px;padding:10px 9px;font-weight:800;font-size:.92rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:6px;color:#314150}
+.btn:hover{background:#f7f9fa}.btn.active{box-shadow:inset 4px 0 0 currentColor;background:#f9fbfc}
+.match{color:var(--red)}.nomatch{color:var(--blue)}.key{color:var(--green)}.compare{color:var(--gray)}.circle{color:var(--purple)}.cross{color:#111}.select{color:#34495e}
+.full{grid-column:1 / -1}
+.hint{background:#f3f6f8;border-radius:8px;padding:10px 11px;line-height:1.55;font-size:.82rem;color:#596773}
+.inlineActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.action{border:0;border-radius:8px;padding:10px 9px;font-weight:800;cursor:pointer;font-size:.9rem}.secondary{background:#edf1f4;color:#334b5e}.danger{background:#fdecec;color:#b52929}.primary{background:#34495e;color:#fff}.warn{background:#fff1dc;color:#a35b00}
+.pickBtn{width:100%;border:1px solid #b9cdfb;background:#eef4ff;color:#1f5fc9;border-radius:8px;padding:11px;font-weight:800;cursor:pointer}.pickBtn.active{background:#dfeafe;box-shadow:0 0 0 2px rgba(37,99,235,.14) inset}
+.controlRow{display:grid;grid-template-columns:90px 1fr 44px;align-items:center;gap:8px;margin:8px 0;font-size:.84rem}.controlRow input[type=range]{width:100%}.num{font-variant-numeric:tabular-nums;text-align:right;color:#4c5b67}
+.checkRow{display:flex;align-items:center;gap:8px;font-size:.88rem;margin:9px 0}.checkRow input{width:16px;height:16px}
+.layerList{display:flex;flex-direction:column;gap:8px;margin-top:9px}.empty{font-size:.84rem;color:#88939c;background:#f7f9fa;border:1px dashed #cfd7dc;border-radius:8px;padding:11px;text-align:center}
+.layerCard{border:1px solid #dfe5e9;border-radius:9px;background:#fff;padding:9px}.layerTop{display:flex;align-items:center;gap:8px}.swatch{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.16);flex:0 0 auto}.layerName{font-weight:800;font-size:.88rem;flex:1}.miniBtn{border:1px solid #d8e0e5;background:#f8fafb;border-radius:6px;padding:5px 7px;font-size:.78rem;cursor:pointer}.miniBtn:hover{background:#eef2f4}.layerMeta{display:flex;justify-content:space-between;font-size:.76rem;color:#77848d;margin-top:7px}
+.footer{border-top:1px solid var(--line);padding:11px 16px 14px;background:#fff}.saveRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.saveRow button{border:0;border-radius:8px;padding:11px 8px;font-weight:900;cursor:pointer}.saveMarked{background:#34495e;color:#fff}.saveCompare{background:#2563eb;color:#fff}
+.workarea{flex:1;position:relative;overflow:hidden;background-image:linear-gradient(45deg,#edf0f2 25%,transparent 25%,transparent 75%,#edf0f2 75%,#edf0f2),linear-gradient(45deg,#edf0f2 25%,transparent 25%,transparent 75%,#edf0f2 75%,#edf0f2);background-size:20px 20px;background-position:0 0,10px 10px}
+#c{position:absolute;left:0;top:0}.dropText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:#7f8a93;pointer-events:none;text-align:center;line-height:1.7}.tip{position:absolute;right:14px;bottom:14px;background:rgba(22,31,39,.76);color:#fff;border-radius:7px;padding:9px 12px;font-size:.81rem;line-height:1.55;pointer-events:none;backdrop-filter:blur(4px)}
+.modeBadge{position:absolute;left:14px;top:14px;background:rgba(255,255,255,.93);border:1px solid #dce3e8;border-radius:999px;padding:7px 11px;font-size:.82rem;font-weight:800;color:#3f5060;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="head">
+    <h2>拉曼圖譜標註與比較</h2>
+    <div class="modeTabs">
+      <button class="modeTab active" data-mode="annotate">標註</button>
+      <button class="modeTab" data-mode="spectrum">圖譜比較</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section">
+      <div class="sectionTitle">光譜圖片</div>
+      <div class="fileBox"><input type="file" id="fileInput" accept="image/*"></div>
+    </div>
+
+    <div id="annotatePanel">
+      <div class="section">
+        <div class="sectionTitle">標註工具</div>
+        <div class="toolGrid">
+          <button class="btn match active" data-tool="match">相符 Peak <span>1</span></button>
+          <button class="btn nomatch" data-tool="nomatch">未相符 Peak <span>2</span></button>
+          <button class="btn key" data-tool="key">重點 Peak <span>3</span></button>
+          <button class="btn compare" data-tool="compare">暫時比對線 <span>4</span></button>
+          <button class="btn circle" data-tool="circle">畫圈 <span>5</span></button>
+          <button class="btn cross" data-tool="cross">打叉 <span>6</span></button>
+          <button class="btn select full" data-tool="select">選取／移動 <span>Space</span></button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">標註管理</div>
+        <div class="inlineActions">
+          <button id="deleteBtn" class="action danger">刪除選取</button>
+          <button id="clearBtn" class="action warn">清除標註</button>
+        </div>
+      </div>
+
+      <div class="hint">滾輪縮放；Alt + 拖曳平移畫面；Delete 刪除選取標註。暫時比對線不會出現在「正式標註輸出」。</div>
+    </div>
+
+    <div id="spectrumPanel" class="hidden">
+      <div class="section">
+        <div class="sectionTitle">擷取圖譜</div>
+        <button id="pickSpectrumBtn" class="pickBtn">＋ 點圖上的顏色建立圖譜</button>
+        <div class="controlRow"><span>顏色容差</span><input id="tolerance" type="range" min="8" max="90" value="34"><span id="tolVal" class="num">34</span></div>
+        <div class="hint">點一下彩色曲線，系統會依附近色相擷取成透明圖層。若擷取太少可提高容差；若吃到文字或其他線條則降低。</div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">比較設定</div>
+        <label class="checkRow"><input id="lockX" type="checkbox" checked> 鎖定 X 軸，只允許上下移動</label>
+        <div class="controlRow"><span>原圖透明度</span><input id="baseOpacity" type="range" min="10" max="100" value="38"><span id="baseOpacityVal" class="num">38%</span></div>
+        <div class="controlRow"><span>圖層透明度</span><input id="layerOpacity" type="range" min="20" max="100" value="100"><span id="layerOpacityVal" class="num">100%</span></div>
+        <div class="inlineActions">
+          <button id="nudgeUp" class="action secondary">↑ 微調上移</button>
+          <button id="nudgeDown" class="action secondary">↓ 微調下移</button>
+          <button id="resetSelectedLayer" class="action secondary">復位選取圖譜</button>
+          <button id="resetAllLayers" class="action secondary">全部復位</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">已擷取圖譜</div>
+        <div id="layerList" class="layerList"><div class="empty">尚未建立圖譜圖層</div></div>
+      </div>
+
+      <div class="hint">比較模式中可直接拖曳彩色圖譜，畫面左側會同步標示各圖譜的位移量。可用 Shift + 點選，或直接框選多條圖譜後一起上下拖動；建議維持「鎖定 X 軸」，避免改變 Raman shift 的相對位置。</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="inlineActions" style="margin-bottom:8px">
+      <button id="resetBtn" class="action secondary">重設視角</button>
+      <button id="restoreBaseBtn" class="action secondary">原圖 100%</button>
+    </div>
+    <div class="saveRow">
+      <button id="saveBtn" class="saveMarked">儲存標註圖</button>
+      <button id="saveCompareBtn" class="saveCompare">儲存比較畫面</button>
+    </div>
+  </div>
+</aside>
+
+<main class="workarea" id="workarea">
+  <canvas id="c"></canvas>
+  <div class="dropText" id="dropText">將拉曼光譜圖片拖曳到這裡<br>或使用左側選擇檔案</div>
+  <div class="modeBadge" id="modeBadge">標註模式</div>
+  <div class="tip" id="tip">滾輪：縮放<br>Alt + 拖曳：平移<br>1～6：切換標註工具</div>
+</main>
+
+<script>
+const workarea=document.getElementById('workarea');
+const canvas=new fabric.Canvas('c',{selection:true,preserveObjectStacking:true});
+let mode='annotate';
+let currentTool='match', previousTool='match', spaceDown=false;
+let imageObj=null, sourceCanvas=null, sourceCtx=null, sourceImageData=null;
+let spectrumPickPending=false, selectedSpectrum=null, spectrumSeq=0;
+const spectrumLayers=[];
+
+const previewLine=new fabric.Line([0,0,0,0],{stroke:'#555',strokeWidth:1,strokeDashArray:[8,6],selectable:false,evented:false,visible:false,excludeMark:true});
+canvas.add(previewLine);
+const styles={match:{color:'#e74c3c',dash:null},nomatch:{color:'#1976d2',dash:null},key:{color:'#16a34a',dash:null},compare:{color:'#555',dash:[10,7]}};
+
+function resizeCanvas(){
+  canvas.setWidth(workarea.clientWidth);canvas.setHeight(workarea.clientHeight);
+  if(imageObj) fitImage(); else canvas.requestRenderAll();
+}
+window.addEventListener('resize',resizeCanvas);resizeCanvas();
+
+function setMode(next){
+  mode=next;
+  document.querySelectorAll('.modeTab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  document.getElementById('annotatePanel').classList.toggle('hidden',mode!=='annotate');
+  document.getElementById('spectrumPanel').classList.toggle('hidden',mode!=='spectrum');
+  document.getElementById('modeBadge').textContent=mode==='annotate'?'標註模式':'圖譜比較模式';
+  document.getElementById('tip').innerHTML=mode==='annotate'
+    ?'滾輪：縮放<br>Alt + 拖曳：平移<br>1～6：切換標註工具'
+    :'拖曳彩色圖譜：上下比較<br>Shift + 點選 / 框選：多條一起移動<br>Alt + 拖曳：平移';
+  spectrumPickPending=false;
+  const pickBtn=document.getElementById('pickSpectrumBtn');
+  pickBtn.classList.remove('active');
+  pickBtn.textContent='＋ 點圖上的顏色建立圖譜';
+  previewLine.visible=false;
+
+  if(mode==='annotate'){
+    if(imageObj) imageObj.opacity=1;
+    spectrumLayers.forEach(s=>{
+      s.obj.visible=false;
+      s.obj.selectable=false;
+      s.obj.evented=false;
+      if(s.marker) s.marker.visible=false;
+    });
+    canvas.selection=(currentTool==='select');
+    canvas.discardActiveObject();
+    setTool(currentTool);
+  }else{
+    if(imageObj) imageObj.opacity=Number(document.getElementById('baseOpacity').value)/100;
+    spectrumLayers.forEach(s=>{
+      s.obj.visible=s.visible;
+      s.obj.selectable=true;
+      s.obj.evented=true;
+      s.obj.lockMovementX=document.getElementById('lockX').checked;
+      updateSpectrumMarker(s);
+    });
+    canvas.selection=true;
+    canvas.discardActiveObject();
+    updateSpectrumOpacity();
+  }
+  canvas.requestRenderAll();
+}
+document.querySelectorAll('.modeTab').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+
+function setTool(t){
+  currentTool=t;
+  document.querySelectorAll('.btn[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
+  if(mode!=='annotate') return;
+  const sel=t==='select';canvas.selection=sel;
+  canvas.getObjects().forEach(o=>{
+    if(o!==imageObj&&o!==previewLine&&!o.isSpectrum&&!o.isSpectrumLabel){o.selectable=sel;o.evented=sel;}
+  });
+  if(t!=='compare')previewLine.visible=false;canvas.requestRenderAll();
+}
+document.querySelectorAll('.btn[data-tool]').forEach(b=>b.onclick=()=>{if(!spaceDown)setTool(b.dataset.tool)});
+
+function loadFile(file){
+  if(!file||!file.type.startsWith('image/'))return;
+  const r=new FileReader();
+  r.onload=e=>{
+    fabric.Image.fromURL(e.target.result,img=>{
+      clearSpectrumLayers();
+      clearMarks(false);
+      if(imageObj) canvas.remove(imageObj);
+      imageObj=img;
+      imageObj.set({left:0,top:0,selectable:false,evented:false,opacity:1});
+      canvas.add(imageObj);
+      canvas.sendToBack(imageObj);
+      canvas.bringToFront(previewLine);
+      document.getElementById('dropText').style.display='none';
+
+      sourceCanvas=document.createElement('canvas');
+      sourceCanvas.width=img.width;sourceCanvas.height=img.height;
+      sourceCtx=sourceCanvas.getContext('2d',{willReadFrequently:true});
+      sourceCtx.drawImage(img.getElement(),0,0,img.width,img.height);
+      sourceImageData=sourceCtx.getImageData(0,0,img.width,img.height);
+
+      fitImage();
+      setMode(mode);
+    },{crossOrigin:'anonymous'});
+  };
+  r.readAsDataURL(file);
+}
+
+function fitImage(){
+  if(!imageObj) return;
+  const w=canvas.getWidth(),h=canvas.getHeight();
+  const scale=Math.min(w/imageObj.width,h/imageObj.height);
+  imageObj.set({scaleX:scale,scaleY:scale,left:(w-imageObj.width*scale)/2,top:(h-imageObj.height*scale)/2});
+  spectrumLayers.forEach(s=>{
+    const dx=s.offsetX||0,dy=s.offsetY||0;
+    s.obj.set({scaleX:scale,scaleY:scale,left:imageObj.left+dx,top:imageObj.top+dy});
+    updateSpectrumMarker(s);
+  });
+  canvas.setViewportTransform([1,0,0,1,0,0]);
+  canvas.setZoom(1);
+  canvas.requestRenderAll();
+}
+
+document.getElementById('fileInput').onchange=e=>loadFile(e.target.files[0]);
+['dragenter','dragover'].forEach(ev=>workarea.addEventListener(ev,e=>{e.preventDefault();workarea.style.outline='4px solid #3498db'}));
+['dragleave','drop'].forEach(ev=>workarea.addEventListener(ev,e=>{e.preventDefault();workarea.style.outline='none'}));
+workarea.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+
+function makeVertical(x,tool){const z=canvas.getZoom(),s=styles[tool];const l=new fabric.Line([x,0,x,canvas.getHeight()],{stroke:s.color,strokeWidth:3/z,strokeDashArray:s.dash?s.dash.map(v=>v/z):null,selectable:false,evented:false,mark:true,isCompare:tool==='compare'});canvas.add(l);canvas.bringToFront(l);return l;}
+function makeCircle(p){const z=canvas.getZoom();const c=new fabric.Circle({left:p.x,top:p.y,originX:'center',originY:'center',radius:24/z,fill:'transparent',stroke:'#8e44ad',strokeWidth:4/z,selectable:false,evented:false,mark:true});canvas.add(c);canvas.bringToFront(c);}
+function makeCross(p){const z=canvas.getZoom(),d=24/z;const l1=new fabric.Line([p.x-d,p.y-d,p.x+d,p.y+d],{stroke:'#111',strokeWidth:5/z,selectable:false,evented:false});const l2=new fabric.Line([p.x-d,p.y+d,p.x+d,p.y-d],{stroke:'#111',strokeWidth:5/z,selectable:false,evented:false});const g=new fabric.Group([l1,l2],{selectable:false,evented:false,mark:true});canvas.add(g);canvas.bringToFront(g);}
+
+function rgbToHsv(r,g,b){r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;let h=0;if(d){if(max===r)h=((g-b)/d)%6;else if(max===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}return[h,max===0?0:d/max,max];}
+function hueDistance(a,b){const d=Math.abs(a-b);return Math.min(d,360-d);}
+function colorHex(r,g,b){return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');}
+function getSelectedSpectrumLayers(){
+  const active=canvas.getActiveObjects().filter(o=>o.isSpectrum).map(o=>o.spectrumRef).filter(Boolean);
+  if(active.length) return [...new Set(active)];
+  return selectedSpectrum?[selectedSpectrum]:[];
+}
+function getSelectedSpectrumSet(){return new Set(getSelectedSpectrumLayers());}
+function formatShiftLabel(offsetY){
+  const rounded=Math.round(offsetY||0);
+  if(rounded===0) return '原位';
+  return rounded<0 ? `上移 ${Math.abs(rounded)} px` : `下移 ${rounded} px`;
+}
+function ensureSpectrumMarker(s){
+  if(s.marker) return;
+  s.marker=new fabric.Text('',{
+    left:imageObj?imageObj.left+8:8,
+    top:imageObj?imageObj.top+8:8,
+    fontSize:13,
+    fontWeight:'700',
+    fill:s.color,
+    backgroundColor:'rgba(255,255,255,0.88)',
+    selectable:false,
+    evented:false,
+    visible:false,
+    isSpectrumLabel:true
+  });
+  canvas.add(s.marker);
+}
+function updateSpectrumMarker(s){
+  if(!s) return;
+  ensureSpectrumMarker(s);
+  const selectedSet=getSelectedSpectrumSet();
+  const prefix=selectedSet.has(s)?'● ':'';
+  s.marker.text=`${prefix}${s.name}｜${formatShiftLabel(s.offsetY)}`;
+  s.marker.set({
+    left:(imageObj?.left||0)+8,
+    top:(s.obj?.top||imageObj?.top||0)+6,
+    visible:mode==='spectrum' && !!s.visible
+  });
+  canvas.bringToFront(s.marker);
+}
+function removeSpectrumMarker(s){if(s?.marker){canvas.remove(s.marker);s.marker=null;}}
+function syncSpectrumOffsetsFromTarget(target){
+  if(!target||!imageObj) return;
+  const list=(target.type==='activeSelection' ? target.getObjects() : [target]).filter(o=>o?.isSpectrum);
+  if(!list.length) return;
+  list.forEach(o=>{
+    const s=o.spectrumRef;
+    if(document.getElementById('lockX').checked){
+      o.left=imageObj.left+(s.offsetX||0);
+    }
+    s.offsetX=o.left-imageObj.left;
+    s.offsetY=o.top-imageObj.top;
+    updateSpectrumMarker(s);
+  });
+  refreshLayerList();
+}
+function configureSpectrumSelection(){
+  if(mode!=='spectrum') return;
+  const activeObject=canvas.getActiveObject();
+  if(activeObject?.type==='activeSelection'){
+    activeObject.lockMovementX=document.getElementById('lockX').checked;
+    activeObject.lockRotation=true;
+    activeObject.hasControls=false;
+    activeObject.hasBorders=true;
+  }
+  const selected=getSelectedSpectrumLayers();
+  selectedSpectrum=selected.length===1 ? selected[0] : (selected[0]||null);
+  spectrumLayers.forEach(updateSpectrumMarker);
+  refreshLayerList();
+}
+
+function pickSpectrumAt(p){
+  if(!sourceImageData||!imageObj)return;
+  const ix=Math.floor((p.x-imageObj.left)/imageObj.scaleX),iy=Math.floor((p.y-imageObj.top)/imageObj.scaleY);
+  if(ix<0||iy<0||ix>=sourceCanvas.width||iy>=sourceCanvas.height)return;
+  const idx=(iy*sourceCanvas.width+ix)*4,d=sourceImageData.data;const r=d[idx],g=d[idx+1],b=d[idx+2];
+  const hsv=rgbToHsv(r,g,b);
+  if(hsv[1]<.08){alert('這個位置接近灰階／黑色，請點在彩色圖譜線上。');return;}
+  createSpectrumLayer(r,g,b,hsv);
+  spectrumPickPending=false;
+  const btn=document.getElementById('pickSpectrumBtn');
+  btn.classList.remove('active');
+  btn.textContent='＋ 點圖上的顏色建立圖譜';
+}
+
+function createSpectrumLayer(sr,sg,sb,seedHsv){
+  const tol=Number(document.getElementById('tolerance').value);
+  const out=document.createElement('canvas');out.width=sourceCanvas.width;out.height=sourceCanvas.height;
+  const ctx=out.getContext('2d');const img=ctx.createImageData(out.width,out.height);const src=sourceImageData.data,dst=img.data;
+  let kept=0;
+  for(let i=0;i<src.length;i+=4){
+    const r=src[i],g=src[i+1],b=src[i+2],a=src[i+3];if(a===0)continue;
+    const hsv=rgbToHsv(r,g,b);const hd=hueDistance(hsv[0],seedHsv[0]);
+    const hueOK=hd<=tol*0.42, satOK=hsv[1]>=Math.max(.10,seedHsv[1]-tol/130), valOK=Math.abs(hsv[2]-seedHsv[2])<=Math.min(.65,.18+tol/110);
+    if(hueOK&&satOK&&valOK){dst[i]=r;dst[i+1]=g;dst[i+2]=b;dst[i+3]=255;kept++;}
+  }
+  ctx.putImageData(img,0,0);
+  if(kept<15){alert('擷取到的像素太少，請重新點在線條較實的位置，或提高顏色容差。');return;}
+  const obj=new fabric.Image(out,{left:imageObj.left,top:imageObj.top,scaleX:imageObj.scaleX,scaleY:imageObj.scaleY,selectable:true,evented:true,hasControls:false,hasBorders:true,lockRotation:true,hoverCursor:'ns-resize',moveCursor:'ns-resize',opacity:Number(document.getElementById('layerOpacity').value)/100});
+  const s={id:++spectrumSeq,name:`圖譜 ${spectrumSeq}`,color:colorHex(sr,sg,sb),obj,offsetX:0,offsetY:0,visible:true,pixels:kept,marker:null};
+  obj.isSpectrum=true;obj.spectrumRef=s;obj.lockMovementX=document.getElementById('lockX').checked;
+  spectrumLayers.push(s);selectedSpectrum=s;
+  canvas.add(obj);canvas.bringToFront(obj);ensureSpectrumMarker(s);updateSpectrumMarker(s);
+  canvas.setActiveObject(obj);configureSpectrumSelection();refreshLayerList();canvas.requestRenderAll();
+}
+
+function clearSpectrumLayers(){
+  spectrumLayers.splice(0).forEach(s=>{canvas.remove(s.obj);removeSpectrumMarker(s);});
+  selectedSpectrum=null;spectrumSeq=0;canvas.discardActiveObject();refreshLayerList();
+}
+
+function deleteSelectedSpectrum(){
+  const targets=getSelectedSpectrumLayers();
+  if(!targets.length) return;
+  canvas.discardActiveObject();
+  targets.forEach(s=>{
+    canvas.remove(s.obj);removeSpectrumMarker(s);
+    const i=spectrumLayers.indexOf(s);if(i>=0)spectrumLayers.splice(i,1);
+  });
+  selectedSpectrum=spectrumLayers[0]||null;
+  if(selectedSpectrum&&mode==='spectrum') canvas.setActiveObject(selectedSpectrum.obj);
+  spectrumLayers.forEach(updateSpectrumMarker);
+  refreshLayerList();canvas.requestRenderAll();
+}
+
+function resetSpectrum(s){
+  if(!s||!imageObj)return;
+  s.offsetX=0;s.offsetY=0;
+  s.obj.set({left:imageObj.left,top:imageObj.top});s.obj.setCoords();
+  updateSpectrumMarker(s);canvas.requestRenderAll();refreshLayerList();
+}
+function resetSelectedSpectra(){
+  const targets=getSelectedSpectrumLayers();
+  if(!targets.length&&selectedSpectrum) targets.push(selectedSpectrum);
+  targets.forEach(resetSpectrum);
+}
+function nudgeSelected(dir,amount){
+  const targets=getSelectedSpectrumLayers();
+  if(!targets.length||!imageObj)return;
+  targets.forEach(s=>{s.obj.top+=dir*amount;s.offsetY=s.obj.top-imageObj.top;s.obj.setCoords();updateSpectrumMarker(s);});
+  canvas.requestRenderAll();refreshLayerList();
+}
+
+function refreshLayerList(){
+  const box=document.getElementById('layerList');box.innerHTML='';
+  if(!spectrumLayers.length){box.innerHTML='<div class="empty">尚未建立圖譜圖層</div>';return;}
+  const activeSet=getSelectedSpectrumSet();
+  spectrumLayers.forEach(s=>{
+    const card=document.createElement('div');card.className='layerCard';if(activeSet.has(s))card.style.borderColor='#7aa5ff';
+    const top=document.createElement('div');top.className='layerTop';
+    top.innerHTML=`<span class="swatch" style="background:${s.color}"></span><span class="layerName">${s.name}</span>`;
+    const eye=document.createElement('button');eye.className='miniBtn';eye.textContent=s.visible?'隱藏':'顯示';
+    eye.onclick=()=>{s.visible=!s.visible;s.obj.visible=s.visible;if(s.marker)s.marker.visible=mode==='spectrum'&&s.visible;eye.textContent=s.visible?'隱藏':'顯示';canvas.requestRenderAll();};
+    const reset=document.createElement('button');reset.className='miniBtn';reset.textContent='復位';reset.onclick=()=>resetSpectrum(s);
+    const del=document.createElement('button');del.className='miniBtn';del.textContent='刪除';del.onclick=()=>{selectedSpectrum=s;canvas.setActiveObject(s.obj);deleteSelectedSpectrum();};
+    top.append(eye,reset,del);card.append(top);
+    const meta=document.createElement('div');meta.className='layerMeta';meta.innerHTML=`<span>${formatShiftLabel(s.offsetY)}</span><span>${activeSet.has(s)?'已選取':''}</span>`;card.append(meta);
+    card.onclick=e=>{if(e.target.tagName==='BUTTON')return;selectedSpectrum=s;canvas.setActiveObject(s.obj);configureSpectrumSelection();refreshLayerList();canvas.requestRenderAll();};
+    box.append(card);
+  });
+}
+
+canvas.on('mouse:down',function(opt){
+  const e=opt.e;
+  if(e.altKey||e.button===1){this.isDragging=true;this.selection=false;this.lastPosX=e.clientX;this.lastPosY=e.clientY;return;}
+  if(mode==='spectrum'){
+    if(spectrumPickPending && imageObj){const p=canvas.getPointer(e);pickSpectrumAt(p);return;}
+    if(opt.target?.isSpectrum){selectedSpectrum=opt.target.spectrumRef;refreshLayerList();}
+    return;
+  }
+  if(currentTool==='select'||opt.target)return;
+  const p=canvas.getPointer(e);
+  if(['match','nomatch','key','compare'].includes(currentTool))makeVertical(p.x,currentTool);
+  else if(currentTool==='circle')makeCircle(p);else if(currentTool==='cross')makeCross(p);
+  canvas.requestRenderAll();
+});
+canvas.on('mouse:move',function(opt){
+  const e=opt.e;
+  if(this.isDragging){const vpt=this.viewportTransform;vpt[4]+=e.clientX-this.lastPosX;vpt[5]+=e.clientY-this.lastPosY;this.lastPosX=e.clientX;this.lastPosY=e.clientY;this.requestRenderAll();return;}
+  if(mode==='annotate'&&currentTool==='compare'){
+    const p=canvas.getPointer(e),z=canvas.getZoom();
+    previewLine.set({x1:p.x,y1:0,x2:p.x,y2:canvas.getHeight(),stroke:'#555',strokeWidth:1.5/z,strokeDashArray:[10/z,7/z],visible:true});
+    canvas.bringToFront(previewLine);canvas.requestRenderAll();
+  }else previewLine.visible=false;
+});
+canvas.on('mouse:up',function(){if(this.isDragging){this.isDragging=false;this.selection=(mode==='spectrum')||currentTool==='select';}});
+canvas.on('object:moving',e=>syncSpectrumOffsetsFromTarget(e.target));
+canvas.on('object:modified',e=>syncSpectrumOffsetsFromTarget(e.target));
+canvas.on('selection:created',configureSpectrumSelection);
+canvas.on('selection:updated',configureSpectrumSelection);
+canvas.on('selection:cleared',()=>{if(mode==='spectrum'){selectedSpectrum=null;spectrumLayers.forEach(updateSpectrumMarker);refreshLayerList();}});
+canvas.on('mouse:wheel',function(opt){let z=canvas.getZoom();z*=0.999**opt.e.deltaY;z=Math.min(10,Math.max(.2,z));canvas.zoomToPoint({x:opt.e.offsetX,y:opt.e.offsetY},z);opt.e.preventDefault();opt.e.stopPropagation();});
+
+window.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
+  if(mode==='spectrum'){
+    if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();nudgeSelected(e.key==='ArrowUp'?-1:1,e.shiftKey?10:2);return;}
+    if(e.key==='Delete'||e.key==='Backspace'){deleteSelectedSpectrum();return;}
+    return;
+  }
+  if(e.code==='Space'&&!spaceDown){e.preventDefault();spaceDown=true;previousTool=currentTool;setTool('select');return;}
+  const map={'1':'match','2':'nomatch','3':'key','4':'compare','5':'circle','6':'cross'};
+  if(map[e.key]&&!spaceDown)setTool(map[e.key]);
+  if(e.key==='Delete'||e.key==='Backspace')deleteSelected();
+});
+window.addEventListener('keyup',e=>{if(mode==='annotate'&&e.code==='Space'){spaceDown=false;setTool(previousTool);}});
+
+function deleteSelected(){const objs=canvas.getActiveObjects();if(objs.length){canvas.discardActiveObject();objs.forEach(o=>{if(o!==imageObj&&o!==previewLine&&!o.isSpectrum&&!o.isSpectrumLabel)canvas.remove(o)});canvas.requestRenderAll();}}
+document.getElementById('deleteBtn').onclick=deleteSelected;
+function clearMarks(render=true){canvas.getObjects().slice().forEach(o=>{if(o.mark||o.isCompare)canvas.remove(o)});if(!canvas.getObjects().includes(previewLine))canvas.add(previewLine);canvas.bringToFront(previewLine);if(render)canvas.requestRenderAll();}
+document.getElementById('clearBtn').onclick=()=>clearMarks(true);
+document.getElementById('resetBtn').onclick=fitImage;
+document.getElementById('restoreBaseBtn').onclick=()=>{document.getElementById('baseOpacity').value=100;updateBaseOpacity();};
+
+document.getElementById('pickSpectrumBtn').onclick=()=>{
+  if(!imageObj){alert('請先載入光譜圖片。');return;}
+  spectrumPickPending=!spectrumPickPending;
+  const btn=document.getElementById('pickSpectrumBtn');
+  btn.classList.toggle('active',spectrumPickPending);
+  btn.textContent=spectrumPickPending?'請點選圖上的彩色曲線…':'＋ 點圖上的顏色建立圖譜';
+};
+document.getElementById('tolerance').oninput=e=>document.getElementById('tolVal').textContent=e.target.value;
+document.getElementById('lockX').onchange=e=>{
+  spectrumLayers.forEach(s=>s.obj.lockMovementX=e.target.checked);
+  const activeObj=canvas.getActiveObject();
+  if(activeObj?.type==='activeSelection') activeObj.lockMovementX=e.target.checked;
+  configureSpectrumSelection();
+};
+function updateBaseOpacity(){const v=Number(document.getElementById('baseOpacity').value);document.getElementById('baseOpacityVal').textContent=v+'%';if(imageObj&&mode==='spectrum'){imageObj.opacity=v/100;canvas.requestRenderAll();}}
+document.getElementById('baseOpacity').oninput=updateBaseOpacity;
+function updateSpectrumOpacity(){const v=Number(document.getElementById('layerOpacity').value);document.getElementById('layerOpacityVal').textContent=v+'%';spectrumLayers.forEach(s=>s.obj.opacity=v/100);canvas.requestRenderAll();}
+document.getElementById('layerOpacity').oninput=updateSpectrumOpacity;
+document.getElementById('nudgeUp').onclick=()=>nudgeSelected(-1,2);
+document.getElementById('nudgeDown').onclick=()=>nudgeSelected(1,2);
+document.getElementById('resetSelectedLayer').onclick=resetSelectedSpectra;
+document.getElementById('resetAllLayers').onclick=()=>spectrumLayers.forEach(resetSpectrum);
+
+function exportCanvas(kind){
+  if(!imageObj)return;
+  const oldBaseOpacity=imageObj.opacity;const saved=[];
+  previewLine.visible=false;canvas.discardActiveObject();
+  canvas.getObjects().forEach(o=>saved.push([o,o.visible,o.opacity]));
+  if(kind==='marked'){
+    imageObj.visible=true;imageObj.opacity=1;
+    spectrumLayers.forEach(s=>{s.obj.visible=false;if(s.marker)s.marker.visible=false;});
+    canvas.getObjects().forEach(o=>{if(o.isCompare||o.isSpectrumLabel)o.visible=false;});
+  }else{
+    imageObj.visible=true;imageObj.opacity=Number(document.getElementById('baseOpacity').value)/100;
+    spectrumLayers.forEach(s=>{s.obj.visible=s.visible;if(s.marker)s.marker.visible=mode==='spectrum'&&s.visible;});
+    spectrumLayers.forEach(updateSpectrumMarker);
+  }
+  canvas.renderAll();
+  const url=canvas.toDataURL({format:'png',multiplier:2});
+  saved.forEach(([o,v,op])=>{o.visible=v;o.opacity=op;});
+  imageObj.opacity=oldBaseOpacity;
+  canvas.renderAll();
+  const a=document.createElement('a');a.download=kind==='marked'?'raman_peak_marked.png':'raman_spectrum_compare.png';a.href=url;a.click();
+}
+document.getElementById('saveBtn').onclick=()=>exportCanvas('marked');
+document.getElementById('saveCompareBtn').onclick=()=>exportCanvas('compare');
+
+setTool('match');
+setMode('annotate');
+</script>
+</body>
+</html>

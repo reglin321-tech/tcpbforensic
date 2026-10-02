@@ -1,0 +1,2872 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>民國日期時間軸產生器</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #64748b;
+      --border: #d8e0ec;
+      --primary: #4f6df5;
+      --primary-dark: #243b86;
+      --danger: #ef4444;
+      --axis: #334155;
+      --axis-soft: #cbd5e1;
+      --timeline-label: #334155;
+      --timeline-border: #d8e0ec;
+      --timeline-bg-soft: #f8fafc;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .07);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    button, input, select, textarea { font-family: inherit; }
+
+    .app { width: 100%; max-width: none; margin: 0 auto; padding: 14px; }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .brand { display: flex; gap: 14px; align-items: center; }
+
+    .logo {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      box-shadow: 0 10px 22px rgba(79, 109, 245, .28);
+    }
+
+    h1 { margin: 0; font-size: 28px; letter-spacing: .04em; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 14px; }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-danger { color: var(--danger); border-color: #fecaca; background: #fff7f7; }
+    .btn-block { width: 100%; }
+    .btn-small { padding: 7px 9px; font-size: 13px; }
+
+    .theme-dots {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, .05);
+    }
+
+    .dot-theme {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .dot-blue { background: #2563eb; }
+    .dot-green { background: #16a34a; }
+    .dot-purple { background: #8b5cf6; }
+    .dot-orange { background: #f97316; }
+    .dot-gray { background: #475569; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+
+      height: calc(100vh - 88px);
+      overflow: hidden;
+    }
+
+    .layout.vertical-layout {
+      grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    .horizontal-layout .stage {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+
+    .vertical-layout .stage {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .panel, .stage {
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid rgba(216, 224, 236, .9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 14px;
+      position: sticky;
+      top: 14px;
+      width: 300px;
+      max-height: calc(100vh - 104px);
+      overflow-y: auto;
+    }
+
+    .stage {
+      padding: 12px;
+      width: 100%;
+      min-width: 0;
+      height: calc(100vh - 104px);
+      overflow: auto;
+      display: block;
+    }
+
+    .vertical-layout .stage {
+      height: calc(100vh - 104px);
+      min-height: 0;
+    }
+
+    .section { border-bottom: 1px solid #edf1f7; padding-bottom: 16px; margin-bottom: 16px; }
+    .section:last-child { border-bottom: 0; margin-bottom: 0; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: var(--primary-dark);
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+
+    .num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+    }
+
+    label { display: block; font-size: 13px; font-weight: 800; margin: 10px 0 6px; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 11px;
+      outline: none;
+      background: #fff;
+      font-size: 14px;
+    }
+
+    textarea { resize: vertical; min-height: 58px; }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(79, 109, 245, .12);
+    }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 6px; }
+    .quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 96px 1fr 42px;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .control-row input[type="range"] { padding: 0; }
+    .control-row input[type="number"] { padding: 7px 9px; text-align: center; }
+    .control-value { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+    .setting-group-title {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #edf1f7;
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .setting-group-title:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+    .setting-divider { height: 1px; background: #edf1f7; margin: 14px 0 4px; }
+
+    .compact-details {
+      padding-bottom: 0;
+    }
+
+    .compact-details > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 4px 0 12px;
+      font-weight: 900;
+      color: var(--primary-dark);
+      user-select: none;
+    }
+
+    .compact-details > summary::-webkit-details-marker { display: none; }
+    .compact-details > summary::after {
+      content: '▾';
+      color: var(--muted);
+      transition: transform .16s ease;
+    }
+    .compact-details:not([open]) > summary::after { transform: rotate(-90deg); }
+    .compact-details .details-body { padding-bottom: 10px; }
+
+    .preset-row, .mode-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .choice-btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #475569;
+      border-radius: 8px;
+      padding: 8px 6px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .choice-btn:hover { border-color: var(--primary); color: var(--primary-dark); }
+    .choice-btn.active {
+      border-color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 9%, white);
+      color: var(--primary-dark);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 34%, transparent);
+    }
+    @supports not (background: color-mix(in srgb, red 10%, white)) {
+      .choice-btn.active { background: #eef2ff; }
+      .display-status { background: #f8fafc; }
+    }
+
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .toggle-chip {
+      margin: 0;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 9px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .toggle-chip input { width: auto; margin: 0; }
+    .toggle-chip.disabled { opacity: .45; cursor: not-allowed; }
+
+    .more-wrap { position: relative; }
+    .more-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      z-index: 200;
+      min-width: 190px;
+      display: none;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, .16);
+    }
+    .more-menu.open { display: grid; gap: 4px; }
+    .more-menu button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      border-radius: 7px;
+      padding: 9px 10px;
+      text-align: left;
+      font-weight: 800;
+      color: #334155;
+      cursor: pointer;
+    }
+    .more-menu button:hover { background: #f8fafc; }
+    .more-menu button.danger { color: var(--danger); }
+
+    .display-status {
+      margin-top: 9px;
+      padding: 8px 9px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--primary) 6%, white);
+      color: #475569;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .color-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+
+    .event-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--border);
+      cursor: pointer;
+    }
+
+    .event-color.active { box-shadow: 0 0 0 3px rgba(79, 109, 245, .35); }
+
+    .canvas-area {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      min-height: 620px;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #dbe3ef;
+      overflow: visible;
+      margin: 0;
+    }
+
+    .vertical-layout .canvas-area {
+      min-width: 0;
+    }
+
+    .title-box {
+      position: absolute;
+      min-width: 340px;
+      background: rgba(255,255,255,.94);
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 14px 48px 12px 48px;
+      text-align: center;
+      box-shadow: 0 12px 26px rgba(124, 58, 237, .09);
+      cursor: move;
+      user-select: none;
+      z-index: 30;
+    }
+
+    .title-box .move-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 24px;
+      color: var(--primary-dark);
+    }
+
+    .title-main { font-size: var(--title-font-size, 24px); font-weight: 900; color: var(--primary-dark); }
+    .title-sub { margin-top: 4px; color: #334155; }
+
+    .zoom-box {
+      position: absolute;
+      right: 28px;
+      top: 42px;
+      display: flex;
+      gap: 8px;
+      z-index: 18;
+    }
+
+    .timeline-zone {
+      position: absolute;
+      left: 48px;
+      top: 128px;
+      transform-origin: top left;
+    }
+
+    .axis-line {
+      position: absolute;
+      background: var(--axis);
+      border-radius: 999px;
+      z-index: 2;
+    }
+
+    .axis-line.horizontal { height: 4px; }
+    .axis-line.vertical { width: 4px; }
+
+    .tick {
+      position: absolute;
+      background: #cbd5e1;
+      z-index: 2;
+    }
+
+    .tick.major { background: var(--axis-soft); }
+    .tick-label, .year-label, .lane-number, .lane-title {
+      position: absolute;
+      color: var(--timeline-label);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .tick-label { font-size: 12px; }
+    .year-label { font-size: 15px; font-weight: 900; color: var(--axis); }
+    .lane-number {
+      font-size: 11px;
+      color: var(--axis-soft);
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 1px 6px;
+      z-index: 3;
+    }
+    .lane-title { font-size: 12px; color: var(--timeline-label); font-weight: 800; }
+    .lane-guide {
+      position: absolute;
+      z-index: 1;
+      pointer-events: none;
+      border-color: var(--axis-soft);
+    }
+    .lane-guide.horizontal {
+      border-top: 1px dashed #e8eef6;
+      height: 1px;
+    }
+    .lane-guide.vertical {
+      border-left: 1px dashed #e8eef6;
+      width: 1px;
+    }
+
+    .event-card {
+      position: absolute;
+      width: 150px;
+      min-height: 62px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1.5px solid currentColor;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, .09);
+      cursor: grab;
+      z-index: 20;
+      user-select: none;
+      touch-action: none;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .event-card.dragging {
+      opacity: .82;
+      z-index: 99;
+      box-shadow: 0 18px 36px rgba(15, 23, 42, .18);
+    }
+
+    .event-name {
+      font-weight: 900;
+      font-size: var(--event-font-size, 14px);
+      margin-bottom: 5px;
+      line-height: 1.35;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .event-date { font-size: var(--event-date-font-size, 12px); color: #475569; }
+    .event-desc {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(100,116,139,.35);
+      font-size: var(--event-desc-font-size, 12px);
+      line-height: 1.4;
+      color: #475569;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .event-inline-edit {
+      display: grid;
+      gap: 7px;
+      cursor: default;
+    }
+
+    .event-inline-edit input,
+    .event-inline-edit textarea {
+      width: 100%;
+      border: 1px solid #d8e0ec;
+      border-radius: 7px;
+      padding: 6px 7px;
+      font-size: 12px;
+      background: #fff;
+      color: #1f2937;
+      box-shadow: none;
+    }
+
+    .event-inline-edit textarea {
+      min-height: 58px;
+      resize: vertical;
+    }
+
+    .event-inline-actions {
+      display: flex;
+      gap: 7px;
+      justify-content: flex-end;
+    }
+
+    .event-inline-actions button {
+      border: 1px solid #d8e0ec;
+      border-radius: 7px;
+      background: #fff;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .event-inline-actions .save {
+      color: #065f46;
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .event-inline-actions .cancel {
+      color: #475569;
+    }
+
+
+
+    .event-image-box {
+      position: absolute;
+      border: 1.5px dashed rgba(100, 116, 139, .42);
+      border-radius: 8px;
+      background: var(--timeline-bg-soft);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      cursor: pointer;
+      color: #64748b;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, .08);
+      z-index: 19;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .event-image-box:hover {
+      border-color: currentColor;
+      background: var(--timeline-bg-soft);
+    }
+
+    .event-image-box.drag-over {
+      border-color: currentColor;
+      box-shadow: inset 0 0 0 3px rgba(79, 109, 245, .14);
+    }
+
+    .event-image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center center;
+      display: block;
+      background: #ffffff;
+    }
+
+    .event-image-content {
+      position: absolute;
+      inset: 0;
+      background-color: #ffffff;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: contain;
+      pointer-events: none;
+    }
+
+    .event-image-placeholder {
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 8px;
+      color: #64748b;
+    }
+
+    .event-image-delete {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      width: 24px;
+      height: 24px;
+      border: 1px solid #fecaca;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .92);
+      color: var(--danger);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .event-floating-actions {
+      position: absolute;
+      z-index: 28;
+      opacity: .58;
+      transition: opacity .12s ease, transform .12s ease;
+      pointer-events: auto;
+    }
+
+    .event-floating-actions:hover,
+    .event-floating-actions.open {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    .event-action-trigger,
+    .event-icon-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #dbe3ef;
+      border-radius: 8px;
+      background: #fff;
+      color: #334155;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, .08);
+      font-size: 13px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .event-action-trigger {
+      color: currentColor;
+      font-weight: 900;
+      border-color: currentColor;
+    }
+
+    .event-action-menu {
+      position: absolute;
+      left: 32px;
+      top: 0;
+      display: none;
+      grid-template-columns: repeat(5, 26px);
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, .14);
+      white-space: nowrap;
+    }
+
+    .event-color-popover {
+      position: absolute;
+      left: 32px;
+      top: 38px;
+      display: none;
+      grid-template-columns: repeat(4, 22px);
+      gap: 7px;
+      padding: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: rgba(255,255,255,.98);
+      box-shadow: 0 12px 26px rgba(15,23,42,.14);
+      z-index: 3;
+    }
+
+    .event-color-dot-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px #cbd5e1;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .event-color-dot-btn.active {
+      box-shadow: 0 0 0 3px rgba(79,109,245,.28);
+    }
+
+    .event-floating-actions.open .event-action-menu { display: grid; }
+    .event-floating-actions.color-open .event-color-popover { display: grid; }
+    .event-floating-actions.menu-left .event-action-menu,
+    .event-floating-actions.menu-left .event-color-popover { left: auto; right: 32px; }
+
+    .event-icon-btn:hover { border-color: currentColor; color: currentColor; }
+    .event-icon-btn.active { color: currentColor; border-color: currentColor; background: #f8fafc; }
+    .event-icon-btn.danger { color: var(--danger); border-color: #fecaca; }
+
+    .event-line { position: absolute; z-index: 5; background: currentColor; pointer-events: none; }
+    .event-line-elbow { position: absolute; z-index: 5; background: currentColor; pointer-events: none; }
+    .event-point {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 8;
+      background: currentColor;
+      box-shadow: 0 0 0 4px #fff, 0 0 0 5px currentColor;
+    }
+
+    .mini-map {
+      position: absolute;
+      left: 54px;
+      right: 36px;
+      bottom: 16px;
+      height: 72px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255,255,255,.8);
+      overflow: hidden;
+      display: none;
+    }
+
+    .mini-axis { position: absolute; background: var(--axis-soft); }
+    .mini-axis.horizontal { left: 22px; right: 22px; top: 35px; height: 2px; }
+    .mini-axis.vertical { top: 10px; bottom: 10px; left: 50%; width: 2px; }
+    .mini-dot { position: absolute; width: 5px; height: 5px; transform: translate(-50%, -50%); border-radius: 50%; }
+
+    .timeline-note-box {
+      position: absolute;
+      left: 90px;
+      right: 90px;
+      bottom: 28px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--axis-soft);
+      color: var(--timeline-label);
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      background: rgba(255,255,255,.9);
+      z-index: 16;
+      display: none;
+    }
+
+
+    .message { display: none; margin-top: 10px; padding: 9px 11px; border-radius: 10px; font-size: 13px; }
+    .message.show { display: block; }
+    .ok { color: #065f46; background: #d1fae5; }
+    .error { color: #991b1b; background: #fee2e2; }
+    .hidden { display: none; }
+
+    .tips {
+      grid-column: 1 / -1;
+      margin-top: 16px;
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .vertical-layout .tips { display: none; }
+
+    .tip {
+      background: rgba(255,255,255,.88);
+      border: 1px solid #ddd6fe;
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: #312e81;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .04);
+    }
+
+    .tip b { display: block; margin-bottom: 4px; }
+    .tip span { color: #64748b; font-size: 12px; line-height: 1.5; }
+
+    @media (max-width: 1200px) {
+      .layout, .layout.vertical-layout { grid-template-columns: 280px minmax(0, 1fr); }
+      .panel {
+        width: 280px;
+        position: sticky;
+        top: 14px;
+        max-height: calc(100vh - 104px);
+        overflow-y: auto;
+      }
+      .stage {
+        width: 100%;
+        min-width: 0;
+        height: calc(100vh - 104px);
+        overflow: auto;
+      }
+      .tips { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">⬡</div>
+        <div>
+          <h1>民國日期時間軸產生器</h1>
+          <div class="subtitle">建立、編輯並視覺化重要事件時間軸</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn" onclick="saveProjectJson()">💾 儲存檔案</button>
+        <button class="btn" onclick="document.getElementById('loadJsonInput').click()">📂 讀取檔案</button>
+        <button class="btn btn-primary" onclick="exportTimelinePng()">🖼 匯出 PNG</button>
+        <button class="btn" onclick="toggleOrientation()">↕ 垂直/水平</button>
+        <button class="btn" onclick="showHelp()">？ 使用說明</button>
+        <div class="more-wrap">
+          <button class="btn" onclick="toggleMoreMenu(event)">⋯ 更多</button>
+          <div id="moreMenu" class="more-menu">
+            <button onclick="loadSample(); closeMoreMenu()">載入範例資料</button>
+            <button onclick="resetTitlePosition(); closeMoreMenu()">重置標題位置</button>
+            <button onclick="resetView(); closeMoreMenu()">重設畫面縮放</button>
+            <button class="danger" onclick="clearEvents(); closeMoreMenu()">清空全部事件</button>
+          </div>
+        </div>
+        <div class="theme-dots">
+          <b>主題配色</b>
+          <span class="dot-theme dot-blue" onclick="setTheme('#2563eb')"></span>
+          <span class="dot-theme dot-green" onclick="setTheme('#16a34a')"></span>
+          <span class="dot-theme dot-purple" onclick="setTheme('#8b5cf6')"></span>
+          <span class="dot-theme dot-orange" onclick="setTheme('#f97316')"></span>
+          <span class="dot-theme dot-gray" onclick="setTheme('#475569')"></span>
+        </div>
+      </div>
+    </header>
+
+    <input id="loadJsonInput" class="hidden" type="file" accept="application/json,.json" onchange="loadProjectJson(event)">
+    <input id="eventImageInput" class="hidden" type="file" accept="image/*" onchange="handleEventImageInput(event)">
+
+    <section id="layoutRoot" class="layout horizontal-layout">
+      <aside class="panel">
+        <div class="section">
+          <div class="section-title"><span class="num">1</span>新增事件</div>
+          <label>事件名稱</label>
+          <input id="eventName" placeholder="例如：專案啟動會議">
+          <label>事件日期（民國）</label>
+          <input id="eventDate" placeholder="例如：1130315" onblur="normalizeDateInput(this)">
+          <label>事件描述（選填）</label>
+          <textarea id="eventDesc" placeholder="輸入事件補充說明..."></textarea>
+          <label>事件顏色</label>
+          <div id="eventColorRow" class="color-row"></div>
+          <button id="eventSubmitBtn" class="btn btn-primary btn-block" onclick="submitEvent()">＋ 新增事件</button>
+          <div id="msg" class="message"></div>
+          <div class="hint">圖片、文字顯示切換與單一事件編輯，建立事件後可直接使用事件旁的「⋯」功能。</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="num">2</span>顯示與排列</div>
+          <div class="hint">快速樣式只是一組預設，之後仍可自行切換排列方式與顯示項目。</div>
+          <div class="preset-row">
+            <button id="presetStandard" class="choice-btn" onclick="applyViewPreset('standard')">標準</button>
+            <button id="presetClean" class="choice-btn" onclick="applyViewPreset('clean')">簡潔</button>
+            <button id="presetSequence" class="choice-btn" onclick="applyViewPreset('sequence')">事件圖</button>
+          </div>
+
+          <div class="setting-divider"></div>
+          <label>排列方式</label>
+          <div class="mode-row">
+            <button id="modeTime" class="choice-btn" onclick="setLayoutMode('time')">時間比例</button>
+            <button id="modeEven" class="choice-btn" onclick="setLayoutMode('even')">平均分布</button>
+            <button id="modeFree" class="choice-btn" onclick="setLayoutMode('free')">自由拖曳</button>
+          </div>
+          <div id="layoutModeHint" class="display-status"></div>
+
+          <div class="toggle-grid">
+            <label class="toggle-chip"><input id="showAxisInput" type="checkbox" onchange="setViewOption('showAxis', this.checked)">主線</label>
+            <label id="showTicksChip" class="toggle-chip"><input id="showTicksInput" type="checkbox" onchange="setViewOption('showTicks', this.checked)">時間刻度</label>
+            <label class="toggle-chip"><input id="showEventDateInput" type="checkbox" onchange="setViewOption('showEventDate', this.checked)">事件日期</label>
+            <label class="toggle-chip"><input id="showConnectorsInput" type="checkbox" onchange="setViewOption('showConnectors', this.checked)">連接線</label>
+            <label class="toggle-chip"><input id="showPointsInput" type="checkbox" onchange="setViewOption('showPoints', this.checked)">事件節點</label>
+          </div>
+        </div>
+
+        <details class="section compact-details">
+          <summary>時間軸設定</summary>
+          <div class="details-body">
+            <label>時間軸標題</label>
+            <input id="timelineTitle" value="專案進度與里程碑時間軸" oninput="render()">
+
+            <label>時間範圍</label>
+            <div class="mode-row">
+              <button id="rangeAutoBtn" class="choice-btn" onclick="setRangeMode('auto')">自動依事件</button>
+              <button id="rangeManualBtn" class="choice-btn" onclick="setRangeMode('manual')">自訂範圍</button>
+            </div>
+            <div id="rangeStatus" class="display-status"></div>
+
+            <div id="manualRangeFields">
+              <div class="row2">
+                <div>
+                  <label>開始日期（民國）</label>
+                  <input id="startDate" value="1130101" onblur="normalizeDateInput(this); render()">
+                </div>
+                <div>
+                  <label>結束日期（民國）</label>
+                  <input id="endDate" value="1141231" onblur="normalizeDateInput(this); render()">
+                </div>
+              </div>
+              <div class="quick">
+                <button class="btn btn-small" onclick="setQuickRange('thisYear')">今年</button>
+                <button class="btn btn-small" onclick="setQuickRange('lastYear')">去年</button>
+                <button class="btn btn-small" onclick="setQuickRange('futureYear')">未來一年</button>
+              </div>
+            </div>
+
+            <div class="hint">預設不必先設定時間軸長度；系統直接以最早與最晚事件日期決定範圍。日期即使隱藏，仍可作為「時間比例」定位或「平均分布」排序依據。</div>
+          </div>
+        </details>
+
+        <details class="section compact-details">
+          <summary>外觀與排版</summary>
+          <div class="details-body">
+            <div class="setting-group-title">標題</div>
+            <div class="control-row">
+              <span>標題字體</span>
+              <input id="titleFontSizeInput" type="range" min="16" max="40" step="1" value="24" oninput="updateLayoutSetting('titleFontSize', this.value)">
+              <span id="titleFontSizeValue" class="control-value">24</span>
+            </div>
+
+            <div class="setting-divider"></div>
+            <div class="setting-group-title">事件卡片</div>
+            <div class="control-row">
+              <span>卡片寬度</span>
+              <input id="cardWidthInput" type="range" min="130" max="260" step="10" value="170" oninput="updateLayoutSetting('cardWidth', this.value)">
+              <span id="cardWidthValue" class="control-value">170</span>
+            </div>
+            <div class="control-row">
+              <span>事件標題</span>
+              <input id="eventFontSizeInput" type="range" min="10" max="28" step="1" value="14" oninput="updateLayoutSetting('eventFontSize', this.value)">
+              <span id="eventFontSizeValue" class="control-value">14</span>
+            </div>
+            <div class="control-row">
+              <span>事件日期</span>
+              <input id="dateFontSizeInput" type="range" min="9" max="22" step="1" value="12" oninput="updateLayoutSetting('dateFontSize', this.value)">
+              <span id="dateFontSizeValue" class="control-value">12</span>
+            </div>
+            <div class="control-row">
+              <span>事件說明</span>
+              <input id="eventDescFontSizeInput" type="range" min="9" max="24" step="1" value="12" oninput="updateLayoutSetting('eventDescFontSize', this.value)">
+              <span id="eventDescFontSizeValue" class="control-value">12</span>
+            </div>
+
+            <div class="setting-divider"></div>
+            <div class="setting-group-title">間距與寬度</div>
+            <div class="control-row">
+              <span>層距</span>
+              <input id="laneGapInput" type="range" min="54" max="130" step="4" value="76" oninput="updateLayoutSetting('laneGap', this.value)">
+              <span id="laneGapValue" class="control-value">76</span>
+            </div>
+            <div class="control-row">
+              <span>整體寬度</span>
+              <input id="timeScaleInput" type="range" min="50" max="300" step="5" value="100" oninput="updateLayoutSetting('timeScale', this.value)">
+              <span id="timeScaleValue" class="control-value">100%</span>
+            </div>
+            <div class="hint">時間比例模式會依日期拉開距離；平均分布模式則以此調整事件間距。自由拖曳模式以實際拖曳位置為準。</div>
+          </div>
+        </details>
+
+        <details class="section compact-details">
+          <summary>整體說明</summary>
+          <div class="details-body">
+            <textarea id="timelineNote" placeholder="可輸入此圖的整體說明，會顯示在圖面下方並一併匯出 PNG。" oninput="render()"></textarea>
+            <div class="control-row">
+              <span>說明字體</span>
+              <input id="noteFontSizeInput" type="range" min="10" max="30" step="1" value="14" oninput="updateLayoutSetting('noteFontSize', this.value)">
+              <span id="noteFontSizeValue" class="control-value">14</span>
+            </div>
+          </div>
+        </details>
+      </aside>
+
+      <section class="stage">
+        <div id="canvasArea" class="canvas-area">
+          <div id="titleBox" class="title-box" onpointerdown="startDragTitle(event)">
+            <div class="move-icon">✥</div>
+            <div id="titleMain" class="title-main"></div>
+            <div id="titleSub" class="title-sub"></div>
+          </div>
+
+          <div class="zoom-box">
+            <button class="btn btn-small" onclick="changeZoom(-.1)">－</button>
+            <button class="btn btn-small"><span id="zoomLabel">100%</span></button>
+            <button class="btn btn-small" onclick="changeZoom(.1)">＋</button>
+            <button class="btn btn-small" onclick="resetView()">重設位置</button>
+          </div>
+
+          <div id="timelineZone" class="timeline-zone"></div>
+          <div id="miniMap" class="mini-map"></div>
+          <div id="timelineNoteBox" class="timeline-note-box"></div>
+        </div>
+      </section>
+
+      <section class="tips">
+        <div class="tip">✋ <div><b>拖曳穩定</b><span>拖曳時只移動卡片，放開後才重排。</span></div></div>
+        <div class="tip">↕ <div><b>垂直時間軸</b><span>可切換水平或垂直方向。</span></div></div>
+        <div class="tip">📏 <div><b>自動長度</b><span>依日期區間、事件數量自動拉長。</span></div></div>
+        <div class="tip">📅 <div><b>刻度修正</b><span>月份與層級刻度分離，避免混在一起。</span></div></div>
+        <div class="tip">🖼 <div><b>匯出 PNG</b><span>Canvas 重畫，橫線與刻度都會保留。</span></div></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const eventColors = ['#2563eb', '#16a34a', '#f97316', '#ef4444', '#8b5cf6', '#0f8b8d', '#334155'];
+    let selectedColor = eventColors[0];
+    let events = [];
+    let editingId = null;
+    let inlineEditingId = null;
+    let imageTargetId = null;
+    const imageCache = new Map();
+    let zoom = 1;
+    let titlePos = { x: 320, y: 24 };
+    let orientation = 'horizontal';
+    let axisX = 90;
+    let axisY = 280;
+    const layoutSettings = { cardWidth: 170, laneGap: 76, timeScale: 100, titleFontSize: 24, eventFontSize: 14, dateFontSize: 12, eventDescFontSize: 12, noteFontSize: 14 };
+    const viewSettings = { layoutMode: 'time', showAxis: true, showTicks: true, showEventDate: true, showConnectors: true, showPoints: true };
+    const rangeSettings = { mode: 'auto' };
+    let canvasW = 980;
+    let canvasH = 720;
+    let lastLayout = [];
+
+    function uid() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
+
+    function msg(text, type='ok') {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = `message show ${type}`;
+      setTimeout(() => el.className = 'message', 2600);
+    }
+
+    function setTheme(color) {
+      const root = document.documentElement;
+      const dark = shade(color, -35);
+      const axis = shade(color, -22);
+      root.style.setProperty('--primary', color);
+      root.style.setProperty('--primary-dark', dark);
+      root.style.setProperty('--axis', axis);
+      root.style.setProperty('--axis-soft', hexToRgba(color, .34));
+      root.style.setProperty('--timeline-label', dark);
+      root.style.setProperty('--timeline-border', hexToRgba(color, .28));
+      root.style.setProperty('--timeline-bg-soft', hexToRgba(color, .055));
+      render();
+    }
+
+    function shade(hex, percent) {
+      const f = parseInt(hex.slice(1),16), t = percent < 0 ? 0 : 255, p = Math.abs(percent)/100;
+      const R = f >> 16, G = f >> 8 & 0x00FF, B = f & 0x0000FF;
+      return '#' + (0x1000000 + (Math.round((t-R)*p)+R)*0x10000 + (Math.round((t-G)*p)+G)*0x100 + (Math.round((t-B)*p)+B)).toString(16).slice(1);
+    }
+
+
+    function hexToRgba(hex, alpha = 1) {
+      const value = String(hex || '#334155').replace('#', '');
+      const full = value.length === 3 ? value.split('').map(ch => ch + ch).join('') : value;
+      const n = parseInt(full, 16);
+      const r = n >> 16 & 255;
+      const g = n >> 8 & 255;
+      const b = n & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function renderColorPicker() {
+      const row = document.getElementById('eventColorRow');
+      row.innerHTML = '';
+      eventColors.forEach(c => {
+        const d = document.createElement('span');
+        d.className = 'event-color' + (c === selectedColor ? ' active' : '');
+        d.style.background = c;
+        d.onclick = () => { selectedColor = c; renderColorPicker(); };
+        row.appendChild(d);
+      });
+    }
+
+    function updateLayoutSetting(key, value) {
+      layoutSettings[key] = Number(value);
+      syncLayoutControls();
+      render();
+    }
+
+    function syncLayoutControls() {
+      const pairs = [
+        ['titleFontSize', 'titleFontSizeInput', 'titleFontSizeValue'],
+        ['cardWidth', 'cardWidthInput', 'cardWidthValue'],
+        ['laneGap', 'laneGapInput', 'laneGapValue'],
+        ['eventFontSize', 'eventFontSizeInput', 'eventFontSizeValue'],
+        ['dateFontSize', 'dateFontSizeInput', 'dateFontSizeValue'],
+        ['eventDescFontSize', 'eventDescFontSizeInput', 'eventDescFontSizeValue'],
+        ['timeScale', 'timeScaleInput', 'timeScaleValue'],
+        ['noteFontSize', 'noteFontSizeInput', 'noteFontSizeValue']
+      ];
+      pairs.forEach(([key, inputId, valueId]) => {
+        const input = document.getElementById(inputId);
+        const value = document.getElementById(valueId);
+        if (input) input.value = layoutSettings[key];
+        if (value) value.textContent = key === 'timeScale' ? `${layoutSettings[key]}%` : layoutSettings[key];
+      });
+    }
+
+    function setViewOption(key, value) {
+      if (!(key in viewSettings)) return;
+      viewSettings[key] = Boolean(value);
+      render();
+    }
+
+    function currentPreset() {
+      const s = viewSettings;
+      if (s.layoutMode === 'time' && s.showAxis && s.showTicks && s.showEventDate && s.showConnectors && s.showPoints) return 'standard';
+      if (s.layoutMode === 'time' && s.showAxis && !s.showTicks && !s.showEventDate && s.showConnectors && s.showPoints) return 'clean';
+      if (s.layoutMode === 'even' && s.showAxis && !s.showTicks && !s.showEventDate && s.showConnectors && s.showPoints) return 'sequence';
+      return '';
+    }
+
+    function layoutModeText(mode = viewSettings.layoutMode) {
+      if (mode === 'even') return '平均分布：日期只決定先後順序，事件會等距排列。';
+      if (mode === 'free') return '自由拖曳：日期仍保留，但位置完全由拖曳決定。';
+      return '時間比例：即使隱藏日期與刻度，事件仍依日期間距定位。';
+    }
+
+    function syncViewControls() {
+      const map = {
+        showAxis: 'showAxisInput',
+        showTicks: 'showTicksInput',
+        showEventDate: 'showEventDateInput',
+        showConnectors: 'showConnectorsInput',
+        showPoints: 'showPointsInput'
+      };
+      Object.entries(map).forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = Boolean(viewSettings[key]);
+      });
+
+      ['time','even','free'].forEach(mode => {
+        const id = mode === 'time' ? 'modeTime' : mode === 'even' ? 'modeEven' : 'modeFree';
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', viewSettings.layoutMode === mode);
+      });
+
+      const preset = currentPreset();
+      [['standard','presetStandard'],['clean','presetClean'],['sequence','presetSequence']].forEach(([name,id]) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', preset === name);
+      });
+
+      const hint = document.getElementById('layoutModeHint');
+      if (hint) hint.textContent = layoutModeText();
+
+      const ticks = document.getElementById('showTicksInput');
+      const ticksChip = document.getElementById('showTicksChip');
+      const timeMode = viewSettings.layoutMode === 'time';
+      if (ticks) ticks.disabled = !timeMode;
+      if (ticksChip) ticksChip.classList.toggle('disabled', !timeMode);
+    }
+
+    function captureCurrentPositionsForFreeMode() {
+      if (!lastLayout || !lastLayout.length) return;
+      lastLayout.forEach(item => {
+        if (!item || !item.ev) return;
+        item.ev.manualX = Math.round(item.left);
+        item.ev.manualY = Math.round(item.top);
+      });
+    }
+
+    function setLayoutMode(mode, options = {}) {
+      if (!['time','even','free'].includes(mode)) return;
+      const previous = viewSettings.layoutMode;
+      if (previous === mode) { syncViewControls(); return; }
+
+      if (previous === 'free' && mode !== 'free' && options.skipConfirm !== true) {
+        const hasManual = events.some(ev => Number.isFinite(ev.manualX) && Number.isFinite(ev.manualY));
+        if (hasManual && !confirm('切換排列方式後，畫面會重新依規則配置事件；自由拖曳的位置仍會保留在檔案中。是否繼續？')) {
+          syncViewControls();
+          return;
+        }
+      }
+
+      if (mode === 'free') captureCurrentPositionsForFreeMode();
+      viewSettings.layoutMode = mode;
+      render();
+    }
+
+    function applyViewPreset(name) {
+      const targetMode = name === 'sequence' ? 'even' : 'time';
+      if (viewSettings.layoutMode === 'free' && targetMode !== 'free') {
+        const hasManual = events.some(ev => Number.isFinite(ev.manualX) && Number.isFinite(ev.manualY));
+        if (hasManual && !confirm('套用快速樣式會重新依規則配置事件；自由拖曳的位置仍會保留。是否繼續？')) return;
+      }
+
+      if (name === 'standard') Object.assign(viewSettings, { layoutMode: 'time', showAxis: true, showTicks: true, showEventDate: true, showConnectors: true, showPoints: true });
+      else if (name === 'clean') Object.assign(viewSettings, { layoutMode: 'time', showAxis: true, showTicks: false, showEventDate: false, showConnectors: true, showPoints: true });
+      else Object.assign(viewSettings, { layoutMode: 'even', showAxis: true, showTicks: false, showEventDate: false, showConnectors: true, showPoints: true });
+      render();
+    }
+
+    function toggleMoreMenu(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('moreMenu');
+      if (menu) menu.classList.toggle('open');
+    }
+
+    function closeMoreMenu() {
+      const menu = document.getElementById('moreMenu');
+      if (menu) menu.classList.remove('open');
+    }
+
+    function normalizeRawDate(value) {
+      let raw = String(value || '').trim().replace(/[年月.\-]/g, '/').replace(/日/g, '');
+      if (/^\d{7}$/.test(raw)) raw = `${raw.slice(0,3)}/${raw.slice(3,5)}/${raw.slice(5,7)}`;
+      if (/^\d{6}$/.test(raw)) raw = `${raw.slice(0,2)}/${raw.slice(2,4)}/${raw.slice(4,6)}`;
+      return raw;
+    }
+
+    function parseRocDate(value) {
+      const raw = normalizeRawDate(value);
+      const m = raw.match(/^(\d{2,3})\/(\d{1,2})\/(\d{1,2})$/);
+      if (!m) return null;
+      const ry = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+      const wy = ry + 1911;
+      const date = new Date(wy, mo - 1, da);
+      if (date.getFullYear() !== wy || date.getMonth() !== mo - 1 || date.getDate() !== da) return null;
+      return { date, roc: `${ry}/${String(mo).padStart(2,'0')}/${String(da).padStart(2,'0')}`, western: `${wy}-${String(mo).padStart(2,'0')}-${String(da).padStart(2,'0')}` };
+    }
+
+    function normalizeDateInput(input) { const p = parseRocDate(input.value); if (p) input.value = p.roc; }
+
+    function daysBetween(a, b) {
+      return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000);
+    }
+
+    function dateInfoFromDate(date) {
+      const d = new Date(date);
+      const ry = d.getFullYear() - 1911;
+      const mo = d.getMonth() + 1;
+      const da = d.getDate();
+      return {
+        date: d,
+        roc: `${ry}/${String(mo).padStart(2,'0')}/${String(da).padStart(2,'0')}`,
+        western: `${d.getFullYear()}-${String(mo).padStart(2,'0')}-${String(da).padStart(2,'0')}`
+      };
+    }
+
+    function autoRangeFromEvents() {
+      const dated = events
+        .map(ev => ev && ev.date instanceof Date ? ev.date : null)
+        .filter(d => d && !Number.isNaN(d.getTime()));
+
+      if (!dated.length) {
+        const now = new Date();
+        return {
+          start: dateInfoFromDate(new Date(now.getFullYear(), 0, 1)),
+          end: dateInfoFromDate(new Date(now.getFullYear(), 11, 31)),
+          empty: true,
+          singleDate: false
+        };
+      }
+
+      const minTime = Math.min(...dated.map(d => d.getTime()));
+      const maxTime = Math.max(...dated.map(d => d.getTime()));
+      let startDate = new Date(minTime);
+      let endDate = new Date(maxTime);
+      const sameDay = minTime === maxTime;
+
+      // 只有單一日期時，內部保留一點範圍，讓事件置中且避免除以 0。
+      if (sameDay) {
+        startDate.setDate(startDate.getDate() - 15);
+        endDate.setDate(endDate.getDate() + 15);
+      }
+
+      return {
+        start: dateInfoFromDate(startDate),
+        end: dateInfoFromDate(endDate),
+        empty: false,
+        singleDate: sameDay,
+        actualStart: dateInfoFromDate(new Date(minTime)),
+        actualEnd: dateInfoFromDate(new Date(maxTime))
+      };
+    }
+
+    function manualRange() {
+      const start = parseRocDate(document.getElementById('startDate').value);
+      const end = parseRocDate(document.getElementById('endDate').value);
+      if (!start || !end || end.date <= start.date) return null;
+      return { start, end, empty: false, singleDate: false };
+    }
+
+    function getRange() {
+      if (rangeSettings.mode === 'manual') return manualRange();
+      return autoRangeFromEvents();
+    }
+
+    function setRangeMode(mode) {
+      if (!['auto','manual'].includes(mode)) return;
+      rangeSettings.mode = mode;
+      syncRangeControls();
+      render();
+    }
+
+    function syncRangeControls() {
+      const autoBtn = document.getElementById('rangeAutoBtn');
+      const manualBtn = document.getElementById('rangeManualBtn');
+      const manualFields = document.getElementById('manualRangeFields');
+      const status = document.getElementById('rangeStatus');
+
+      if (autoBtn) autoBtn.classList.toggle('active', rangeSettings.mode === 'auto');
+      if (manualBtn) manualBtn.classList.toggle('active', rangeSettings.mode === 'manual');
+      if (manualFields) manualFields.style.display = rangeSettings.mode === 'manual' ? 'block' : 'none';
+
+      if (!status) return;
+      if (rangeSettings.mode === 'manual') {
+        const r = manualRange();
+        status.textContent = r
+          ? `自訂範圍：${r.start.roc} ～ ${r.end.roc}`
+          : '自訂範圍格式尚未完成；請確認開始與結束日期。';
+        return;
+      }
+
+      const r = autoRangeFromEvents();
+      if (r.empty) {
+        status.textContent = '尚無事件；新增第一個事件後會自動建立時間範圍。';
+      } else if (r.singleDate) {
+        status.textContent = `自動範圍：目前事件日期皆為 ${r.actualStart.roc}，畫面會自動保留左右空間。`;
+      } else {
+        status.textContent = `自動範圍：${r.actualStart.roc} ～ ${r.actualEnd.roc}`;
+      }
+    }
+
+
+    function triggerEventImageUpload(id) {
+      imageTargetId = id;
+      const input = document.getElementById('eventImageInput');
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+    }
+
+    function handleEventImageInput(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !imageTargetId) return;
+      setEventImageFromFile(imageTargetId, file);
+      e.target.value = '';
+    }
+
+    function setEventImageFromFile(id, file) {
+      if (!file || !file.type || !file.type.startsWith('image/')) {
+        msg('請上傳圖片檔。', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const ev = events.find(item => item.id === id);
+        if (!ev) return;
+        ev.imageData = reader.result;
+        ev.imageName = file.name || '';
+        imageCache.delete(ev.imageData);
+        // Load the image to compute its natural aspect ratio.  This helps us
+        // determine how tall or wide the image box should be.  If loading
+        // fails, default to square (ratio = 1).
+        const tmpImg = new Image();
+        tmpImg.onload = () => {
+          ev.imageRatio = (tmpImg.naturalWidth && tmpImg.naturalHeight) ? (tmpImg.naturalWidth / tmpImg.naturalHeight) : 1;
+          msg('事件圖片已加入。');
+          render();
+        };
+        tmpImg.onerror = () => {
+          ev.imageRatio = 1;
+          msg('事件圖片已加入。');
+          render();
+        };
+        tmpImg.src = reader.result;
+      };
+      reader.onerror = () => msg('圖片讀取失敗。', 'error');
+      reader.readAsDataURL(file);
+    }
+
+    function handleEventImageDrop(e, id) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      setEventImageFromFile(id, file);
+    }
+
+    function removeEventImage(id) {
+      const ev = events.find(item => item.id === id);
+      if (!ev) return;
+      ev.imageData = null;
+      ev.imageName = '';
+      msg('事件圖片已移除。');
+      render();
+    }
+
+    function eventHasImage(ev) {
+      return Boolean(ev && ev.imageData);
+    }
+
+    function eventShowsImage(ev) {
+      return Boolean(ev && ev.showImage !== false);
+    }
+
+    // Determine the image box size. Always return the current card width so the
+    // image container is a perfect square matching the card's width. This
+    // change removes the previous minimum size of 88px, ensuring that
+    // narrow cards don't force a larger image box than necessary. See
+    // https://developer.mozilla.org/en-US/docs/Web/CSS/aspect-ratio for
+    // details on keeping elements square via matching width and height.
+    // Return the desired image box width (and implicitly height) based on the card width.
+    // Previously this always returned a square size equal to the card width.  We now
+    // calculate the width only; the height will be derived from the image's aspect
+    // ratio stored on the event (ev.imageRatio) when positioning the image box.
+    function eventImageSize(cardW = layoutSettings.cardWidth) {
+      return Math.round(cardW);
+    }
+
+    function eventImageGap() { return 12; }
+
+    function displayModeLabel(ev) {
+      const descOn = ev && ev.showDesc !== false;
+      const imageOn = ev && ev.showImage !== false;
+      if (descOn && imageOn) return '文字＋圖片';
+      if (descOn && !imageOn) return '只顯示文字';
+      if (!descOn && imageOn) return '只顯示圖片';
+      return '簡潔模式';
+    }
+
+    function toggleEventDesc(id) {
+      const ev = events.find(item => item.id === id);
+      if (!ev) return;
+      ev.showDesc = ev.showDesc === false;
+      if (editingId === id) {
+        const input = document.getElementById('eventShowDesc');
+        if (input) input.checked = ev.showDesc !== false;
+      }
+      msg(ev.showDesc !== false ? '已顯示事件描述。' : '已隱藏事件描述。');
+      render();
+    }
+
+    function toggleEventImageVisibility(id) {
+      const ev = events.find(item => item.id === id);
+      if (!ev) return;
+      ev.showImage = ev.showImage === false;
+      if (editingId === id) {
+        const input = document.getElementById('eventShowImage');
+        if (input) input.checked = ev.showImage !== false;
+      }
+      msg(ev.showImage !== false ? '已顯示圖片框。' : '已隱藏圖片框。');
+      render();
+    }
+
+    function toggleEventActionMenu(id) {
+      document.querySelectorAll('.event-floating-actions.open').forEach(el => {
+        if (el.dataset.id !== id) el.classList.remove('open');
+      });
+      const el = document.querySelector(`.event-floating-actions[data-id="${CSS.escape(id)}"]`);
+      if (el) el.classList.toggle('open');
+    }
+
+    function closeEventActionMenus() {
+      document.querySelectorAll('.event-floating-actions.open, .event-floating-actions.color-open').forEach(el => {
+        el.classList.remove('open', 'color-open');
+      });
+    }
+
+    function toggleEventColorPalette(id) {
+      const el = document.querySelector(`.event-floating-actions[data-id="${CSS.escape(id)}"]`);
+      if (!el) return;
+      el.classList.add('open');
+      el.classList.toggle('color-open');
+    }
+
+    function setEventColor(id, color) {
+      const ev = events.find(item => item.id === id);
+      if (!ev || !eventColors.includes(color)) return;
+      ev.color = color;
+      closeEventActionMenus();
+      msg('事件配色已更新。');
+      render();
+    }
+
+    function submitEvent() {
+      const name = document.getElementById('eventName').value.trim();
+      const date = parseRocDate(document.getElementById('eventDate').value);
+      const desc = document.getElementById('eventDesc').value.trim();
+      const showDesc = true;
+      const showImage = false;
+      if (!name) return msg('請輸入事件名稱。', 'error');
+      if (!date) return msg('事件日期格式錯誤。', 'error');
+      if (rangeSettings.mode === 'manual') {
+        const range = manualRange();
+        if (!range) return msg('自訂時間範圍格式錯誤。', 'error');
+        if (date.date < range.start.date || date.date > range.end.date) return msg('事件不在自訂時間範圍內。', 'error');
+      }
+
+      if (editingId) {
+        const ev = events.find(e => e.id === editingId);
+        if (ev) Object.assign(ev, { name, date: date.date, roc: date.roc, western: date.western, desc, color: selectedColor });
+        cancelEdit(false);
+        msg('事件已更新。');
+      } else {
+        events.push({ id: uid(), name, date: date.date, roc: date.roc, western: date.western, desc, showDesc, showImage, color: selectedColor, lane: null, imageData: null, imageName: '', manualX: null, manualY: null });
+        msg('事件已新增。');
+      }
+      clearForm();
+      sortEvents(false);
+      render();
+    }
+
+    function clearForm() {
+      document.getElementById('eventName').value = '';
+      document.getElementById('eventDate').value = '';
+      document.getElementById('eventDesc').value = '';
+    }
+
+    function startInlineEdit(id) {
+      const ev = events.find(e => e.id === id);
+      if (!ev) return;
+      inlineEditingId = id;
+      closeEventActionMenus();
+      cancelEdit(false);
+      render();
+    }
+
+    function cancelInlineEdit() {
+      inlineEditingId = null;
+      render();
+    }
+
+    function saveInlineEdit(id) {
+      const ev = events.find(e => e.id === id);
+      if (!ev) return;
+      const nameEl = document.getElementById(`inlineName_${id}`);
+      const dateEl = document.getElementById(`inlineDate_${id}`);
+      const descEl = document.getElementById(`inlineDesc_${id}`);
+      const name = nameEl ? nameEl.value.trim() : '';
+      const parsed = dateEl ? parseRocDate(dateEl.value) : null;
+      const desc = descEl ? descEl.value.trim() : '';
+      if (!name) return msg('請輸入事件名稱。', 'error');
+      if (!parsed) return msg('事件日期格式錯誤。', 'error');
+      if (rangeSettings.mode === 'manual') {
+        const range = manualRange();
+        if (!range) return msg('自訂時間範圍格式錯誤。', 'error');
+        if (parsed.date < range.start.date || parsed.date > range.end.date) return msg('事件不在自訂時間範圍內。', 'error');
+      }
+      Object.assign(ev, { name, date: parsed.date, roc: parsed.roc, western: parsed.western, desc });
+      inlineEditingId = null;
+      sortEvents(false);
+      msg('事件已更新。');
+      render();
+    }
+
+    function editEvent(id) {
+      startInlineEdit(id);
+    }
+
+    function cancelEdit(clear=true) {
+      editingId = null;
+      const submit = document.getElementById('eventSubmitBtn');
+      if (submit) submit.textContent = '＋ 新增事件';
+      if (clear) clearForm();
+    }
+
+    function deleteEvent(id, ask=false) {
+      if (ask && !confirm('確定刪除此事件？')) return;
+      events = events.filter(e => e.id !== id);
+      if (editingId === id) cancelEdit();
+      if (inlineEditingId === id) inlineEditingId = null;
+      render();
+    }
+    function sortEvents(refresh=true) { events.sort((a,b) => a.date - b.date); if (refresh) render(); }
+    function clearEvents() { if (!confirm('確定清空所有事件？')) return; events = []; cancelEdit(); render(); }
+
+    function toggleOrientation() {
+      orientation = orientation === 'horizontal' ? 'vertical' : 'horizontal';
+      titlePos = orientation === 'horizontal' ? { x: 320, y: 24 } : { x: 160, y: 24 };
+      render();
+    }
+
+    function stageInnerWidth() {
+      const stage = document.querySelector('.stage');
+      if (!stage) return 980;
+      return Math.max(620, stage.clientWidth - 44);
+    }
+
+    function applyOrientationLayout() {
+      const root = document.getElementById('layoutRoot');
+      if (!root) return;
+      root.classList.toggle('horizontal-layout', orientation === 'horizontal');
+      root.classList.toggle('vertical-layout', orientation === 'vertical');
+    }
+
+    function estimateLines(text, maxChars, maxLines = 99) {
+      const len = String(text || '').trim().length;
+      if (!len) return 1;
+      return Math.max(1, Math.min(maxLines, Math.ceil(len / maxChars)));
+    }
+
+    function boundedNumber(value, min, max, fallback) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function titleFontSize() { return boundedNumber(layoutSettings.titleFontSize, 16, 40, 24); }
+    function eventFontSize() { return boundedNumber(layoutSettings.eventFontSize, 10, 28, 14); }
+    function dateFontSize() { return boundedNumber(layoutSettings.dateFontSize, 9, 22, 12); }
+    function eventDescFontSize() { return boundedNumber(layoutSettings.eventDescFontSize, 9, 24, 12); }
+
+    function cardHeightFor(ev, cardW = layoutSettings.cardWidth) {
+      const textW = Math.max(56, cardW - 24);
+      const nameSize = eventFontSize();
+      const dateSize = dateFontSize();
+      const descSize = eventDescFontSize();
+      const nameLineHeight = Math.ceil(nameSize * 1.35);
+      const descLineHeight = Math.ceil(descSize * 1.4);
+      const nameLines = estimateLines(ev.name, Math.max(4, Math.floor(textW / nameSize)), 99);
+      const hasDate = viewSettings.showEventDate;
+      const hasDesc = ev.showDesc !== false && ev.desc;
+      const descLines = hasDesc ? estimateLines(ev.desc, Math.max(5, Math.floor(textW / descSize)), 99) : 0;
+      const dateBlock = hasDate ? dateSize + 12 : 2;
+      const descBlock = hasDesc ? 12 + descLines * descLineHeight : 0;
+      return 22 + nameLines * nameLineHeight + dateBlock + descBlock;
+    }
+
+    function laneSequence(limit = 18) {
+      const lanes = [];
+      for (let i = 1; i <= limit; i++) lanes.push(i, -i);
+      return lanes;
+    }
+
+    function laneOf(ev) { return ev.lane != null ? ev.lane : (ev.autoLane != null ? ev.autoLane : 1); }
+
+
+    function getTimelineNote() {
+      const el = document.getElementById('timelineNote');
+      return el ? el.value.trim() : '';
+    }
+
+    function noteFontSize() {
+      return boundedNumber(layoutSettings.noteFontSize, 10, 36, 14);
+    }
+
+    function wrapPlainTextByChars(text, maxChars) {
+      const source = String(text || '').replace(/\r\n/g, '\n');
+      const lines = [];
+      source.split('\n').forEach(part => {
+        let buf = '';
+        for (const ch of part) {
+          if (buf.length >= maxChars) {
+            lines.push(buf);
+            buf = ch;
+          } else {
+            buf += ch;
+          }
+        }
+        lines.push(buf);
+      });
+      return lines.length ? lines : [''];
+    }
+
+    function estimateTimelineNoteHeight(width = canvasW) {
+      const note = getTimelineNote();
+      if (!note) return 0;
+      const fontSize = noteFontSize();
+      const noteW = Math.max(160, width - 180 - 32);
+      const maxChars = Math.max(8, Math.floor(noteW / (fontSize * 0.95)));
+      const lines = wrapPlainTextByChars(note, maxChars).length;
+      return Math.ceil(24 + lines * fontSize * 1.7 + 18);
+    }
+
+    function layoutMetrics(range) {
+      const totalDays = daysBetween(range.start.date, range.end.date) + 1;
+      const monthCount = Math.max(1, makeMonthTicks(range.start.date, range.end.date).length);
+      const sorted = [...events].sort((a,b)=>a.date-b.date);
+
+      const maxAbsLane = Math.max(4, ...sorted.map(e => Math.abs(laneOf(e))));
+      const scaleFactor = layoutSettings.timeScale / 100;
+      let timeLength;
+      if (viewSettings.layoutMode === 'time') {
+        timeLength = Math.max(360, monthCount * 60 * scaleFactor, events.length * 72);
+      } else if (viewSettings.layoutMode === 'even') {
+        const gap = Math.max(120, layoutSettings.cardWidth + 36);
+        timeLength = Math.max(520, Math.max(1, events.length - 1) * gap * scaleFactor);
+      } else {
+        timeLength = Math.max(620, stageInnerWidth() - 120);
+      }
+
+      const crossSize = Math.max(520, maxAbsLane * layoutSettings.laneGap + 300);
+      const availableStageW = stageInnerWidth();
+      const preliminaryW = orientation === 'horizontal'
+        ? Math.max(availableStageW, 760, timeLength + 150)
+        : Math.max(availableStageW, 700, crossSize + 160);
+
+      if (orientation === 'horizontal') {
+        canvasW = preliminaryW;
+        canvasH = Math.max(700, crossSize + 170);
+        axisX = 90;
+        axisY = Math.round(canvasH / 2) - 10;
+      } else {
+        canvasW = preliminaryW;
+        canvasH = Math.max(900, timeLength + 260);
+        axisX = Math.round(canvasW / 2);
+        axisY = 170;
+      }
+      return { sorted, totalDays, timeLength, crossSize };
+    }
+
+    function timeToPercent(date, range) {
+      const total = daysBetween(range.start.date, range.end.date);
+      return total ? daysBetween(range.start.date, date) / total : 0;
+    }
+
+    function positionPercentFor(ev, range, index = 0, total = 1) {
+      if (viewSettings.layoutMode === 'even' || viewSettings.layoutMode === 'free') {
+        return total <= 1 ? .5 : index / (total - 1);
+      }
+      return timeToPercent(ev.date, range);
+    }
+
+    function axisPositionFor(ev, range, index = 0, total = 1) {
+      const p = positionPercentFor(ev, range, index, total);
+      if (orientation === 'horizontal') {
+        const leftPad = 130, rightPad = 130;
+        const x = leftPad + (canvasW - leftPad - rightPad) * p;
+        return { x, y: axisY };
+      }
+      const bottomPad = 90;
+      const y = axisY + (canvasH - axisY - bottomPad) * p;
+      return { x: axisX, y };
+    }
+
+    function itemBoundsWithImage(item) {
+      const bounds = {
+        left: item.left,
+        top: item.top,
+        right: item.left + item.cardW,
+        bottom: item.top + item.cardH
+      };
+      const img = imagePositionForItem(item);
+      if (img) {
+        // The image box is square: use size for both width and height.
+        const size = img.size;
+        bounds.left = Math.min(bounds.left, img.left);
+        bounds.top = Math.min(bounds.top, img.top);
+        bounds.right = Math.max(bounds.right, img.left + size);
+        bounds.bottom = Math.max(bounds.bottom, img.top + size);
+      }
+      return bounds;
+    }
+
+    function buildEventLayout(sorted, range) {
+      const cardW = layoutSettings.cardWidth;
+      const used = [];
+      const candidates = laneSequence(18);
+      const total = Math.max(1, sorted.length);
+      const items = sorted.map((ev, index) => ({
+        ev,
+        cardW,
+        cardH: cardHeightFor(ev, cardW),
+        ...axisPositionFor(ev, range, index, total),
+        _index: index
+      }));
+
+      if (viewSettings.layoutMode === 'free') {
+        items.forEach((item, index) => {
+          const fallbackLane = item.ev.lane != null ? item.ev.lane : (index % 2 === 0 ? 1 : -1);
+          let fallbackLeft, fallbackTop;
+          if (orientation === 'horizontal') {
+            fallbackLeft = Math.round(item.x - cardW / 2);
+            fallbackTop = Math.round(axisY - fallbackLane * layoutSettings.laneGap - (fallbackLane > 0 ? item.cardH : 0));
+          } else {
+            fallbackLeft = Math.round(axisX + fallbackLane * layoutSettings.laneGap - (fallbackLane < 0 ? cardW : 0));
+            fallbackTop = Math.round(item.y - item.cardH / 2);
+          }
+
+          item.left = Number.isFinite(item.ev.manualX) ? item.ev.manualX : fallbackLeft;
+          item.top = Number.isFinite(item.ev.manualY) ? item.ev.manualY : fallbackTop;
+
+          if (orientation === 'horizontal') {
+            const centerY = item.top + item.cardH / 2;
+            item.lane = centerY < axisY ? 1 : -1;
+            item.x = Math.round(item.left + cardW / 2);
+            item.y = axisY;
+            item.attachX = item.x;
+            item.attachY = item.lane > 0 ? item.top + item.cardH : item.top;
+          } else {
+            const centerX = item.left + cardW / 2;
+            item.lane = centerX < axisX ? -1 : 1;
+            item.x = axisX;
+            item.y = Math.round(item.top + item.cardH / 2);
+            item.attachX = item.lane < 0 ? item.left + cardW : item.left;
+            item.attachY = item.y;
+          }
+          item.ev.autoLane = item.lane;
+        });
+
+        if (items.length) {
+          const bounds = items.map(itemBoundsWithImage);
+          canvasW = Math.max(canvasW, ...bounds.map(b => b.right + 150));
+          canvasH = Math.max(canvasH, ...bounds.map(b => b.bottom + 150));
+        }
+
+        const noteReserve = estimateTimelineNoteHeight(canvasW);
+        if (noteReserve > 0) canvasH += noteReserve;
+        return items;
+      }
+
+      items.forEach((item, index) => {
+        const manualLane = item.ev.lane != null ? item.ev.lane : null;
+        const choices = manualLane !== null ? [manualLane] : candidates;
+        let chosen = choices[0] || (index % 2 ? -1 : 1);
+
+        for (const lane of choices) {
+          const conflict = used.some(other => {
+            if (other.lane !== lane) return false;
+            if (orientation === 'horizontal') return Math.abs(other.x - item.x) < (cardW + 24);
+            return Math.abs(other.y - item.y) < (Math.max(other.cardH, item.cardH) + 22);
+          });
+          if (!conflict) { chosen = lane; break; }
+        }
+
+        item.lane = chosen;
+        item.ev.autoLane = chosen;
+        if (orientation === 'horizontal') {
+          item.left = Math.round(item.x - cardW / 2);
+          item.top = Math.round(axisY - chosen * layoutSettings.laneGap - (chosen > 0 ? item.cardH : 0));
+          item.attachX = Math.round(item.x);
+          item.attachY = chosen > 0 ? item.top + item.cardH : item.top;
+        } else {
+          item.left = Math.round(axisX + chosen * layoutSettings.laneGap - (chosen < 0 ? cardW : 0));
+          item.top = Math.round(item.y - item.cardH / 2);
+          item.attachX = chosen < 0 ? item.left + cardW : item.left;
+          item.attachY = Math.round(item.y);
+        }
+        used.push(item);
+      });
+
+      if (orientation === 'horizontal') {
+        const neededTop = Math.max(24, ...items.filter(i => i.lane > 0).map(i => axisY - itemBoundsWithImage(i).top + 120));
+        const neededBottom = Math.max(240, ...items.filter(i => i.lane < 0).map(i => itemBoundsWithImage(i).bottom - axisY + 130));
+        canvasH = Math.max(canvasH, neededTop + neededBottom);
+        axisY = Math.max(250, neededTop);
+      } else {
+        const neededLeft = Math.max(230, ...items.filter(i => i.lane < 0).map(i => axisX - itemBoundsWithImage(i).left + 110));
+        const neededRight = Math.max(230, ...items.filter(i => i.lane > 0).map(i => itemBoundsWithImage(i).right - axisX + 120));
+        canvasW = Math.max(canvasW, neededLeft + neededRight);
+        axisX = Math.max(260, neededLeft);
+      }
+
+      const noteReserveAfterLayout = estimateTimelineNoteHeight(canvasW);
+      if (noteReserveAfterLayout > 0) canvasH += noteReserveAfterLayout;
+
+      return items.map((item, index) => {
+        const refreshed = { ...item, ...axisPositionFor(item.ev, range, index, total) };
+        if (orientation === 'horizontal') {
+          refreshed.left = Math.round(refreshed.x - refreshed.cardW / 2);
+          refreshed.top = Math.round(axisY - refreshed.lane * layoutSettings.laneGap - (refreshed.lane > 0 ? refreshed.cardH : 0));
+          refreshed.attachX = Math.round(refreshed.x);
+          refreshed.attachY = refreshed.lane > 0 ? refreshed.top + refreshed.cardH : refreshed.top;
+        } else {
+          refreshed.left = Math.round(axisX + refreshed.lane * layoutSettings.laneGap - (refreshed.lane < 0 ? refreshed.cardW : 0));
+          refreshed.top = Math.round(refreshed.y - refreshed.cardH / 2);
+          refreshed.attachX = refreshed.lane < 0 ? refreshed.left + refreshed.cardW : refreshed.left;
+          refreshed.attachY = Math.round(refreshed.y);
+        }
+        return refreshed;
+      });
+    }
+
+    function render() {
+      applyOrientationLayout();
+      syncRangeControls();
+      const range = getRange();
+      if (!range) {
+        syncLayoutControls();
+        syncViewControls();
+        return;
+      }
+      const { sorted } = layoutMetrics(range);
+      const title = document.getElementById('timelineTitle').value.trim() || '事件時間軸';
+
+      const area = document.getElementById('canvasArea');
+      area.style.width = `${canvasW}px`;
+      area.style.height = `${canvasH}px`;
+      area.style.minWidth = `${canvasW}px`;
+      area.style.minHeight = `${canvasH}px`;
+
+      document.getElementById('titleMain').textContent = title;
+      const titleBox = document.getElementById('titleBox');
+      titleBox.style.setProperty('--title-font-size', `${titleFontSize()}px`);
+      titleBox.style.left = `${titlePos.x}px`;
+      titleBox.style.top = `${titlePos.y}px`;
+
+      const zone = document.getElementById('timelineZone');
+      zone.style.width = `${canvasW - 90}px`;
+      zone.style.height = `${canvasH - 150}px`;
+      zone.style.transform = `scale(${zoom})`;
+      zone.innerHTML = '';
+
+      lastLayout = buildEventLayout(sorted, range);
+      area.style.width = `${canvasW}px`;
+      area.style.height = `${canvasH}px`;
+      area.style.minWidth = `${canvasW}px`;
+      area.style.minHeight = `${canvasH}px`;
+      zone.style.width = `${canvasW - 90}px`;
+      zone.style.height = `${canvasH - 150}px`;
+
+      renderAxisAndTicks(zone, range);
+      lastLayout.forEach(item => renderEvent(zone, item));
+      renderMiniMap(range, sorted);
+      renderTimelineNoteBox();
+      document.getElementById('zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+      syncLayoutControls();
+      syncViewControls();
+    }
+
+    function renderTimelineNoteBox() {
+      const noteBox = document.getElementById('timelineNoteBox');
+      if (!noteBox) return;
+      const note = getTimelineNote();
+      noteBox.textContent = note;
+      noteBox.style.fontSize = `${noteFontSize()}px`;
+      noteBox.style.display = note ? 'block' : 'none';
+    }
+
+    function renderAxisAndTicks(zone, range) {
+      const leftPad = 130, rightPad = 130, topPad = axisY, bottomPad = 90;
+      const usedLanes = [...new Set(lastLayout.map(item => item.lane))].sort((a, b) => b - a);
+      const showGuides = viewSettings.showAxis && viewSettings.layoutMode !== 'free';
+      const showTicks = viewSettings.showTicks && viewSettings.layoutMode === 'time' && events.length > 0;
+
+      if (orientation === 'horizontal') {
+        if (viewSettings.showAxis) addDiv(zone, 'axis-line horizontal', { left: `${leftPad}px`, top: `${axisY}px`, width: `${canvasW - leftPad - rightPad}px` });
+        if (showGuides) {
+          addText(zone, 'lane-title', '上方事件', 18, axisY - layoutSettings.laneGap - 18);
+          addText(zone, 'lane-title', '下方事件', 18, axisY + layoutSettings.laneGap + 6);
+          usedLanes.forEach(l => {
+            const y = axisY - l * layoutSettings.laneGap;
+            addDiv(zone, 'lane-guide horizontal', { left: `${leftPad}px`, top: `${y}px`, width: `${canvasW - leftPad - rightPad}px` });
+            addText(zone, 'lane-number', `L${Math.abs(l)}`, 30, y - 10);
+          });
+        }
+        if (showTicks) {
+          makeMonthTicks(range.start.date, range.end.date).forEach(t => {
+            const p = timeToPercent(t.date, range);
+            const x = leftPad + (canvasW - leftPad - rightPad) * p;
+            addDiv(zone, 'tick' + (t.month === 1 ? ' major' : ''), { left: `${x}px`, top: `${axisY - (t.month === 1 ? 18 : 10)}px`, width: '1px', height: `${t.month === 1 ? 42 : 24}px` });
+            if (t.month === 1) addText(zone, 'year-label', `${t.rocYear}年`, x - 16, axisY - 52);
+            addText(zone, 'tick-label', `${t.month}月`, x - 10, axisY + 30);
+          });
+        }
+      } else {
+        if (viewSettings.showAxis) addDiv(zone, 'axis-line vertical', { left: `${axisX}px`, top: `${topPad}px`, height: `${canvasH - topPad - bottomPad}px` });
+        if (showGuides) {
+          addText(zone, 'lane-title', '左側事件', axisX - layoutSettings.laneGap - 84, 98);
+          addText(zone, 'lane-title', '右側事件', axisX + layoutSettings.laneGap + 18, 98);
+          usedLanes.forEach(l => {
+            const x = axisX + l * layoutSettings.laneGap;
+            addDiv(zone, 'lane-guide vertical', { left: `${x}px`, top: `${topPad}px`, height: `${canvasH - topPad - bottomPad}px` });
+            addText(zone, 'lane-number', `L${Math.abs(l)}`, x - 14, 122);
+          });
+        }
+        if (showTicks) {
+          makeMonthTicks(range.start.date, range.end.date).forEach(t => {
+            const p = timeToPercent(t.date, range);
+            const y = topPad + (canvasH - topPad - bottomPad) * p;
+            addDiv(zone, 'tick' + (t.month === 1 ? ' major' : ''), { left: `${axisX - (t.month === 1 ? 20 : 11)}px`, top: `${y}px`, width: `${t.month === 1 ? 42 : 24}px`, height: '1px' });
+            if (t.month === 1) addText(zone, 'year-label', `${t.rocYear}年`, axisX - 72, y - 8);
+            addText(zone, 'tick-label', `${t.month}月`, axisX + 30, y - 8);
+          });
+        }
+      }
+    }
+
+    function addDiv(parent, cls, styles) {
+      const el = document.createElement('div');
+      el.className = cls;
+      Object.assign(el.style, styles);
+      parent.appendChild(el);
+      return el;
+    }
+
+    function addText(parent, cls, text, x, y) {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.textContent = text;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      parent.appendChild(el);
+      return el;
+    }
+
+    function makeMonthTicks(start, end) {
+      const arr = [];
+      const d = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (d <= end) {
+        arr.push({ date: new Date(d), month: d.getMonth() + 1, rocYear: d.getFullYear() - 1911 });
+        d.setMonth(d.getMonth() + 1);
+      }
+      return arr;
+    }
+
+    function renderEvent(zone, item) {
+      const { ev, x, y, left, top, cardW, cardH, attachX, attachY } = item;
+      const color = ev.color || eventColors[0];
+
+      if (orientation === 'horizontal') {
+        if (viewSettings.showConnectors) {
+          addDiv(zone, 'event-line', {
+            color,
+            left: `${x}px`,
+            top: `${Math.min(axisY, attachY)}px`,
+            width: '2px',
+            height: `${Math.abs(axisY - attachY) || 1}px`
+          });
+        }
+        if (viewSettings.showPoints) addDiv(zone, 'event-point', { color, left: `${x}px`, top: `${axisY}px` });
+      } else {
+        if (viewSettings.showConnectors) {
+          addDiv(zone, 'event-line', {
+            color,
+            left: `${Math.min(axisX, attachX)}px`,
+            top: `${y}px`,
+            height: '2px',
+            width: `${Math.abs(axisX - attachX) || 1}px`
+          });
+        }
+        if (viewSettings.showPoints) addDiv(zone, 'event-point', { color, left: `${axisX}px`, top: `${y}px` });
+      }
+      makeCard(zone, ev, left, top, cardW, cardH);
+      makeEventImageBox(zone, item);
+      makeEventActions(zone, item);
+    }
+
+    function imagePositionForItem(item) {
+      const { ev, left, top, cardW, cardH, lane } = item;
+      if (!eventShowsImage(ev)) return null;
+      // Always use a square box equal to the card width.  The image itself will
+      // be scaled to fit within this square.  This ensures that wide images
+      // fill the width and tall images fill the height without cropping.
+      const size = eventImageSize(cardW);
+      const gap = eventImageGap();
+      if (orientation === 'horizontal') {
+        return {
+          left: Math.round(left + (cardW - size) / 2),
+          top: Math.round(lane > 0 ? top - gap - size : top + cardH + gap),
+          size
+        };
+      }
+      // vertical orientation
+      return {
+        left: Math.round(lane < 0 ? left - gap - size : left + cardW + gap),
+        top: Math.round(top + (cardH - size) / 2),
+        size
+      };
+    }
+
+    function actionPositionForItem(item) {
+      const { left, top, cardW, lane } = item;
+      const actionW = 26;
+      const gap = 8;
+      if (orientation === 'horizontal') {
+        return {
+          left: Math.round(left + cardW + gap),
+          top: Math.round(top - 2),
+          side: 'right'
+        };
+      }
+      return {
+        left: Math.round(lane < 0 ? left - actionW - gap : left + cardW + gap),
+        top: Math.round(top - 2),
+        side: lane < 0 ? 'left' : 'right'
+      };
+    }
+
+    function makeEventActions(zone, item) {
+      const ev = item.ev;
+      const pos = actionPositionForItem(item);
+      const actions = document.createElement('div');
+      actions.className = `event-floating-actions ${pos.side === 'left' ? 'menu-left' : ''}`;
+      actions.dataset.id = ev.id;
+      actions.style.left = `${pos.left}px`;
+      actions.style.top = `${pos.top}px`;
+      actions.style.color = ev.color || eventColors[0];
+      actions.onpointerdown = e => e.stopPropagation();
+      const descActive = ev.showDesc !== false ? ' active' : '';
+      const imageActive = ev.showImage !== false ? ' active' : '';
+      const colorDots = eventColors.map(c => `
+        <button class="event-color-dot-btn${c === (ev.color || eventColors[0]) ? ' active' : ''}"
+          style="background:${c}"
+          title="套用此配色"
+          onpointerdown="event.stopPropagation()"
+          onclick="event.stopPropagation(); setEventColor('${ev.id}', '${c}')"></button>
+      `).join('');
+      actions.innerHTML = `
+        <button class="event-action-trigger" title="事件功能" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventActionMenu('${ev.id}')">⋯</button>
+        <div class="event-action-menu">
+          <button class="event-icon-btn" title="編輯名稱、日期與描述" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); startInlineEdit('${ev.id}');">✎</button>
+          <button class="event-icon-btn" title="更改事件配色" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventColorPalette('${ev.id}');">色</button>
+          <button class="event-icon-btn${descActive}" title="切換事件描述顯示與否" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventDesc('${ev.id}')">文</button>
+          <button class="event-icon-btn${imageActive}" title="切換圖片顯示與否" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleEventImageVisibility('${ev.id}')">圖</button>
+          <button class="event-icon-btn danger" title="刪除事件" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); deleteEvent('${ev.id}', true)">×</button>
+        </div>
+        <div class="event-color-popover">${colorDots}</div>
+      `;
+      zone.appendChild(actions);
+    }
+
+    function makeEventImageBox(zone, item) {
+      const pos = imagePositionForItem(item);
+      if (!pos) return;
+      const ev = item.ev;
+      const box = document.createElement('div');
+      box.className = 'event-image-box';
+      box.style.color = ev.color || eventColors[0];
+      box.style.left = `${pos.left}px`;
+      box.style.top = `${pos.top}px`;
+      // Use pos.size for both width and height to keep the image box square.
+      const size = pos.size;
+      box.style.width = `${size}px`;
+      box.style.height = `${size}px`;
+      box.title = eventHasImage(ev) ? '點擊更換圖片，也可拖曳圖片到此' : '點擊上傳圖片，也可拖曳圖片到此';
+      box.onpointerdown = e => e.stopPropagation();
+      box.onclick = e => { e.stopPropagation(); triggerEventImageUpload(ev.id); };
+      box.ondragover = e => { e.preventDefault(); e.stopPropagation(); box.classList.add('drag-over'); };
+      box.ondragleave = e => { e.preventDefault(); e.stopPropagation(); box.classList.remove('drag-over'); };
+      box.ondrop = e => handleEventImageDrop(e, ev.id);
+      if (eventHasImage(ev)) {
+        const imageLayer = document.createElement('div');
+        imageLayer.className = 'event-image-content';
+        imageLayer.style.backgroundImage = `url("${String(ev.imageData).replace(/"/g, '\\\"')}")`;
+        box.appendChild(imageLayer);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'event-image-delete';
+        deleteBtn.type = 'button';
+        deleteBtn.title = '移除圖片';
+        deleteBtn.textContent = '×';
+        deleteBtn.onpointerdown = e => e.stopPropagation();
+        deleteBtn.onclick = e => {
+          e.stopPropagation();
+          removeEventImage(ev.id);
+        };
+        box.appendChild(deleteBtn);
+      } else {
+        box.innerHTML = `<div class="event-image-placeholder">＋<br>拖曳或點擊<br>加入圖片</div>`;
+      }
+      zone.appendChild(box);
+    }
+
+    function makeCard(zone, ev, left, top, width, height) {
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      if (inlineEditingId === ev.id) card.classList.add('editing');
+      card.dataset.id = ev.id;
+      card.style.color = ev.color || eventColors[0];
+      card.style.left = `${left}px`;
+      card.style.top = `${top}px`;
+      card.style.width = `${width}px`;
+      card.style.minHeight = `${height}px`;
+      card.style.setProperty('--event-font-size', `${eventFontSize()}px`);
+      card.style.setProperty('--event-date-font-size', `${dateFontSize()}px`);
+      card.style.setProperty('--event-desc-font-size', `${eventDescFontSize()}px`);
+
+      if (inlineEditingId === ev.id) {
+        card.onpointerdown = e => e.stopPropagation();
+        card.innerHTML = `
+          <div class="event-inline-edit" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
+            <input id="inlineName_${ev.id}" value="${escapeHtml(ev.name)}" placeholder="事件名稱">
+            <input id="inlineDate_${ev.id}" value="${escapeHtml(ev.roc)}" placeholder="民國日期，例如 1130315" onblur="normalizeDateInput(this)">
+            <textarea id="inlineDesc_${ev.id}" placeholder="事件描述">${escapeHtml(ev.desc || '')}</textarea>
+            <div class="event-inline-actions">
+              <button class="cancel" type="button" onclick="event.stopPropagation(); cancelInlineEdit();">取消</button>
+              <button class="save" type="button" onclick="event.stopPropagation(); saveInlineEdit('${ev.id}');">確認修改</button>
+            </div>
+          </div>`;
+      } else {
+        card.onpointerdown = e => startDragEvent(e, ev.id, card);
+        const showDesc = ev.showDesc !== false && ev.desc;
+        const dateHtml = viewSettings.showEventDate ? `<div class="event-date">${ev.roc}</div>` : '';
+        const descHtml = showDesc ? `<div class="event-desc">${escapeHtml(ev.desc)}</div>` : '';
+        card.innerHTML = `<div class="event-name">${escapeHtml(ev.name)}</div>${dateHtml}${descHtml}`;
+      }
+      zone.appendChild(card);
+    }
+
+    function renderMiniMap(range, sorted) {
+      const box = document.getElementById('miniMap');
+      box.innerHTML = `<div class="mini-axis ${orientation}"></div>`;
+      sorted.forEach(ev => {
+        const p = timeToPercent(ev.date, range);
+        const d = document.createElement('div');
+        d.className = 'mini-dot';
+        d.style.background = ev.color || eventColors[0];
+        if (orientation === 'horizontal') {
+          d.style.left = `calc(22px + (100% - 44px) * ${p})`;
+          d.style.top = '35px';
+        } else {
+          d.style.left = '50%';
+          d.style.top = `calc(10px + (100% - 20px) * ${p})`;
+        }
+        box.appendChild(d);
+      });
+    }
+
+    function startDragEvent(e, id, card) {
+      if (inlineEditingId === id || e.target.closest('input, textarea, button, .event-inline-edit')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const zone = document.getElementById('timelineZone');
+      const rect = zone.getBoundingClientRect();
+      const startX = (e.clientX - rect.left) / zoom;
+      const startY = (e.clientY - rect.top) / zoom;
+      const startLeft = parseFloat(card.style.left);
+      const startTop = parseFloat(card.style.top);
+      card.classList.add('dragging');
+      card.setPointerCapture?.(e.pointerId);
+
+      function move(ev) {
+        const x = (ev.clientX - rect.left) / zoom;
+        const y = (ev.clientY - rect.top) / zoom;
+        card.style.left = `${Math.max(8, startLeft + x - startX)}px`;
+        card.style.top = `${Math.max(8, startTop + y - startY)}px`;
+      }
+
+      function up(ev) {
+        const currentLeft = parseFloat(card.style.left);
+        const currentTop = parseFloat(card.style.top);
+        const item = events.find(x => x.id === id);
+        if (item) {
+          if (viewSettings.layoutMode === 'free') {
+            item.manualX = Math.round(currentLeft);
+            item.manualY = Math.round(currentTop);
+          } else if (orientation === 'horizontal') {
+            const cardCenterY = currentTop + card.offsetHeight / 2;
+            let lane = Math.round((axisY - cardCenterY) / layoutSettings.laneGap);
+            if (lane === 0) lane = cardCenterY < axisY ? 1 : -1;
+            item.lane = Math.max(-12, Math.min(12, lane));
+          } else {
+            const cardCenterX = currentLeft + card.offsetWidth / 2;
+            let lane = Math.round((cardCenterX - axisX) / layoutSettings.laneGap);
+            if (lane === 0) lane = cardCenterX > axisX ? 1 : -1;
+            item.lane = Math.max(-12, Math.min(12, lane));
+          }
+        }
+        card.classList.remove('dragging');
+        try { card.releasePointerCapture?.(ev.pointerId); } catch {}
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        render();
+      }
+
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    }
+
+    function startDragTitle(e) {
+      e.preventDefault();
+      const startX = e.clientX, startY = e.clientY, ox = titlePos.x, oy = titlePos.y;
+      function move(ev) {
+        titlePos.x = Math.max(0, ox + ev.clientX - startX);
+        titlePos.y = Math.max(0, oy + ev.clientY - startY);
+        const box = document.getElementById('titleBox');
+        box.style.left = `${titlePos.x}px`;
+        box.style.top = `${titlePos.y}px`;
+      }
+      function up() { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    }
+
+    function changeZoom(delta) { zoom = Math.max(.6, Math.min(1.6, zoom + delta)); render(); }
+    function resetView() { zoom = 1; render(); }
+    function resetTitlePosition() { titlePos = orientation === 'horizontal' ? { x: 320, y: 24 } : { x: 160, y: 24 }; render(); }
+
+    function saveProjectJson() {
+      const data = {
+        version: 'roc-timeline-html-v12-auto-range-color-edit',
+        title: document.getElementById('timelineTitle').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        rangeSettings: { ...rangeSettings },
+        timelineNote: getTimelineNote(),
+        titlePos,
+        orientation,
+        zoom,
+        layoutSettings: { ...layoutSettings },
+        viewSettings: { ...viewSettings },
+        theme: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
+        events: events.map(e => ({ ...e, date: e.roc }))
+      };
+      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }), `${safeName(data.title)}_時間軸暫存.json`);
+    }
+
+    function loadProjectJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const data = JSON.parse(r.result);
+          document.getElementById('timelineTitle').value = data.title || '事件時間軸';
+          document.getElementById('startDate').value = data.startDate || '113/01/01';
+          document.getElementById('endDate').value = data.endDate || '114/12/31';
+          Object.assign(rangeSettings, data.rangeSettings || {});
+          if (!['auto','manual'].includes(rangeSettings.mode)) rangeSettings.mode = 'auto';
+          const noteEl = document.getElementById('timelineNote');
+          if (noteEl) noteEl.value = data.timelineNote || data.note || '';
+          if (data.theme) setTheme(data.theme);
+          titlePos = data.titlePos || { x: 320, y: 24 };
+          orientation = data.orientation || 'horizontal';
+          zoom = data.zoom || 1;
+          Object.assign(layoutSettings, data.layoutSettings || {});
+          Object.assign(viewSettings, data.viewSettings || {});
+          if (!data.rangeSettings) rangeSettings.mode = 'auto';
+          if (data.layoutMode && !data.viewSettings) viewSettings.layoutMode = data.layoutMode;
+          if (!['time','even','free'].includes(viewSettings.layoutMode)) viewSettings.layoutMode = 'time';
+          if (!layoutSettings.titleFontSize) layoutSettings.titleFontSize = 24;
+          if (!layoutSettings.eventFontSize) layoutSettings.eventFontSize = 14;
+          if (!layoutSettings.dateFontSize) layoutSettings.dateFontSize = 12;
+          if (!layoutSettings.eventDescFontSize) layoutSettings.eventDescFontSize = 12;
+          if (!layoutSettings.noteFontSize) layoutSettings.noteFontSize = 14;
+          syncLayoutControls();
+          syncViewControls();
+          events = (data.events || []).map(item => {
+            const p = parseRocDate(item.date || item.roc);
+            if (!p) return null;
+            const imageData = item.imageData || null;
+            let imageRatio = 1;
+            if (imageData) {
+              // Attempt to parse ratio from embedded SVG width/height attributes or use 1
+              const match = String(imageData).match(/width=\"(\d+)\".*height=\"(\d+)\"/);
+              if (match && match[1] && match[2]) {
+                const w = Number(match[1]);
+                const h = Number(match[2]);
+                if (h) imageRatio = w / h;
+              }
+            }
+            return {
+              id: item.id || uid(),
+              name: item.name || '未命名事件',
+              date: p.date,
+              roc: p.roc,
+              western: p.western,
+              desc: item.desc || '',
+              showDesc: item.showDesc !== false,
+              color: item.color || eventColors[0],
+              lane: item.lane != null ? item.lane : null,
+              showImage: item.showImage != null ? item.showImage !== false : Boolean(imageData),
+              imageData,
+              imageName: item.imageName || '',
+              imageRatio,
+              manualX: Number.isFinite(Number(item.manualX)) ? Number(item.manualX) : null,
+              manualY: Number.isFinite(Number(item.manualY)) ? Number(item.manualY) : null
+            };
+          }).filter(Boolean);
+          render();
+          msg('暫存檔已讀取。');
+        } catch { msg('讀取失敗，請確認 JSON 格式。', 'error'); }
+      };
+      r.readAsText(file, 'utf-8');
+      e.target.value = '';
+    }
+
+    async function exportTimelinePng() {
+      const range = getRange();
+      if (!range) return msg('自訂時間範圍格式錯誤。', 'error');
+      applyOrientationLayout();
+      render();
+      const { sorted } = layoutMetrics(range);
+      const exportLayout = buildEventLayout(sorted, range);
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasW * scale;
+      canvas.height = canvasH * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      await drawExport(ctx, range, exportLayout);
+      canvas.toBlob(blob => downloadBlob(blob, `${safeName(document.getElementById('timelineTitle').value)}.png`), 'image/png');
+    }
+
+    function drawRoundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+    }
+
+    async function drawExport(ctx, range, items = null) {
+      const layoutItems = items || buildEventLayout([...events].sort((a,b)=>a.date-b.date), range);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,canvasW,canvasH);
+      drawRoundRect(ctx, 10, 10, canvasW-20, canvasH-20, 8, '#ffffff', getCss('--timeline-border') || '#d8e0ec');
+      drawTitle(ctx, range);
+      drawAxisCanvas(ctx, range);
+      for (const item of layoutItems) await drawEventCanvas(ctx, item);
+      drawTimelineNoteCanvas(ctx);
+    }
+
+    function drawTimelineNoteCanvas(ctx) {
+      const note = getTimelineNote();
+      if (!note) return;
+      const fontSize = noteFontSize();
+      const left = 90;
+      const right = 90;
+      const width = canvasW - left - right;
+      const paddingX = 16;
+      const paddingY = 12;
+      const lineHeight = fontSize * 1.7;
+      const maxTextWidth = width - paddingX * 2;
+
+      ctx.save();
+      ctx.font = `${fontSize}px Microsoft JhengHei, Noto Sans TC, Arial`;
+      const rawLines = String(note).replace(/\r\n/g, '\n').split('\n');
+      const lines = [];
+      rawLines.forEach(line => {
+        wrapCanvasText(ctx, line, maxTextWidth, 999).forEach(w => lines.push(w));
+      });
+      const boxHeight = paddingY * 2 + lines.length * lineHeight;
+      const y = canvasH - 28 - boxHeight;
+
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.fillRect(left, y, width, boxHeight);
+      ctx.strokeStyle = getCss('--axis-soft') || '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(left + width, y);
+      ctx.stroke();
+
+      ctx.fillStyle = getCss('--timeline-label') || '#334155';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      lines.forEach((line, index) => {
+        ctx.fillText(line, left + paddingX, y + paddingY + index * lineHeight);
+      });
+      ctx.restore();
+    }
+
+    function drawLaneGuidesCanvas(ctx, items) {
+      const usedLanes = [...new Set(items.map(item => item.lane))];
+      ctx.save();
+      ctx.strokeStyle = getCss('--axis-soft') || '#e8eef6';
+      ctx.fillStyle = getCss('--timeline-label') || '#94a3b8';
+      ctx.font = '11px Microsoft JhengHei, Arial';
+      ctx.setLineDash([5, 5]);
+      if (orientation === 'horizontal') {
+        usedLanes.forEach(l => {
+          const y = axisY - l * layoutSettings.laneGap;
+          ctx.beginPath();
+          ctx.moveTo(130, y);
+          ctx.lineTo(canvasW - 130, y);
+          ctx.stroke();
+          ctx.fillText(`L${Math.abs(l)}`, 30, y + 4);
+        });
+      } else {
+        usedLanes.forEach(l => {
+          const x = axisX + l * layoutSettings.laneGap;
+          ctx.beginPath();
+          ctx.moveTo(x, axisY);
+          ctx.lineTo(x, canvasH - 90);
+          ctx.stroke();
+          ctx.fillText(`L${Math.abs(l)}`, x - 12, 126);
+        });
+      }
+      ctx.restore();
+    }
+
+    function drawTitle(ctx, range) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = getCss('--primary-dark');
+      ctx.font = `900 ${titleFontSize()}px Microsoft JhengHei, Arial`;
+      ctx.fillText(document.getElementById('timelineTitle').value || '事件時間軸', titlePos.x + 180, titlePos.y + Math.max(34, titleFontSize() + 10));
+      /*匯出不要時間範圍ctx.font = '16px Microsoft JhengHei, Arial';
+      ctx.fillStyle = '#334155';
+      ctx.fillText(`${range.start.roc} ~ ${range.end.roc}`, titlePos.x + 180, titlePos.y + 62);*/
+    }
+
+    function drawAxisCanvas(ctx, range) {
+      if (viewSettings.showAxis) {
+        ctx.strokeStyle = getCss('--axis') || '#18365e';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        if (orientation === 'horizontal') {
+          ctx.moveTo(130, axisY);
+          ctx.lineTo(canvasW - 130, axisY);
+        } else {
+          ctx.moveTo(axisX, axisY);
+          ctx.lineTo(axisX, canvasH - 90);
+        }
+        ctx.stroke();
+      }
+      if (viewSettings.showTicks && viewSettings.layoutMode === 'time') {
+        makeMonthTicks(range.start.date, range.end.date).forEach(t => drawTickCanvas(ctx, t, range));
+      }
+    }
+
+    function drawTickCanvas(ctx, t, range) {
+      const p = timeToPercent(t.date, range);
+      ctx.strokeStyle = t.month === 1 ? (getCss('--axis') || '#94a3b8') : (getCss('--axis-soft') || '#cbd5e1');
+      ctx.lineWidth = 1;
+      ctx.fillStyle = getCss('--timeline-label') || '#334155';
+      ctx.textAlign = 'center';
+      if (orientation === 'horizontal') {
+        const x = 130 + (canvasW - 260) * p;
+        ctx.beginPath();
+        ctx.moveTo(x, axisY - (t.month === 1 ? 18 : 10));
+        ctx.lineTo(x, axisY + (t.month === 1 ? 24 : 14));
+        ctx.stroke();
+        ctx.font = t.month === 1 ? '900 16px Microsoft JhengHei, Arial' : '13px Microsoft JhengHei, Arial';
+        ctx.fillText(t.month === 1 ? `${t.rocYear}年` : `${t.month}月`, x, axisY + (t.month === 1 ? -34 : 36));
+      } else {
+        const y = axisY + (canvasH - axisY - 90) * p;
+        ctx.beginPath();
+        ctx.moveTo(axisX - (t.month === 1 ? 20 : 11), y);
+        ctx.lineTo(axisX + (t.month === 1 ? 22 : 13), y);
+        ctx.stroke();
+        ctx.font = t.month === 1 ? '900 16px Microsoft JhengHei, Arial' : '13px Microsoft JhengHei, Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(t.month === 1 ? `${t.rocYear}年` : `${t.month}月`, axisX + 30, y + 4);
+      }
+    }
+
+    async function drawEventCanvas(ctx, item) {
+      const { ev, x, y, left, top, cardW, cardH, attachX, attachY } = item;
+      const color = ev.color || eventColors[0];
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+
+      if (orientation === 'horizontal') {
+        if (viewSettings.showConnectors) {
+          ctx.beginPath();
+          ctx.moveTo(x, axisY);
+          ctx.lineTo(x, attachY);
+          ctx.stroke();
+        }
+        if (viewSettings.showPoints) {
+          ctx.beginPath();
+          ctx.arc(x, axisY, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        if (viewSettings.showConnectors) {
+          ctx.beginPath();
+          ctx.moveTo(axisX, y);
+          ctx.lineTo(attachX, y);
+          ctx.stroke();
+        }
+        if (viewSettings.showPoints) {
+          ctx.beginPath();
+          ctx.arc(axisX, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      await drawEventImageCanvas(ctx, item);
+      await drawCardCanvas(ctx, ev, left, top, color, cardW, cardH);
+    }
+
+    async function drawEventImageCanvas(ctx, item) {
+      const pos = imagePositionForItem(item);
+      if (!pos) return;
+      const ev = item.ev;
+      const color = ev.color || eventColors[0];
+      const img = eventHasImage(ev) ? await loadImageForCanvas(ev.imageData) : null;
+      // Use a square size for drawing the rounded rectangle and image.
+      const size = pos.size;
+      drawRoundRect(ctx, pos.left, pos.top, size, size, 8, getCss('--timeline-bg-soft') || '#f8fafc', getCss('--timeline-border') || 'rgba(100,116,139,.42)');
+      if (img) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pos.left + 8, pos.top);
+        ctx.arcTo(pos.left + size, pos.top, pos.left + size, pos.top + size, 8);
+        ctx.arcTo(pos.left + size, pos.top + size, pos.left, pos.top + size, 8);
+        ctx.arcTo(pos.left, pos.top + size, pos.left, pos.top, 8);
+        ctx.arcTo(pos.left, pos.top, pos.left + 8, pos.top, 8);
+        ctx.closePath();
+        ctx.clip();
+        drawContainImage(ctx, img, pos.left, pos.top, size, size);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = getCss('--timeline-label') || '#64748b';
+        ctx.font = '12px Microsoft JhengHei, Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('拖曳或點擊', pos.left + size / 2, pos.top + size / 2 - 8);
+        ctx.fillText('加入圖片', pos.left + size / 2, pos.top + size / 2 + 10);
+      }
+    }
+
+
+    function loadImageForCanvas(src) {
+      if (!src) return Promise.resolve(null);
+      if (imageCache.has(src)) return imageCache.get(src);
+      const promise = new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+      imageCache.set(src, promise);
+      return promise;
+    }
+
+    function drawContainImage(ctx, img, x, y, w, h) {
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      if (!iw || !ih) return;
+
+      let ratio;
+      if (iw > ih) {
+        // 寬圖：寬度塞進正方框，上下留白。
+        ratio = w / iw;
+      } else if (ih > iw) {
+        // 高圖：高度塞進正方框，左右留白。
+        ratio = h / ih;
+      } else {
+        // 正方圖：寬高都可，剛好填滿正方框。
+        ratio = Math.min(w / iw, h / ih);
+      }
+
+      const dw = iw * ratio;
+      const dh = ih * ratio;
+      const dx = x + (w - dw) / 2;
+      const dy = y + (h - dh) / 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, h);
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    async function drawCardCanvas(ctx, ev, x, y, color, cardW = 150, cardH = 68) {
+      const showDesc = ev.showDesc !== false && ev.desc;
+      const showDate = viewSettings.showEventDate;
+
+      drawRoundRect(ctx, x, y, cardW, cardH, 8, '#ffffff', color);
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      const contentY = y + 11;
+      const nameSize = eventFontSize();
+      const dateSize = dateFontSize();
+      const descSize = eventDescFontSize();
+      const nameLineHeight = Math.ceil(nameSize * 1.35);
+      const descLineHeight = Math.ceil(descSize * 1.4);
+      const exportTextW = Math.max(56, cardW - 24);
+
+      ctx.fillStyle = color;
+      ctx.font = `900 ${nameSize}px Microsoft JhengHei, Arial`;
+      const nameLines = wrapCanvasText(ctx, ev.name, exportTextW, 99);
+      nameLines.forEach((line, index) => {
+        ctx.fillText(line, x + 12, contentY + index * nameLineHeight);
+      });
+
+      let nextY = contentY + 2 + nameLines.length * nameLineHeight;
+      if (showDate) {
+        ctx.fillStyle = '#334155';
+        ctx.font = `${dateSize}px Microsoft JhengHei, Arial`;
+        ctx.fillText(ev.roc, x + 12, nextY);
+        nextY += dateSize + 8;
+      } else {
+        nextY += 3;
+      }
+
+      if (showDesc) {
+        const descY = nextY;
+        ctx.strokeStyle = 'rgba(100,116,139,.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 12, descY - 6);
+        ctx.lineTo(x + 12 + exportTextW, descY - 6);
+        ctx.stroke();
+
+        ctx.fillStyle = '#475569';
+        ctx.font = `${descSize}px Microsoft JhengHei, Arial`;
+        const descLines = wrapCanvasText(ctx, ev.desc, exportTextW, 99);
+        descLines.forEach((line, index) => {
+          ctx.fillText(line, x + 12, descY + index * descLineHeight);
+        });
+      }
+    }
+
+    function wrapCanvasText(ctx, text, maxWidth, maxLines = 2) {
+      const source = String(text || '').trim();
+      if (!source) return [''];
+
+      const chars = source.split('');
+      const lines = [];
+      let line = '';
+
+      chars.forEach(ch => {
+        const test = line + ch;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = ch;
+        } else {
+          line = test;
+        }
+      });
+
+      if (line) lines.push(line);
+
+      if (lines.length > maxLines) {
+        const limited = lines.slice(0, maxLines);
+        limited[maxLines - 1] = limited[maxLines - 1].slice(0, Math.max(0, limited[maxLines - 1].length - 1)) + '…';
+        return limited;
+      }
+
+      return lines;
+    }
+
+    function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function downloadBlob(blob, filename) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000); }
+    function safeName(s) { return String(s || '事件時間軸').replace(/[\\/:*?"<>|]/g, '_').slice(0, 50); }
+    function escapeHtml(s) { return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
+    function trim(s, n) { s = String(s || ''); return s.length > n ? s.slice(0,n) + '…' : s; }
+
+    function setQuickRange(type) {
+      rangeSettings.mode = 'manual';
+      const now = new Date();
+      let y = now.getFullYear() - 1911;
+      if (type === 'lastYear') y -= 1;
+      if (type === 'futureYear') {
+        const next = new Date(now); next.setFullYear(now.getFullYear() + 1);
+        document.getElementById('startDate').value = `${y}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+        document.getElementById('endDate').value = `${next.getFullYear()-1911}/${String(next.getMonth()+1).padStart(2,'0')}/${String(next.getDate()).padStart(2,'0')}`;
+      } else {
+        document.getElementById('startDate').value = `${y}/01/01`;
+        document.getElementById('endDate').value = `${y}/12/31`;
+      }
+      render();
+    }
+
+    function makeSampleImageData(title, color, shape = 'wide') {
+      const size = 260;
+      const svgW = shape === 'tall' ? 180 : (shape === 'wide' ? 360 : 260);
+      const svgH = shape === 'tall' ? 360 : (shape === 'wide' ? 180 : 260);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+        <rect width="100%" height="100%" rx="18" fill="#f8fafc"/>
+        <rect x="10" y="10" width="${svgW - 20}" height="${svgH - 20}" rx="16" fill="${color}" opacity="0.14" stroke="${color}" stroke-width="5"/>
+        <circle cx="${svgW * 0.24}" cy="${svgH * 0.34}" r="${Math.min(svgW, svgH) * 0.14}" fill="${color}" opacity="0.9"/>
+        <path d="M ${svgW * 0.08} ${svgH * 0.82} L ${svgW * 0.38} ${svgH * 0.52} L ${svgW * 0.55} ${svgH * 0.68} L ${svgW * 0.72} ${svgH * 0.46} L ${svgW * 0.94} ${svgH * 0.82} Z" fill="${color}" opacity="0.42"/>
+        <text x="50%" y="${svgH - 24}" text-anchor="middle" font-family="Microsoft JhengHei, Noto Sans TC, Arial" font-size="24" font-weight="900" fill="#334155">${escapeHtml(title)}</text>
+      </svg>`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+
+    function loadSample() {
+      rangeSettings.mode = 'auto';
+      document.getElementById('timelineTitle').value = '可以直接刪除--專案進度與里程碑時間軸';
+      document.getElementById('startDate').value = '1130101';
+      document.getElementById('endDate').value = '1141231';
+      const samples = [
+        ['專案啟動會議','1130215','#2563eb', true, makeSampleImageData('啟動會議', '#2563eb', 'wide')],
+        ['需求分析完成','1130320','#16a34a', false, null],
+        ['系統設計審核','1130510','#f97316', true, makeSampleImageData('設計審核', '#f97316', 'tall')],
+        ['原型開發完成','1130630','#8b5cf6', false, null],
+        ['期中檢討會議','1130915','#ef4444', true, makeSampleImageData('期中檢討', '#ef4444', 'square')],
+        ['系統測試開始','1131020','#2563eb', false, null],
+        ['使用者測試','1140205','#16a34a', true, makeSampleImageData('使用者測試', '#16a34a', 'wide')],
+        ['教育訓練','1140315','#f97316', false, null],
+        ['專案上線','1140601','#8b5cf6', true, makeSampleImageData('專案上線', '#8b5cf6', 'tall')],
+        ['專案結案','1140930','#0f8b8d', false, null]
+      ];
+      events = samples.map(s => {
+        const p = parseRocDate(s[1]);
+        const imageData = s[4] || null;
+        let imageRatio = 1;
+        if (imageData) {
+          // Attempt to parse width and height from the SVG header embedded in the data URI.
+          const match = String(imageData).match(/width=\"(\d+)\".*height=\"(\d+)\"/);
+          if (match && match[1] && match[2]) {
+            const w = Number(match[1]);
+            const h = Number(match[2]);
+            if (h) imageRatio = w / h;
+          }
+        }
+        return {
+          id: uid(),
+          name: s[0],
+          date: p.date,
+          roc: p.roc,
+          western: p.western,
+          color: s[2],
+          desc: '可在左側編輯事件描述，並指定是否顯示。',
+          showDesc: false,
+          lane: null,
+          showImage: Boolean(s[3]),
+          imageData,
+          imageName: s[3] ? `${s[0]}示意圖.svg` : '',
+          imageRatio,
+          manualX: null,
+          manualY: null
+        };
+      });
+      render();
+    }
+
+    function showHelp() { alert('操作方式：\n1. 直接新增事件即可；預設會依最早與最晚事件日期自動決定時間範圍。\n2. 顯示與排列可選「時間比例、平均分布、自由拖曳」。\n3. 日期即使隱藏仍會保留，可繼續作為時間比例定位或平均分布排序依據。\n4. 可獨立顯示或隱藏主線、時間刻度、事件日期、連接線與節點。\n5. 需要固定年度或指定區間時，再到「時間軸設定」改用自訂範圍。\n6. 事件旁「⋯」可編輯文字、更換配色、切換描述/圖片或刪除事件。\n7. 可儲存 JSON 或匯出 PNG。'); }
+
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.event-floating-actions')) closeEventActionMenus();
+      if (!e.target.closest('.more-wrap')) closeMoreMenu();
+    });
+
+    window.addEventListener('resize', () => {
+      clearTimeout(window.__timelineResizeTimer);
+      window.__timelineResizeTimer = setTimeout(render, 120);
+    });
+
+    if (new URLSearchParams(location.search).get('mode') === 'vertical') {
+      orientation = 'vertical';
+      titlePos = { x: 160, y: 24 };
+    }
+
+    renderColorPicker();
+    syncViewControls();
+    loadSample();
+  </script>
+</body>
+</html>
