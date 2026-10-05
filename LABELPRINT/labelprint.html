@@ -161,6 +161,13 @@
                     號碼牌模式
                 </button>
             </div>
+            <label id="cutStackOption" class="hidden mt-2 flex items-center justify-between gap-3 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 cursor-pointer">
+                <div>
+                    <div class="text-xs font-black text-orange-700">CUT AND STACK</div>
+                    <div class="text-[10px] text-orange-600 mt-0.5">裁切後依左上 → 右上 → 左下 → 右下整疊</div>
+                </div>
+                <input id="cutStackToggle" type="checkbox" onchange="refreshPreview()" class="w-4 h-4 accent-orange-500 shrink-0">
+            </label>
             <button onclick="openPhoneMode()" class="w-full mt-2 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-slate-900 transition flex items-center justify-center gap-2 text-sm">
                 📱 開啟手機現場展示模式 (全螢幕)
             </button>
@@ -293,12 +300,15 @@
         currentMode = mode;
         const btnLabel = document.getElementById('btn-mode-label');
         const btnTent = document.getElementById('btn-mode-tent');
+        const cutStackOption = document.getElementById('cutStackOption');
         if (mode === 'label') {
             btnLabel.className = "bg-green-600 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-green-700 transition text-sm text-center";
             btnTent.className = "bg-gray-100 text-gray-500 font-bold py-3 px-2 rounded-xl border-2 border-transparent hover:bg-gray-200 transition text-sm text-center";
+            cutStackOption.classList.add('hidden');
         } else {
             btnLabel.className = "bg-gray-100 text-gray-500 font-bold py-3 px-2 rounded-xl border-2 border-transparent hover:bg-gray-200 transition text-sm text-center";
             btnTent.className = "bg-orange-500 text-white font-bold py-3 px-2 rounded-xl shadow border-2 border-orange-600 transition text-sm text-center";
+            cutStackOption.classList.remove('hidden');
         }
         refreshPreview();
     }
@@ -411,36 +421,91 @@
     function refreshPreview() {
         const area = document.getElementById('printArea');
         area.innerHTML = '';
-        const perPage = currentMode === 'label' ? 30 : 4;
 
-        for (let i = 0; i < itemArray.length; i += perPage) {
-            const zoomWrapper = document.createElement('div');
-            zoomWrapper.className = 'page-zoom-wrapper';
-            const pageDiv = document.createElement('div');
-            pageDiv.className = currentMode === 'label' ? 'label-page' : 'tent-page';
+        if (currentMode === 'label') {
+            const perPage = 30;
+            for (let i = 0; i < itemArray.length; i += perPage) {
+                const zoomWrapper = document.createElement('div');
+                zoomWrapper.className = 'page-zoom-wrapper';
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'label-page';
 
-            const pageItems = itemArray.slice(i, i + perPage);
-            pageItems.forEach((id, pIdx) => {
-                const gIdx = i + pIdx;
-                const div = document.createElement('div');
-                if (currentMode === 'label') {
+                const pageItems = itemArray.slice(i, i + perPage);
+                pageItems.forEach((id, pIdx) => {
+                    const gIdx = i + pIdx;
+                    const div = document.createElement('div');
                     div.className = 'label-item';
                     div.innerHTML = `<div class="id-text-label">${id}</div><hr class="divider"><div class="barcode-container"><svg id="barcode-${gIdx}" style="width:100%;height:100%"></svg></div>`;
-                } else {
-                    div.className = 'tent-item';
-                    div.innerHTML = `<div class="tent-top"><div class="tent-text">${id}</div></div><div class="tent-bottom"><div class="tent-text">${id}</div></div>`;
-                }
-                pageDiv.appendChild(div);
-            });
+                    pageDiv.appendChild(div);
+                });
 
-            zoomWrapper.appendChild(pageDiv);
-            area.appendChild(zoomWrapper);
+                zoomWrapper.appendChild(pageDiv);
+                area.appendChild(zoomWrapper);
 
-            if (currentMode === 'label') {
                 pageItems.forEach((id, pIdx) => {
                     JsBarcode(`#barcode-${i + pIdx}`, id, { format: "CODE128", width: 2.2, height: 55, displayValue: false, margin: 0 });
                 });
             }
+            return;
+        }
+
+        // 號碼牌模式：可選一般順序或 cut-and-stack 排版。
+        const positionsPerPage = 4;
+        const useCutStack = document.getElementById('cutStackToggle')?.checked ?? false;
+
+        if (!useCutStack) {
+            // 一般順序：每張 A4 依待印清單由左上→右上→左下→右下排列。
+            for (let i = 0; i < itemArray.length; i += positionsPerPage) {
+                const zoomWrapper = document.createElement('div');
+                zoomWrapper.className = 'page-zoom-wrapper';
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'tent-page';
+
+                const pageItems = itemArray.slice(i, i + positionsPerPage);
+                for (let position = 0; position < positionsPerPage; position++) {
+                    const div = document.createElement('div');
+                    div.className = 'tent-item';
+                    const id = pageItems[position];
+                    if (id !== undefined) {
+                        div.innerHTML = `<div class="tent-top"><div class="tent-text">${id}</div></div><div class="tent-bottom"><div class="tent-text">${id}</div></div>`;
+                    } else {
+                        div.innerHTML = `<div class="tent-top"></div><div class="tent-bottom"></div>`;
+                    }
+                    pageDiv.appendChild(div);
+                }
+
+                zoomWrapper.appendChild(pageDiv);
+                area.appendChild(zoomWrapper);
+            }
+            return;
+        }
+
+        // CUT AND STACK：同一位置跨頁連續。整疊裁成四疊後，
+        // 依左上→右上→左下→右下疊放即可保持待印清單順序。
+        const totalPages = Math.ceil(itemArray.length / positionsPerPage);
+
+        for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+            const zoomWrapper = document.createElement('div');
+            zoomWrapper.className = 'page-zoom-wrapper';
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'tent-page';
+
+            for (let position = 0; position < positionsPerPage; position++) {
+                const itemIndex = position * totalPages + pageIndex;
+                const div = document.createElement('div');
+                div.className = 'tent-item';
+
+                if (itemIndex < itemArray.length) {
+                    const id = itemArray[itemIndex];
+                    div.innerHTML = `<div class="tent-top"><div class="tent-text">${id}</div></div><div class="tent-bottom"><div class="tent-text">${id}</div></div>`;
+                } else {
+                    div.innerHTML = `<div class="tent-top"></div><div class="tent-bottom"></div>`;
+                }
+                pageDiv.appendChild(div);
+            }
+
+            zoomWrapper.appendChild(pageDiv);
+            area.appendChild(zoomWrapper);
         }
     }
     document.getElementById('numberInput').addEventListener('keypress', (e) => e.key === 'Enter' && addFromInput());
