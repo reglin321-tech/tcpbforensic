@@ -9,7 +9,7 @@
 *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text);background:var(--bg)}body{overflow:hidden}
 .app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
 header{background:var(--panel);border-bottom:1px solid var(--line);padding:9px 14px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}.title{font-weight:700;margin-right:6px}button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:14px}button:hover{border-color:#9ca3af}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}.spacer{flex:1}.status{color:var(--muted);font-size:13px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}.modal.show{display:flex}.modal-card{width:min(720px,92vw);max-height:85vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.28);padding:20px}.modal-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}.modal-head h2{margin:0;font-size:20px}.help-grid{display:grid;grid-template-columns:160px 1fr;gap:10px 16px;font-size:14px;line-height:1.6}.help-grid b{color:#111827}.help-note{margin-top:14px;padding:12px;border-radius:8px;background:#f8fafc;color:#475569;font-size:13px}
-.adjust{display:flex;align-items:center;gap:7px;padding:3px 8px;border:1px solid var(--line);border-radius:8px;background:#fafafa}.adjust label{font-size:12px;color:#4b5563}.adjust input[type=range]{width:105px}.adjust output{width:38px;text-align:right;font-size:12px;color:#374151}
+.adjust{display:flex;align-items:center;gap:7px;padding:3px 8px;border:1px solid var(--line);border-radius:8px;background:#fafafa}.side-tools{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 14px 10px}.side-tools select,.side-tools button{width:100%;min-width:0}.download-progress{display:none;align-items:center;gap:7px;font-size:12px;color:var(--muted)}.download-progress.show{display:flex}.download-progress progress{width:120px;height:12px}.adjust label{font-size:12px;color:#4b5563}.adjust input[type=range]{width:105px}.adjust output{width:38px;text-align:right;font-size:12px;color:#374151}.memory-status{font-size:12px;color:var(--muted);padding:0 4px;white-space:nowrap}.memory-status.on{color:var(--ok);font-weight:600}
 main{min-height:0;display:grid;grid-template-columns:310px 1fr}aside{min-height:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}.drop{margin:14px;padding:34px 12px;min-height:118px;border:2px dashed #b9c1cc;border-radius:12px;text-align:center;color:var(--muted);cursor:pointer;background:#fafbfc;display:flex;align-items:center;justify-content:center;line-height:1.8}.drop.drag{border-color:var(--accent);background:var(--accent2);color:var(--accent)}.list{overflow:auto;padding:0 9px 10px}.item{display:grid;grid-template-columns:28px 1fr auto;gap:7px;align-items:center;padding:8px;border-radius:8px;cursor:pointer}.item:hover{background:#f3f4f6}.item.active{background:var(--accent2);outline:1px solid #93c5fd}.num{width:24px;height:24px;border-radius:50%;background:#e5e7eb;display:grid;place-items:center;font-size:12px}.done .num{background:#dcfce7;color:var(--ok)}.skipped .num{background:#fef3c7;color:var(--skip)}.name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px}.badge{font-size:11px;color:var(--muted)}
 .workspace{min-width:0;min-height:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#20242a}.empty{color:#d1d5db;text-align:center;line-height:1.9;pointer-events:none;padding:20px}canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
 footer{background:var(--panel);border-top:1px solid var(--line);padding:8px 14px;display:flex;gap:15px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}kbd{border:1px solid #c9ced6;border-bottom-width:2px;background:#fff;border-radius:5px;padding:1px 6px;color:#374151;font-family:inherit}.cropinfo{margin-left:auto;color:#374151}
@@ -26,16 +26,33 @@ footer{background:var(--panel);border-top:1px solid var(--line);padding:8px 14px
   <button id="resetBtn">重畫本張</button>
   <div class="adjust"><label>亮度</label><input id="brightness" type="range" min="-100" max="100" value="0"><output id="brightnessVal">0</output></div>
   <div class="adjust"><label>對比</label><input id="contrast" type="range" min="-100" max="100" value="0"><output id="contrastVal">0</output></div>
+  <div class="adjust"><label>Gamma</label><input id="gamma" type="range" min="-100" max="100" value="0"><output id="gammaVal">0</output></div>
+  <div class="adjust"><label>陰影</label><input id="shadows" type="range" min="-100" max="100" value="0"><output id="shadowsVal">0</output></div>
+  <div class="adjust"><label>高光</label><input id="highlights" type="range" min="-100" max="100" value="0"><output id="highlightsVal">0</output></div>
+  <div class="adjust"><label>飽和度</label><input id="saturation" type="range" min="-100" max="100" value="0"><output id="saturationVal">0</output></div>
+  <div class="adjust"><label>銳化</label><input id="sharpen" type="range" min="0" max="100" value="0"><output id="sharpenVal">0</output></div>
+  <button id="grayscaleBtn">黑白：關</button>
+  <button id="rememberAdjustBtn">記住目前 Ctrl+C</button>
+  <button id="copyPrevAdjustBtn" disabled>套用記住 C</button>
+  <button id="clearRememberedBtn" disabled>清除記憶</button>
+  <span class="memory-status" id="memoryStatus">尚未記住調色</span>
   <button id="adjustResetBtn">重設調整</button>
   <button id="helpBtn">操作說明</button>
   <div class="spacer"></div>
   <button id="downloadBtn" class="primary" disabled>批次下載</button>
+  <div class="download-progress" id="downloadProgress"><progress id="downloadBar" max="1" value="0"></progress><span id="downloadText">0 / 0</span></div>
   <div class="status" id="status">尚未加入照片</div>
   <input id="fileInput" type="file" accept="image/*" multiple hidden>
 </header>
 <main>
   <aside>
     <div class="drop" id="dropZone"><div><strong>拖曳多張照片到這裡</strong><br>或點此選取照片</div></div>
+    <div class="side-tools">
+      <select id="sortMode" title="排序方式"><option value="natural">檔名自然排序</option><option value="load">載入順序</option><option value="shot">拍攝時間</option></select>
+      <button id="sortDirBtn" title="切換升冪／降冪">升冪 ↑</button>
+      <select id="filterMode" title="狀態篩選"><option value="all">全部狀態</option><option value="pending">未處理</option><option value="done">已完成</option><option value="skipped">已跳過</option></select>
+      <button id="clearFilterBtn">顯示全部</button>
+    </div>
     <div class="list" id="list"></div>
   </aside>
   <section class="workspace" id="workspace">
@@ -44,49 +61,160 @@ footer{background:var(--panel);border-top:1px solid var(--line);padding:8px 14px
   </section>
 </main>
 <footer>
-  <span><kbd>拖曳</kbd> 原圖比例</span><span><kbd>Shift</kbd> + 拖曳：比例反轉</span><span><kbd>框內拖曳</kbd> 移動</span><span><kbd>四角控制點</kbd> 等比例縮放</span><span>拖曳上方圓點：自由旋轉</span><span><kbd>Enter</kbd> 有框或有調整＝確認；都沒有＝跳過</span><span class="cropinfo" id="cropInfo">—</span>
+  <span><kbd>拖曳</kbd> 原圖比例</span><span><kbd>Shift</kbd> + 拖曳：比例反轉</span><span><kbd>框內拖曳</kbd> 移動</span><span><kbd>四角控制點</kbd> 等比例縮放</span><span>拖曳上方圓點：自由旋轉</span><span><kbd>Ctrl+C</kbd> 記住目前調色</span><span><kbd>C</kbd> 套用已記住調色</span><span><kbd>Space</kbd> 按住比較原圖</span><span><kbd>Enter</kbd> 有框或有調整＝確認；都沒有＝跳過</span><span class="cropinfo" id="cropInfo">—</span>
 </footer>
 </div>
 <div class="modal" id="helpModal">
   <div class="modal-card">
     <div class="modal-head"><h2>操作說明</h2><div class="spacer"></div><button id="closeHelpBtn">關閉</button></div>
     <div class="help-grid">
-      <b>加入照片</b><div>可一次選取多張，或直接拖曳多張照片到左側上傳區。</div>
+      <b>加入照片</b><div>可一次選取多張，或直接拖曳多張照片到左側上傳區。大量照片會採延遲載入，只保留目前張與前後鄰近照片在記憶體。</div>
+      <b>排序</b><div>可選「檔名自然排序／載入順序／拍攝時間」，並切換升冪或降冪。拍攝時間會讀取 JPEG EXIF DateTimeOriginal；無 EXIF 時自動退回檔名自然排序。</div>
+      <b>狀態篩選</b><div>左側清單可只顯示未處理、已完成或已跳過；篩選只影響清單顯示，不會刪除任何照片或設定。</div>
       <b>建立裁切框</b><div>在照片上拖曳，裁切框預設維持該張原圖的長寬比。</div>
       <b>反轉比例</b><div>按住 <kbd>Shift</kbd> 再拖曳，改用原圖長寬比反轉。</div>
       <b>移動框體</b><div>在裁切框內按住滑鼠拖曳，可移動整個框體。</div>
       <b>縮放框體</b><div>拖曳裁切框四個角的控制點，可等比例放大或縮小框體。</div>
       <b>自由旋轉</b><div>拖曳裁切框上方的圓形旋轉控制點，可自由調整角度。</div>
-      <b>亮度 / 對比</b><div>使用上方滑桿調整；即使沒有裁切，只要有調整，Enter 後也會儲存整張調整後的照片。</div>
-      <b>Enter</b><div>有裁切框或有亮度/對比調整＝確認並下一張；兩者都沒有＝跳過且不輸出。</div>
+      <b>影像調整</b><div>可調整亮度、對比、Gamma、陰影、高光、飽和度與銳化，也可切換黑白。Gamma 往右會提亮中間調；陰影往右可拉回暗部細節；高光往左可壓回過亮區域。</div>
+      <b>Enter</b><div>有裁切框或有任何影像調整＝確認並下一張；都沒有＝跳過且不輸出。</div>
       <b>上一張 / 下一張</b><div>可用按鈕或鍵盤左右方向鍵切換照片。</div>
-      <b>重畫本張</b><div>清除裁切框，但保留目前亮度 / 對比設定。</div>
-      <b>重設調整</b><div>只把亮度 / 對比恢復為 0，不影響裁切框。</div>
-      <b>批次下載</b><div>全部照片都處理完後才可下載。輸出會依原始格式另存新檔，不覆蓋原圖。</div>
+      <b>重畫本張</b><div>清除裁切框，但保留目前影像調整設定。</div>
+      <b>重設調整</b><div>把亮度、對比、Gamma、陰影、高光、飽和度與銳化全部恢復，並關閉黑白，不影響裁切框。</div>
+      <b>批次下載</b><div>全部照片都處理完後才可下載。輸出會依原始格式另存新檔，不覆蓋原圖；下載時會顯示目前處理進度。</div>
     </div>
-    <div class="help-note">輸出命名：有裁切時加 <code>_crop</code>；只有亮度 / 對比調整時加 <code>_adjust</code>。</div>
+    <b>快速比較與套用</b><div><code>Ctrl+C</code> 記住目前照片的影像調整；之後按 <code>C</code> 可把這組已記住的調色套用到任何照片，不複製裁切框。中間跳過照片或臨時微調都不會改變已記住的設定，直到再次按 <code>Ctrl+C</code> 才會覆蓋。按住 <code>Space</code> 可暫時顯示未調整原圖，放開即回到目前調整。</div>
+    <div class="help-note">輸出命名：有裁切時加 <code>_crop</code>；只有影像調整時加 <code>_adjust</code>。所有調整都會真正套用到輸出檔，不只是預覽。</div>
   </div>
 </div>
 
 <script>
 (()=>{
 const $=s=>document.querySelector(s),canvas=$('#canvas'),ctx=canvas.getContext('2d'),workspace=$('#workspace'),input=$('#fileInput'),listEl=$('#list'),dropZone=$('#dropZone'),statusEl=$('#status'),cropInfo=$('#cropInfo'),emptyText=$('#emptyText');
-const openBtn=$('#openBtn'),prevBtn=$('#prevBtn'),nextBtn=$('#nextBtn'),resetBtn=$('#resetBtn'),downloadBtn=$('#downloadBtn'),brightness=$('#brightness'),contrast=$('#contrast'),brightnessVal=$('#brightnessVal'),contrastVal=$('#contrastVal'),adjustResetBtn=$('#adjustResetBtn'),helpBtn=$('#helpBtn'),helpModal=$('#helpModal'),closeHelpBtn=$('#closeHelpBtn');
-const items=[];let index=-1,view=null,mode=null,start=null,moveStart=null,cropStart=null,rotateOffset=0,resizeCorner=-1,resizeOpp=null;
-const hasAdjust=it=>!!it&&(Number(it.brightness)!==0||Number(it.contrast)!==0);
+const openBtn=$('#openBtn'),prevBtn=$('#prevBtn'),nextBtn=$('#nextBtn'),resetBtn=$('#resetBtn'),downloadBtn=$('#downloadBtn'),downloadProgress=$('#downloadProgress'),downloadBar=$('#downloadBar'),downloadText=$('#downloadText'),sortMode=$('#sortMode'),sortDirBtn=$('#sortDirBtn'),filterMode=$('#filterMode'),clearFilterBtn=$('#clearFilterBtn'),brightness=$('#brightness'),contrast=$('#contrast'),gamma=$('#gamma'),shadows=$('#shadows'),highlights=$('#highlights'),saturation=$('#saturation'),sharpen=$('#sharpen'),brightnessVal=$('#brightnessVal'),contrastVal=$('#contrastVal'),gammaVal=$('#gammaVal'),shadowsVal=$('#shadowsVal'),highlightsVal=$('#highlightsVal'),saturationVal=$('#saturationVal'),sharpenVal=$('#sharpenVal'),grayscaleBtn=$('#grayscaleBtn'),rememberAdjustBtn=$('#rememberAdjustBtn'),copyPrevAdjustBtn=$('#copyPrevAdjustBtn'),clearRememberedBtn=$('#clearRememberedBtn'),memoryStatus=$('#memoryStatus'),adjustResetBtn=$('#adjustResetBtn'),helpBtn=$('#helpBtn'),helpModal=$('#helpModal'),closeHelpBtn=$('#closeHelpBtn');
+const items=[];let index=-1,view=null,mode=null,start=null,moveStart=null,cropStart=null,rotateOffset=0,resizeCorner=-1,resizeOpp=null,compareOriginal=false,sortAscending=true,nextLoadOrder=0,rememberedAdjust=null;
+const adjustKeys=['brightness','contrast','gamma','shadows','highlights','saturation','sharpen','grayscale'];
+const hasAdjust=it=>!!it&&([it.brightness,it.contrast,it.gamma,it.shadows,it.highlights,it.saturation,it.sharpen].some(v=>Number(v)!==0)||!!it.grayscale);
 const hasOutput=it=>!!it&&(!!it.crop||hasAdjust(it));
+function naturalCompare(a,b){return a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})}
+function parseExifDateString(s){const m=/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/.exec(s||'');if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]);return Number.isNaN(d.getTime())?null:d.getTime()}
+async function readExifShotTime(file){
+  if(!/jpe?g/i.test(file.type)&&!/\.(jpe?g)$/i.test(file.name))return null;
+  try{
+    const buf=await file.slice(0,256*1024).arrayBuffer();
+    const v=new DataView(buf);
+    if(v.byteLength<4||v.getUint16(0,false)!==0xFFD8)return null;
+    let o=2;
+    while(o+4<=v.byteLength){
+      if(v.getUint8(o)!==0xFF){o++;continue}
+      const marker=v.getUint8(o+1);
+      if(marker===0xDA||marker===0xD9)break;
+      const len=v.getUint16(o+2,false);
+      if(len<2||o+2+len>v.byteLength)break;
+      if(marker===0xE1&&len>=8){
+        const exif=o+4;
+        if(exif+6<=v.byteLength&&v.getUint32(exif,false)===0x45786966){
+          const tiff=exif+6;
+          const le=v.getUint16(tiff,false)===0x4949;
+          const rd16=p=>v.getUint16(p,le);
+          const rd32=p=>v.getUint32(p,le);
+          if(tiff+8>v.byteLength||rd16(tiff+2)!==42)return null;
+          const ifd0=tiff+rd32(tiff+4);
+          if(ifd0+2>v.byteLength)return null;
+          let exifPtr=null;
+          const n0=rd16(ifd0);
+          for(let i=0;i<n0;i++){
+            const e=ifd0+2+i*12;
+            if(e+12>v.byteLength)break;
+            if(rd16(e)===0x8769){exifPtr=tiff+rd32(e+8);break}
+          }
+          if(exifPtr&&exifPtr+2<=v.byteLength){
+            const n=rd16(exifPtr);
+            for(let i=0;i<n;i++){
+              const e=exifPtr+2+i*12;
+              if(e+12>v.byteLength)break;
+              if(rd16(e)!==0x9003)continue;
+              const count=rd32(e+4);
+              const ptr=count<=4?e+8:tiff+rd32(e+8);
+              if(ptr>=v.byteLength)return null;
+              let str='';
+              for(let j=0;j<count&&ptr+j<v.byteLength;j++){
+                const c=v.getUint8(ptr+j);
+                if(!c)break;
+                str+=String.fromCharCode(c);
+              }
+              return parseExifDateString(str);
+            }
+          }
+        }
+      }
+      o+=2+len;
+    }
+  }catch{}
+  return null;
+}
+function currentObject(){return items[index]||null}
+function applySort(){
+  const keep=currentObject(),mode=sortMode.value,dir=sortAscending?1:-1;
+  items.sort((a,b)=>{let c=0;if(mode==='load')c=a.loadOrder-b.loadOrder;else if(mode==='shot'){if(a.shotTime!=null&&b.shotTime!=null)c=a.shotTime-b.shotTime;else if(a.shotTime!=null)c=-1;else if(b.shotTime!=null)c=1;else c=naturalCompare(a.file.name,b.file.name)}else c=naturalCompare(a.file.name,b.file.name);if(c===0)c=a.loadOrder-b.loadOrder;return c*dir});
+  index=keep?Math.max(0,items.indexOf(keep)):(items.length?0:-1);releaseFarImages(index);refreshUI();render();ensureWindow(index);
+}
+async function prepareShotTimes(){const missing=items.filter(x=>x.shotTime===undefined);await Promise.all(missing.map(async it=>{it.shotTime=await readExifShotTime(it.file)}))}
+function visibleByFilter(it){return filterMode.value==='all'||it.state===filterMode.value}
 function setCanvasSize(){const r=workspace.getBoundingClientRect(),dpr=window.devicePixelRatio||1;canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);render()}new ResizeObserver(setCanvasSize).observe(workspace);
-async function addFiles(fileList){for(const file of [...fileList].filter(f=>f.type.startsWith('image/'))){const url=URL.createObjectURL(file),img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});items.push({file,url,img,crop:null,state:'pending',brightness:0,contrast:0})}if(index<0&&items.length)index=0;refreshUI();render()}
+async function loadItem(i){
+  const it=items[i];if(!it)return null;if(it.img)return it.img;if(it.loading)return it.loading;
+  it.loading=new Promise((resolve,reject)=>{const url=URL.createObjectURL(it.file),img=new Image();img.onload=()=>{it.img=img;it.width=img.naturalWidth;it.height=img.naturalHeight;URL.revokeObjectURL(url);it.loading=null;resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);it.loading=null;reject(new Error('無法載入 '+it.file.name))};img.src=url});
+  return it.loading;
+}
+function releaseItem(i){const it=items[i];if(!it||!it.img)return;try{it.img.src=''}catch{}it.img=null}
+function releaseFarImages(center=index){items.forEach((_,i)=>{if(Math.abs(i-center)>1)releaseItem(i)})}
+async function ensureWindow(center=index){if(center<0)return;releaseFarImages(center);const targets=[center,center-1,center+1].filter(i=>i>=0&&i<items.length);await Promise.allSettled(targets.map(loadItem));if(center===index){refreshUI();render()}}
+async function addFiles(fileList){for(const file of [...fileList].filter(f=>f.type.startsWith('image/'))){items.push({file,img:null,loading:null,width:0,height:0,crop:null,state:'pending',brightness:0,contrast:0,gamma:0,shadows:0,highlights:0,saturation:0,sharpen:0,grayscale:false,loadOrder:nextLoadOrder++,shotTime:undefined})}if(index<0&&items.length)index=0;if(sortMode.value==='shot')await prepareShotTimes();applySort();await ensureWindow(index)}
 function current(){return items[index]||null}
 function calcView(img){const w=workspace.clientWidth,h=workspace.clientHeight,pad=24,scale=Math.min((w-pad*2)/img.naturalWidth,(h-pad*2)/img.naturalHeight,1),vw=img.naturalWidth*scale,vh=img.naturalHeight*scale;return{x:(w-vw)/2,y:(h-vh)/2,w:vw,h:vh,scale}}
-function filterFor(it){return `brightness(${Math.max(0,100+it.brightness)}%) contrast(${Math.max(0,100+it.contrast)}%)`}
+function clamp01(v){return v<0?0:v>1?1:v}
+function applyAdjustmentsToImageData(imageData,it){
+  const d=imageData.data,b=(Number(it.brightness)||0)/100,c=(Number(it.contrast)||0)/100,g=(Number(it.gamma)||0)/100,sh=(Number(it.shadows)||0)/100,hi=(Number(it.highlights)||0)/100,sat=(Number(it.saturation)||0)/100;
+  const contrastFactor=Math.pow(2,c*2),gammaExp=Math.pow(4,-g),satFactor=1+sat;
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i]/255,gg=d[i+1]/255,bb=d[i+2]/255;
+    r=clamp01((r-.5)*contrastFactor+.5+b*.5);gg=clamp01((gg-.5)*contrastFactor+.5+b*.5);bb=clamp01((bb-.5)*contrastFactor+.5+b*.5);
+    r=Math.pow(r,gammaExp);gg=Math.pow(gg,gammaExp);bb=Math.pow(bb,gammaExp);
+    let lum=.2126*r+.7152*gg+.0722*bb,shadowMask=Math.pow(1-lum,2),highlightMask=Math.pow(lum,2);
+    const shadowDelta=sh*.55*shadowMask,highlightDelta=hi*.55*highlightMask;
+    r=clamp01(r+shadowDelta+highlightDelta);gg=clamp01(gg+shadowDelta+highlightDelta);bb=clamp01(bb+shadowDelta+highlightDelta);
+    lum=.2126*r+.7152*gg+.0722*bb;
+    if(it.grayscale){r=gg=bb=lum}else{r=clamp01(lum+(r-lum)*satFactor);gg=clamp01(lum+(gg-lum)*satFactor);bb=clamp01(lum+(bb-lum)*satFactor)}
+    d[i]=Math.round(r*255);d[i+1]=Math.round(gg*255);d[i+2]=Math.round(bb*255);
+  }
+  return imageData;
+}
+function applySharpen(imageData,amount){
+  const a=Math.max(0,Math.min(1,(Number(amount)||0)/100));if(a<=0)return imageData;
+  const {width:w,height:h,data:d}=imageData,src=new Uint8ClampedArray(d),strength=1.35*a;
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const i=(y*w+x)*4;
+    for(let ch=0;ch<3;ch++){
+      const center=src[i+ch],up=src[i-w*4+ch],down=src[i+w*4+ch],left=src[i-4+ch],right=src[i+4+ch];
+      d[i+ch]=Math.max(0,Math.min(255,center+strength*(4*center-up-down-left-right)));
+    }
+  }
+  return imageData;
+}
+function processImageData(imageData,it){applyAdjustmentsToImageData(imageData,it);applySharpen(imageData,it.sharpen);return imageData}
+function drawAdjustedPreview(it){
+  const pw=Math.max(1,Math.round(view.w)),ph=Math.max(1,Math.round(view.h)),off=document.createElement('canvas');off.width=pw;off.height=ph;const ox=off.getContext('2d',{willReadFrequently:true});ox.drawImage(it.img,0,0,pw,ph);
+  if(hasAdjust(it)&&!compareOriginal){const data=ox.getImageData(0,0,pw,ph);processImageData(data,it);ox.putImageData(data,0,0)}
+  ctx.drawImage(off,view.x,view.y,view.w,view.h);
+}
 function cropViewGeom(c){return{cx:view.x+c.cx*view.scale,cy:view.y+c.cy*view.scale,w:c.w*view.scale,h:c.h*view.scale,angle:c.angle}}
 function corners(g){const ca=Math.cos(g.angle),sa=Math.sin(g.angle),hw=g.w/2,hh=g.h/2;return[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>({x:g.cx+x*ca-y*sa,y:g.cy+x*sa+y*ca}))}
 function rotationHandle(g){const d=Math.max(28,36),ca=Math.cos(g.angle),sa=Math.sin(g.angle);return{x:g.cx+sa*(g.h/2+d),y:g.cy-ca*(g.h/2+d)}}
 function cornerHandleIndex(x,y){const it=current();if(!it?.crop)return -1;const pts=corners(cropViewGeom(it.crop));for(let i=0;i<pts.length;i++)if(Math.hypot(x-pts[i].x,y-pts[i].y)<=12)return i;return -1}
 function imageToView(p){return{x:view.x+p.x*view.scale,y:view.y+p.y*view.scale}}
 function rotatePointAround(p,c,a){const dx=p.x-c.x,dy=p.y-c.y,ca=Math.cos(a),sa=Math.sin(a);return{x:c.x+dx*ca-dy*sa,y:c.y+dx*sa+dy*ca}}
-function render(){const w=workspace.clientWidth,h=workspace.clientHeight;ctx.clearRect(0,0,w,h);const it=current();emptyText.style.display=it?'none':'block';if(!it)return;view=calcView(it.img);ctx.save();ctx.filter=filterFor(it);ctx.drawImage(it.img,view.x,view.y,view.w,view.h);ctx.restore();if(!it.crop)return;const g=cropViewGeom(it.crop),pts=corners(g);ctx.save();ctx.fillStyle='rgba(0,0,0,.48)';ctx.beginPath();ctx.rect(view.x,view.y,view.w,view.h);ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<4;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();ctx.fill('evenodd');ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.setLineDash([8,5]);ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<4;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle='#2563eb';ctx.lineWidth=1;ctx.stroke();const rh=rotationHandle(g),topMid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};ctx.beginPath();ctx.moveTo(topMid.x,topMid.y);ctx.lineTo(rh.x,rh.y);ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(rh.x,rh.y,7,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#2563eb';ctx.lineWidth=2;ctx.stroke();for(const p of pts){ctx.beginPath();ctx.rect(p.x-5,p.y-5,10,10);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#2563eb';ctx.lineWidth=2;ctx.stroke()}ctx.restore()}
+function render(){const w=workspace.clientWidth,h=workspace.clientHeight;ctx.clearRect(0,0,w,h);const it=current();if(!it){emptyText.style.display='block';emptyText.innerHTML='加入照片後開始裁切<br>拖曳＝原圖比例　Shift＋拖曳＝長寬比反轉<br>框內可移動，上方圓點可自由旋轉';view=null;return}if(!it.img){emptyText.style.display='block';emptyText.textContent='照片載入中…';view=null;return}emptyText.style.display='none';view=calcView(it.img);drawAdjustedPreview(it);if(!it.crop)return;const g=cropViewGeom(it.crop),pts=corners(g);ctx.save();ctx.fillStyle='rgba(0,0,0,.48)';ctx.beginPath();ctx.rect(view.x,view.y,view.w,view.h);ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<4;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();ctx.fill('evenodd');ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.setLineDash([8,5]);ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<4;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle='#2563eb';ctx.lineWidth=1;ctx.stroke();const rh=rotationHandle(g),topMid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};ctx.beginPath();ctx.moveTo(topMid.x,topMid.y);ctx.lineTo(rh.x,rh.y);ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(rh.x,rh.y,7,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#2563eb';ctx.lineWidth=2;ctx.stroke();for(const p of pts){ctx.beginPath();ctx.rect(p.x-5,p.y-5,10,10);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#2563eb';ctx.lineWidth=2;ctx.stroke()}ctx.restore()}
 function clampToImageView(p){return{x:Math.max(view.x,Math.min(view.x+view.w,p.x)),y:Math.max(view.y,Math.min(view.y+view.h,p.y))}}
 function viewToImage(p){return{x:(p.x-view.x)/view.scale,y:(p.y-view.y)/view.scale}}
 function pointInRotatedCrop(x,y){const it=current();if(!it?.crop)return false;const g=cropViewGeom(it.crop),dx=x-g.cx,dy=y-g.cy,ca=Math.cos(-g.angle),sa=Math.sin(-g.angle),lx=dx*ca-dy*sa,ly=dx*sa+dy*ca;return Math.abs(lx)<=g.w/2&&Math.abs(ly)<=g.h/2}
@@ -97,19 +225,37 @@ function constrainCropCenter(c,it){const lim=cropFits(c,it.img);if(!lim.ok)retur
 canvas.addEventListener('pointerdown',e=>{if(!current()||!view)return;const r=canvas.getBoundingClientRect(),raw={x:e.clientX-r.left,y:e.clientY-r.top};const ch=cornerHandleIndex(raw.x,raw.y);if(ch>=0){mode='resize';resizeCorner=ch;cropStart={...current().crop};const pts=corners(cropViewGeom(cropStart)),opp=pts[(ch+2)%4];resizeOpp=viewToImage(opp);canvas.setPointerCapture(e.pointerId);return}if(onRotateHandle(raw.x,raw.y)){mode='rotate';const g=cropViewGeom(current().crop),a=Math.atan2(raw.y-g.cy,raw.x-g.cx);rotateOffset=current().crop.angle-a;canvas.setPointerCapture(e.pointerId);return}if(pointInRotatedCrop(raw.x,raw.y)){mode='move';moveStart=raw;cropStart={...current().crop};canvas.setPointerCapture(e.pointerId);canvas.style.cursor='grabbing';return}const p=clampToImageView(raw);if(p.x<view.x||p.x>view.x+view.w||p.y<view.y||p.y>view.y+view.h)return;mode='draw';start=p;current().crop=null;current().state='pending';canvas.setPointerCapture(e.pointerId)});
 canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect(),raw={x:e.clientX-r.left,y:e.clientY-r.top},it=current();if(!it)return;if(mode==='draw'){it.crop=makeCropFromDrag(start,clampToImageView(raw),e.shiftKey);render();refreshUI(false);return}if(mode==='resize'){const p=viewToImage(clampToImageView(raw)),a=cropStart.angle,ca=Math.cos(-a),sa=Math.sin(-a),dx=p.x-resizeOpp.x,dy=p.y-resizeOpp.y,lx=dx*ca-dy*sa,ly=dx*sa+dy*ca,ratio=cropStart.w/cropStart.h;let w=Math.max(Math.abs(lx),Math.abs(ly)*ratio),h=w/ratio;const sx=lx>=0?1:-1,sy=ly>=0?1:-1,centerLocal={x:sx*w/2,y:sy*h/2},cca=Math.cos(a),ssa=Math.sin(a),cx=resizeOpp.x+centerLocal.x*cca-centerLocal.y*ssa,cy=resizeOpp.y+centerLocal.x*ssa+centerLocal.y*cca,candidate={...cropStart,cx,cy,w,h};const lim=cropFits(candidate,it.img);if(lim.ok)it.crop=constrainCropCenter(candidate,it);it.state='pending';render();refreshUI(false);return}if(mode==='move'){const dx=(raw.x-moveStart.x)/view.scale,dy=(raw.y-moveStart.y)/view.scale;it.crop=constrainCropCenter({...cropStart,cx:cropStart.cx+dx,cy:cropStart.cy+dy},it);it.state='pending';render();refreshUI(false);return}if(mode==='rotate'){const g=cropViewGeom(it.crop),a=Math.atan2(raw.y-g.cy,raw.x-g.cx);let candidate={...it.crop,angle:a+rotateOffset};const lim=cropFits(candidate,it.img);if(lim.ok)candidate=constrainCropCenter(candidate,it);it.crop=candidate;it.state='pending';render();refreshUI(false);return}const ch=cornerHandleIndex(raw.x,raw.y);canvas.style.cursor=ch>=0?'nwse-resize':onRotateHandle(raw.x,raw.y)?'grab':pointInRotatedCrop(raw.x,raw.y)?'grab':'crosshair'});
 function endPointer(){mode=null;moveStart=null;cropStart=null;resizeCorner=-1;resizeOpp=null;canvas.style.cursor='crosshair';refreshUI();render()}canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);
-function goTo(i){if(!items.length)return;index=Math.max(0,Math.min(items.length-1,i));refreshUI();render()}
-function advance(){const it=current();if(!it)return;it.state=hasOutput(it)?'done':'skipped';if(index<items.length-1)index++;refreshUI();render()}
-function refreshUI(rebuild=true){const done=items.filter(x=>x.state==='done').length,skipped=items.filter(x=>x.state==='skipped').length,processed=done+skipped;statusEl.textContent=items.length?`${index+1} / ${items.length}　完成 ${done}　跳過 ${skipped}`:'尚未加入照片';prevBtn.disabled=index<=0;nextBtn.disabled=!current();resetBtn.disabled=!current();downloadBtn.disabled=!items.length||processed!==items.length||done===0;const it=current();brightness.value=it?.brightness??0;contrast.value=it?.contrast??0;brightnessVal.value=brightness.value;contrastVal.value=contrast.value;if(it?.crop){cropInfo.textContent=`裁切：${Math.round(it.crop.w)} × ${Math.round(it.crop.h)} px　角度 ${((it.crop.angle*180/Math.PI)%360+360)%360|0}°`}else if(it){cropInfo.textContent=`原圖：${it.img.naturalWidth} × ${it.img.naturalHeight} px${hasAdjust(it)?'　已套用亮度/對比調整':''}`}else cropInfo.textContent='—';if(!rebuild)return;listEl.innerHTML='';items.forEach((it,i)=>{const row=document.createElement('div');row.className='item'+(i===index?' active':'')+(it.state==='done'?' done':'')+(it.state==='skipped'?' skipped':'');const mark=it.state==='done'?'✓':it.state==='skipped'?'—':i+1;const badge=it.state==='skipped'?'跳過':it.crop?Math.round(it.crop.w)+'×'+Math.round(it.crop.h):hasAdjust(it)?'僅調整':'';row.innerHTML=`<div class="num">${mark}</div><div class="name" title="${escapeHtml(it.file.name)}">${escapeHtml(it.file.name)}</div><div class="badge">${badge}</div>`;row.onclick=()=>goTo(i);listEl.appendChild(row)});listEl.querySelector('.active')?.scrollIntoView({block:'nearest'})}
+async function goTo(i){if(!items.length)return;index=Math.max(0,Math.min(items.length-1,i));refreshUI();render();await ensureWindow(index)}
+async function advance(){const it=current();if(!it)return;it.state=hasOutput(it)?'done':'skipped';if(index<items.length-1)index++;refreshUI();render();await ensureWindow(index)}
+function refreshUI(rebuild=true){const done=items.filter(x=>x.state==='done').length,skipped=items.filter(x=>x.state==='skipped').length,processed=done+skipped;statusEl.textContent=items.length?`${index+1} / ${items.length}　完成 ${done}　跳過 ${skipped}`:'尚未加入照片';prevBtn.disabled=index<=0;nextBtn.disabled=!current();resetBtn.disabled=!current();downloadBtn.disabled=!items.length||processed!==items.length||done===0;const it=current();brightness.value=it?.brightness??0;contrast.value=it?.contrast??0;gamma.value=it?.gamma??0;shadows.value=it?.shadows??0;highlights.value=it?.highlights??0;saturation.value=it?.saturation??0;sharpen.value=it?.sharpen??0;brightnessVal.value=brightness.value;contrastVal.value=contrast.value;gammaVal.value=gamma.value;shadowsVal.value=shadows.value;highlightsVal.value=highlights.value;saturationVal.value=saturation.value;sharpenVal.value=sharpen.value;grayscaleBtn.textContent=`黑白：${it?.grayscale?'開':'關'}`;copyPrevAdjustBtn.disabled=!rememberedAdjust;clearRememberedBtn.disabled=!rememberedAdjust;memoryStatus.textContent=rememberedAdjust?'已記住調色':'尚未記住調色';memoryStatus.classList.toggle('on',!!rememberedAdjust);if(it?.crop){cropInfo.textContent=`裁切：${Math.round(it.crop.w)} × ${Math.round(it.crop.h)} px　角度 ${((it.crop.angle*180/Math.PI)%360+360)%360|0}°`}else if(it){const iw=it.img?.naturalWidth||it.width||'—',ih=it.img?.naturalHeight||it.height||'—';cropInfo.textContent=`原圖：${iw} × ${ih} px${hasAdjust(it)?'　已套用影像調整':''}${it.img?'':'　（待載入）'}`}else cropInfo.textContent='—';if(!rebuild)return;listEl.innerHTML='';items.forEach((it,i)=>{if(!visibleByFilter(it))return;const row=document.createElement('div');row.className='item'+(i===index?' active':'')+(it.state==='done'?' done':'')+(it.state==='skipped'?' skipped':'');const mark=it.state==='done'?'✓':it.state==='skipped'?'—':i+1;const badge=it.state==='skipped'?'跳過':it.crop?Math.round(it.crop.w)+'×'+Math.round(it.crop.h):hasAdjust(it)?'僅調整':'';row.innerHTML=`<div class="num">${mark}</div><div class="name" title="${escapeHtml(it.file.name)}">${escapeHtml(it.file.name)}</div><div class="badge">${badge}</div>`;row.onclick=()=>goTo(i);listEl.appendChild(row)});listEl.querySelector('.active')?.scrollIntoView({block:'nearest'})}
 function escapeHtml(s){return s.replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function outputInfo(it){const type=(it.file.type||'').toLowerCase(),ext=(it.file.name.split('.').pop()||'').toLowerCase();if(type==='image/jpeg'||['jpg','jpeg','jpe'].includes(ext))return{mime:'image/jpeg',ext:ext==='jpeg'?'jpeg':'jpg',quality:1};if(type==='image/png'||ext==='png')return{mime:'image/png',ext:'png'};if(type==='image/webp'||ext==='webp')return{mime:'image/webp',ext:'webp',quality:1};return{mime:'image/png',ext:'png'}}
-async function renderToBlob(it){const out=outputInfo(it);let w,h,off=document.createElement('canvas');if(it.crop){const c=it.crop;w=Math.max(1,Math.round(c.w));h=Math.max(1,Math.round(c.h));off.width=w;off.height=h;const ox=off.getContext('2d',{alpha:true});ox.filter=filterFor(it);ox.translate(w/2,h/2);ox.rotate(-c.angle);ox.drawImage(it.img,-c.cx,-c.cy)}else{w=it.img.naturalWidth;h=it.img.naturalHeight;off.width=w;off.height=h;const ox=off.getContext('2d',{alpha:true});ox.filter=filterFor(it);ox.drawImage(it.img,0,0,w,h)}return await new Promise(res=>off.toBlob(res,out.mime,out.quality))}
-function baseName(name){return name.replace(/\.[^.]+$/,'')}async function downloadAll(){for(const it of items.filter(x=>x.state==='done'&&hasOutput(x))){const out=outputInfo(it),blob=await renderToBlob(it),a=document.createElement('a'),url=URL.createObjectURL(blob),suffix=it.crop?'_crop':'_adjust';a.href=url;a.download=`${baseName(it.file.name)}${suffix}.${out.ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);await new Promise(r=>setTimeout(r,180))}}
-function changeAdjust(){const it=current();if(!it)return;it.brightness=+brightness.value;it.contrast=+contrast.value;it.state='pending';brightnessVal.value=it.brightness;contrastVal.value=it.contrast;render();refreshUI(false)}
-brightness.addEventListener('input',changeAdjust);contrast.addEventListener('input',changeAdjust);adjustResetBtn.onclick=()=>{const it=current();if(!it)return;it.brightness=0;it.contrast=0;it.state='pending';refreshUI();render()};
+async function renderToBlob(it){
+  const out=outputInfo(it);let w,h,off=document.createElement('canvas');
+  if(it.crop){
+    const c=it.crop;w=Math.max(1,Math.round(c.w));h=Math.max(1,Math.round(c.h));off.width=w;off.height=h;
+    const ox=off.getContext('2d',{alpha:true,willReadFrequently:true});ox.translate(w/2,h/2);ox.rotate(-c.angle);ox.drawImage(it.img,-c.cx,-c.cy);ox.setTransform(1,0,0,1,0,0);
+    if(hasAdjust(it)){const data=ox.getImageData(0,0,w,h);processImageData(data,it);ox.putImageData(data,0,0)}
+  }else{
+    w=it.img.naturalWidth;h=it.img.naturalHeight;off.width=w;off.height=h;const ox=off.getContext('2d',{alpha:true,willReadFrequently:true});ox.drawImage(it.img,0,0,w,h);
+    if(hasAdjust(it)){const data=ox.getImageData(0,0,w,h);processImageData(data,it);ox.putImageData(data,0,0)}
+  }
+  return await new Promise(res=>off.toBlob(res,out.mime,out.quality));
+}
+function baseName(name){return name.replace(/\.[^.]+$/,'')}async function downloadAll(){const targets=items.map((it,i)=>({it,i})).filter(x=>x.it.state==='done'&&hasOutput(x.it));downloadBtn.disabled=true;downloadProgress.classList.add('show');downloadBar.max=Math.max(1,targets.length);downloadBar.value=0;downloadText.textContent=`0 / ${targets.length}`;try{let n=0;for(const {it,i} of targets){await loadItem(i);downloadText.textContent=`${n+1} / ${targets.length}　${it.file.name}`;const out=outputInfo(it),blob=await renderToBlob(it),a=document.createElement('a'),url=URL.createObjectURL(blob),suffix=it.crop?'_crop':'_adjust';a.href=url;a.download=`${baseName(it.file.name)}${suffix}.${out.ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);n++;downloadBar.value=n;downloadText.textContent=`${n} / ${targets.length}`;if(Math.abs(i-index)>1)releaseItem(i);await new Promise(r=>setTimeout(r,180))}}finally{await ensureWindow(index);downloadProgress.classList.remove('show');refreshUI()}}
+function changeAdjust(){const it=current();if(!it)return;it.brightness=+brightness.value;it.contrast=+contrast.value;it.gamma=+gamma.value;it.shadows=+shadows.value;it.highlights=+highlights.value;it.saturation=+saturation.value;it.sharpen=+sharpen.value;it.state='pending';brightnessVal.value=it.brightness;contrastVal.value=it.contrast;gammaVal.value=it.gamma;shadowsVal.value=it.shadows;highlightsVal.value=it.highlights;saturationVal.value=it.saturation;sharpenVal.value=it.sharpen;render();refreshUI(false)}
+[brightness,contrast,gamma,shadows,highlights,saturation,sharpen].forEach(el=>el.addEventListener('input',changeAdjust));adjustResetBtn.onclick=()=>{const it=current();if(!it)return;it.brightness=0;it.contrast=0;it.gamma=0;it.shadows=0;it.highlights=0;it.saturation=0;it.sharpen=0;it.grayscale=false;it.state='pending';refreshUI();render()};
+grayscaleBtn.onclick=()=>{const it=current();if(!it)return;it.grayscale=!it.grayscale;it.state='pending';refreshUI();render()};
+function rememberCurrentAdjust(){const it=current();if(!it)return;rememberedAdjust={};for(const k of adjustKeys)rememberedAdjust[k]=it[k];refreshUI();}
+function applyRememberedAdjust(){const it=current();if(!it||!rememberedAdjust)return;for(const k of adjustKeys)it[k]=rememberedAdjust[k];it.state='pending';refreshUI();render()}
+function clearRememberedAdjust(){rememberedAdjust=null;refreshUI()}
+rememberAdjustBtn.onclick=rememberCurrentAdjust;copyPrevAdjustBtn.onclick=applyRememberedAdjust;clearRememberedBtn.onclick=clearRememberedAdjust;
+sortMode.onchange=async()=>{if(sortMode.value==='shot')await prepareShotTimes();applySort()};sortDirBtn.onclick=()=>{sortAscending=!sortAscending;sortDirBtn.textContent=sortAscending?'升冪 ↑':'降冪 ↓';applySort()};filterMode.onchange=()=>refreshUI();clearFilterBtn.onclick=()=>{filterMode.value='all';refreshUI()};
 helpBtn.onclick=()=>helpModal.classList.add('show');closeHelpBtn.onclick=()=>helpModal.classList.remove('show');helpModal.addEventListener('click',e=>{if(e.target===helpModal)helpModal.classList.remove('show')});openBtn.onclick=()=>input.click();dropZone.onclick=()=>input.click();input.onchange=e=>addFiles(e.target.files).then(()=>input.value='');prevBtn.onclick=()=>goTo(index-1);nextBtn.onclick=advance;resetBtn.onclick=()=>{const it=current();if(it){it.crop=null;it.state='pending';refreshUI();render()}};downloadBtn.onclick=downloadAll;
 ['dragenter','dragover'].forEach(t=>dropZone.addEventListener(t,e=>{e.preventDefault();dropZone.classList.add('drag')}));['dragleave','drop'].forEach(t=>dropZone.addEventListener(t,e=>{e.preventDefault();dropZone.classList.remove('drag')}));dropZone.addEventListener('drop',e=>addFiles(e.dataTransfer.files));workspace.addEventListener('dragover',e=>e.preventDefault());workspace.addEventListener('drop',e=>{e.preventDefault();addFiles(e.dataTransfer.files)});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&helpModal.classList.contains('show')){helpModal.classList.remove('show');return}if(e.key==='Enter'){e.preventDefault();advance()}else if(e.key==='ArrowLeft'){e.preventDefault();goTo(index-1)}else if(e.key==='ArrowRight'){e.preventDefault();goTo(index+1)}else if(e.key==='Escape'){const it=current();if(it){it.crop=null;it.state='pending';refreshUI();render()}}});
-window.addEventListener('beforeunload',()=>items.forEach(x=>URL.revokeObjectURL(x.url)));setCanvasSize();refreshUI();
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&helpModal.classList.contains('show')){helpModal.classList.remove('show');return}if(e.code==='Space'&&!e.repeat){e.preventDefault();compareOriginal=true;render();return}if((e.key==='c'||e.key==='C')&&(e.ctrlKey||e.metaKey)){e.preventDefault();rememberCurrentAdjust();return}if((e.key==='c'||e.key==='C')&&!e.ctrlKey&&!e.metaKey){e.preventDefault();applyRememberedAdjust();return}if(e.key==='Enter'){e.preventDefault();advance()}else if(e.key==='ArrowLeft'){e.preventDefault();goTo(index-1)}else if(e.key==='ArrowRight'){e.preventDefault();goTo(index+1)}else if(e.key==='Escape'){const it=current();if(it){it.crop=null;it.state='pending';refreshUI();render()}}});
+window.addEventListener('keyup',e=>{if(e.code==='Space'){compareOriginal=false;render()}});
+window.addEventListener('beforeunload',()=>items.forEach((_,i)=>releaseItem(i)));setCanvasSize();refreshUI();
 })();
 </script>
 </body>
