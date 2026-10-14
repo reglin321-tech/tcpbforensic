@@ -11,10 +11,10 @@ header{height:54px;display:flex;align-items:center;gap:14px;padding:0 16px;borde
 header b{font-size:17px} header span{font-size:12px;color:var(--muted)}
 button,.fileBtn{border:1px solid #4a5565;background:#242a34;color:var(--text);padding:7px 11px;border-radius:7px;cursor:pointer;font-size:13px}
 button:hover,.fileBtn:hover{background:#303846}.fileBtn input{display:none}
-.app{height:calc(100vh - 54px);display:grid;grid-template-columns:280px 1fr 1fr;min-width:1100px}
+.app{height:calc(100vh - 54px);display:grid;grid-template-columns:320px 1fr 1fr;min-width:1100px}
 .controls{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
 .group{padding:10px 0;border-bottom:1px solid var(--line)} .group h3{font-size:13px;margin:0 0 8px;color:#dfe8f3}.group p{font-size:11px;line-height:1.5;color:var(--muted);margin:6px 0}
-.row{display:grid;grid-template-columns:90px 1fr 46px;align-items:center;gap:8px;margin:8px 0}.row label{font-size:12px;color:#c8d0dc}.row output{font-size:11px;color:var(--accent);text-align:right}.row input[type=range]{width:100%}
+.row{display:grid;grid-template-columns:102px 1fr 68px;align-items:center;gap:8px;margin:8px 0}.row label{font-size:12px;color:#c8d0dc}.row input[type=range]{width:100%}.numEdit{width:68px;min-width:0;border:1px solid #4a5565;background:#11151b;color:var(--accent);border-radius:5px;padding:4px 5px;font-size:11px;text-align:right}.numEdit:focus{outline:1px solid var(--accent);border-color:var(--accent)}
 .chk{display:flex;align-items:center;gap:7px;font-size:12px;color:#c8d0dc;margin:6px 0}
 .stage{position:relative;min-width:0;min-height:0;background:#090b0f;border-right:1px solid var(--line)}.stage:last-child{border-right:0}
 .stageHead{position:absolute;left:12px;top:10px;z-index:3;background:rgba(10,12,16,.76);backdrop-filter:blur(4px);padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:7px;font-size:12px}.stageHead small{color:var(--muted);margin-left:8px}
@@ -42,52 +42,62 @@ canvas.main{width:100%;height:100%;display:block}.tip{position:absolute;left:12p
   <aside class="controls">
     <div class="group">
       <h3>1. 表面範圍</h3>
-      <p>先讓半透明網格覆蓋要校正的指紋區。直接在左圖拖曳可移動整個模型。</p>
-      <div class="row"><label>模型寬度</label><input id="scale" type="range" min="180" max="2500" step="1"><output></output></div>
-      <div class="row"><label>長寬比 H/W</label><input id="aspect" type="range" min="0.35" max="1.5" step="0.01"><output></output></div>
-      <div class="row"><label>平面旋轉</label><input id="roll" type="range" min="-180" max="180" step="0.5"><output></output></div>
+      <p>先讓半透明網格覆蓋要校正的指紋區。四角白色把手可直接改變框體寬高與比例；外側圓形把手負責旋轉。</p>
+      <div class="row"><label>模型寬度</label><input id="scale" type="range" min="180" max="2500" step="1"><input id="scaleNum" class="numEdit" type="number" min="180" max="2500" step="1" aria-label="scale 數值"></div>
+      <div class="row"><label>依框體比例 H/W</label><input id="aspect" type="range" min="0.35" max="1.5" step="0.01"><input id="aspectNum" class="numEdit" type="number" min="0.35" max="1.5" step="0.01" aria-label="aspect 數值"></div>
+      <div class="row"><label>平面旋轉</label><input id="roll" type="range" min="-180" max="180" step="0.5"><input id="rollNum" class="numEdit" type="number" min="-180" max="180" step="0.5" aria-label="roll 數值"></div>
     </div>
     <div class="group">
       <h3>2. 3D 拍攝姿態</h3>
       <div class="miniWrap">
         <div>
-          <div class="row"><label>Yaw 左右</label><input id="yaw" type="range" min="-70" max="70" step="0.5"><output></output></div>
-          <div class="row"><label>Pitch 上下</label><input id="pitch" type="range" min="-70" max="70" step="0.5"><output></output></div>
-          <div class="row"><label>透視強度</label><input id="persp" type="range" min="0" max="1.5" step="0.01"><output></output></div>
+          <div class="row"><label>Yaw 左右</label><input id="yaw" type="range" min="-70" max="70" step="0.5"><input id="yawNum" class="numEdit" type="number" min="-70" max="70" step="0.5" aria-label="yaw 數值"></div>
+          <div class="row"><label>Pitch 上下</label><input id="pitch" type="range" min="-70" max="70" step="0.5"><input id="pitchNum" class="numEdit" type="number" min="-70" max="70" step="0.5" aria-label="pitch 數值"></div>
+          <div class="row"><label>透視強度</label><input id="persp" type="range" min="0" max="1.5" step="0.01"><input id="perspNum" class="numEdit" type="number" min="0" max="1.5" step="0.01" aria-label="persp 數值"></div>
         </div>
         <canvas id="mini3d" class="mini3d" width="232" height="180"></canvas>
       </div>
       <p>這一層主要消除「斜拍」。可直接在左圖用中鍵拖曳旋轉：左右＝Yaw、上下＝Pitch；Shift + 中鍵＝Roll。滑桿保留作精細修正。</p>
     </div>
     <div class="group">
-      <h3>3. 貼紙 / 曲面彎曲</h3>
-      <div class="row"><label>X 方向彎曲</label><input id="bendX" type="range" min="-150" max="150" step="1"><output></output></div>
-      <div class="row"><label>Y 方向彎曲</label><input id="bendY" type="range" min="-150" max="150" step="1"><output></output></div>
-      <div class="row"><label>對角線彎曲 ↘</label><input id="bendD1" type="range" min="-150" max="150" step="1"><output></output></div>
-      <div class="row"><label>對角線彎曲 ↗</label><input id="bendD2" type="range" min="-150" max="150" step="1"><output></output></div>
-      <p>正負值代表凸 / 凹方向。這不是「拉紋線」，而是改變整張貼附表面的幾何。對角線彎曲可補足單純 X/Y 不夠時的斜向貼附變形。右側展平與匯出都直接從乾淨原圖取樣；格線、虛擬尺、控制點只存在於左側操作預覽。</p>
+      <h3>3. 表面模型 / 彎曲</h3>
+      <div class="row"><label>表面模型</label><select id="surfaceMode" style="grid-column:2/4;width:100%;background:#111821;color:#e7edf5;border:1px solid #44505f;border-radius:5px;padding:5px 7px"><option value="free">自由曲面</option><option value="cylinder">標準圓柱</option></select></div>
+      <div id="freeSurfaceControls">
+        <div class="row"><label>X 方向彎曲</label><input id="bendX" type="range" min="-150" max="150" step="1"><input id="bendXNum" class="numEdit" type="number" min="-150" max="150" step="1" aria-label="bendX 數值"></div>
+        <div class="row"><label>Y 方向彎曲</label><input id="bendY" type="range" min="-150" max="150" step="1"><input id="bendYNum" class="numEdit" type="number" min="-150" max="150" step="1" aria-label="bendY 數值"></div>
+        <div class="row"><label>對角線彎曲 ↘</label><input id="bendD1" type="range" min="-150" max="150" step="1"><input id="bendD1Num" class="numEdit" type="number" min="-150" max="150" step="1" aria-label="bendD1 數值"></div>
+        <div class="row"><label>對角線彎曲 ↗</label><input id="bendD2" type="range" min="-150" max="150" step="1"><input id="bendD2Num" class="numEdit" type="number" min="-150" max="150" step="1" aria-label="bendD2 數值"></div>
+        <p>自由曲面沿用 V14：X / Y / 兩個對角線可分別調整。</p>
+      </div>
+      <div id="cylinderControls" style="display:none">
+        <div class="row"><label>圓柱軸方向</label><input id="cylAxis" type="range" min="-180" max="180" step="0.5"><input id="cylAxisNum" class="numEdit" type="number" min="-180" max="180" step="0.5" aria-label="圓柱軸方向"></div>
+        <div class="row"><label>半徑 R/W</label><input id="cylRadius" type="range" min="0.08" max="5" step="0.01"><input id="cylRadiusNum" class="numEdit" type="number" min="0.08" max="20" step="0.01" aria-label="圓柱半徑"></div>
+        <div class="row"><label>曲面方向</label><select id="cylSign" style="grid-column:2/4;width:100%;background:#111821;color:#e7edf5;border:1px solid #44505f;border-radius:5px;padding:5px 7px"><option value="1">向相機方向凸</option><option value="-1">反方向 / 凹</option></select></div>
+        <p><b>R/W</b> 是「圓柱半徑 ÷ 目前框體寬度」。數值越小彎得越明顯；越大越接近平面。橘色虛線表示圓柱軸，可先把它對準實際棒體長軸，再調半徑與 3D 姿態。</p>
+      </div>
+      <p>右側展平與匯出都直接從乾淨原圖取樣；輔助格線與控制點只存在左側操作預覽。</p>
     </div>
     <div class="group">
       <h3>4. 虛擬 L 比例尺</h3>
-      <div class="row"><label>L 水平位置</label><input id="lu" type="range" min="0.05" max="0.95" step="0.01"><output></output></div>
-      <div class="row"><label>L 垂直位置</label><input id="lv" type="range" min="0.05" max="0.95" step="0.01"><output></output></div>
-      <div class="row"><label>水平臂長</label><input id="lx" type="range" min="0.08" max="0.8" step="0.01"><output></output></div>
-      <div class="row"><label>垂直臂長</label><input id="ly" type="range" min="0.08" max="0.8" step="0.01"><output></output></div>
+      <div class="row"><label>L 水平位置</label><input id="lu" type="range" min="0.05" max="0.95" step="0.01"><input id="luNum" class="numEdit" type="number" min="0.05" max="0.95" step="0.01" aria-label="lu 數值"></div>
+      <div class="row"><label>L 垂直位置</label><input id="lv" type="range" min="0.05" max="0.95" step="0.01"><input id="lvNum" class="numEdit" type="number" min="0.05" max="0.95" step="0.01" aria-label="lv 數值"></div>
+      <div class="row"><label>水平臂長</label><input id="lx" type="range" min="0.08" max="0.8" step="0.01"><input id="lxNum" class="numEdit" type="number" min="0.08" max="0.8" step="0.01" aria-label="lx 數值"></div>
+      <div class="row"><label>垂直臂長</label><input id="ly" type="range" min="0.08" max="0.8" step="0.01"><input id="lyNum" class="numEdit" type="number" min="0.08" max="0.8" step="0.01" aria-label="ly 數值"></div>
       <label class="chk"><input id="showL" type="checkbox" checked> 顯示虛擬 L 尺與刻度</label>
       <label class="chk"><input id="showGrid" type="checkbox" checked> 顯示曲面網格</label>
       <p class="note">實際只有單邊比例尺時，也可先用其中一支對準；另一支當作曲面方向輔助，不視為真實量測資料。</p>
     </div>
     <div class="group">
       <h3>操作</h3>
-      <p>滑鼠在參考平面內時操作模型；滑鼠在參考平面外時，左鍵拖曳與滾輪改為移動／縮放底圖。右側展平結果使用原始影像像素重新取樣，可拖曳與縮放檢查細節。</p>
+      <p>滑鼠在參考平面內時操作模型；四角白色把手直接調整框體大小與 H/W 比例，角落外側圓形把手旋轉。所有滑桿右側數值皆可直接輸入。模型外則移動／縮放底圖。</p>
       <div class="btnRow"><button id="flat">暫設平面</button></div>
       <p class="note">「另存專案」會下載一個 .fprj 專案檔，內含目前圖片與全部校正參數；每張圖片都可以各自保存成不同專案。</p>
     </div>
   </aside>
   <section class="stage" id="leftStage">
-    <div class="stageHead">原始影像 <small>模型投影 / 虛擬 L</small></div>
+    <div class="stageHead">原始影像 <small>模型投影 / 虛擬 L / 圓柱軸</small></div>
     <canvas id="src" class="main"></canvas>
-    <div class="tip">模型內：左鍵移動模型 · 四角旋轉 · 中鍵 3D · 滾輪模型縮放 ｜ 模型外：左鍵移動圖片 · 滾輪圖片縮放</div>
+    <div class="tip">模型內：左鍵移動 · 四角白點調整框體（固定對角點） · 外側圓點旋轉 · 中鍵 3D · 滾輪模型縮放 ｜ 模型外：左鍵移動圖片 · 滾輪圖片縮放</div>
   </section>
   <section class="stage" id="rightStage">
     <div class="stageHead">展平結果 <small id="resultInfo" class="viewInfo">尚未產生</small><span class="viewTools"><button id="fitResult" type="button">適合視窗</button><button id="actualResult" type="button">100%</button></span></div>
@@ -107,12 +117,44 @@ const hiRes=document.createElement('canvas');
 const hiCtx=hiRes.getContext('2d');
 const resultView={scale:0,panX:0,panY:0,mode:'fit'};
 let hiResReady=false,lastHiResKey='',hiResTimer=0,hiResBusy=false;
-const P={cx:.56,cy:.51,scale:520,aspect:.72,roll:-6,yaw:13,pitch:-18,persp:.72,bendX:58,bendY:-6,bendD1:0,bendD2:0,lu:.12,lv:.74,lx:.62,ly:.48,showL:true,showGrid:true};
+const P={cx:.56,cy:.51,scale:520,aspect:.72,roll:-6,yaw:13,pitch:-18,persp:.72,surfaceMode:'free',bendX:58,bendY:-6,bendD1:0,bendD2:0,cylAxis:90,cylRadius:.45,cylSign:1,lu:.12,lv:.74,lx:.62,ly:.48,showL:true,showGrid:true};
 const defaults=JSON.parse(JSON.stringify(P));
-const ids=['scale','aspect','roll','yaw','pitch','persp','bendX','bendY','bendD1','bendD2','lu','lv','lx','ly'];
-const suffix={scale:' px',aspect:'',roll:'°',yaw:'°',pitch:'°',persp:'',bendX:'°',bendY:'°',bendD1:'°',bendD2:'°',lu:'',lv:'',lx:'',ly:''};
-function syncUI(){ids.forEach(id=>{const el=$('#'+id);el.value=P[id];el.nextElementSibling.value=(+P[id]).toFixed(['scale','roll','yaw','pitch','bendX','bendY','bendD1','bendD2'].includes(id)?0:2)+suffix[id]});$('#showL').checked=P.showL;$('#showGrid').checked=P.showGrid}
-ids.forEach(id=>$('#'+id).addEventListener('input',e=>{P[id]=+e.target.value;e.target.nextElementSibling.value=(+P[id]).toFixed(['scale','roll','yaw','pitch','bendX','bendY','bendD1','bendD2'].includes(id)?0:2)+suffix[id];render()}));
+const ids=['scale','aspect','roll','yaw','pitch','persp','bendX','bendY','bendD1','bendD2','cylAxis','cylRadius','lu','lv','lx','ly'];
+const suffix={scale:' px',aspect:'',roll:'°',yaw:'°',pitch:'°',persp:'',bendX:'°',bendY:'°',bendD1:'°',bendD2:'°',cylAxis:'°',cylRadius:'',lu:'',lv:'',lx:'',ly:''};
+function decimalsFor(id){if(id==='cylAxis')return 1;return ['scale','roll','yaw','pitch','bendX','bendY','bendD1','bendD2'].includes(id)?0:2}
+function syncUI(){
+  ids.forEach(id=>{
+    const el=$('#'+id),num=$('#'+id+'Num');
+    el.value=P[id];
+    if(num&&document.activeElement!==num)num.value=(+P[id]).toFixed(decimalsFor(id));
+  });
+  $('#showL').checked=P.showL;$('#showGrid').checked=P.showGrid;
+  $('#surfaceMode').value=P.surfaceMode||'free';
+  $('#cylSign').value=String(P.cylSign||1);
+  updateSurfaceModeUI();
+}
+function applyParamValue(id,value,fromNumber=false){
+  const range=$('#'+id),num=$('#'+id+'Num');
+  let v=Number(value);if(!Number.isFinite(v))return;
+  const min=Number(range.min),max=Number(range.max);v=clamp(v,min,max);
+  P[id]=v;range.value=v;if(num&&(!fromNumber||document.activeElement!==num))num.value=v.toFixed(decimalsFor(id));
+  render();
+}
+ids.forEach(id=>{
+  const range=$('#'+id),num=$('#'+id+'Num');
+  range.addEventListener('input',e=>applyParamValue(id,e.target.value));
+  if(num){
+    num.addEventListener('change',e=>{applyParamValue(id,e.target.value,true);num.value=(+P[id]).toFixed(decimalsFor(id));renderHighResNow()});
+    num.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();num.blur()}});
+  }
+});
+function updateSurfaceModeUI(){
+  const cyl=(P.surfaceMode==='cylinder');
+  $('#freeSurfaceControls').style.display=cyl?'none':'';
+  $('#cylinderControls').style.display=cyl?'':'none';
+}
+$('#surfaceMode').addEventListener('change',e=>{P.surfaceMode=e.target.value==='cylinder'?'cylinder':'free';updateSurfaceModeUI();hiResReady=false;lastHiResKey='';render();renderHighResNow()});
+$('#cylSign').addEventListener('change',e=>{P.cylSign=Number(e.target.value)>=0?1:-1;hiResReady=false;lastHiResKey='';render();renderHighResNow()});
 $('#showL').onchange=e=>{P.showL=e.target.checked;render()};$('#showGrid').onchange=e=>{P.showGrid=e.target.checked;render()};
 function fitCanvas(c){const r=c.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2); const w=Math.max(10,Math.round(r.width*dpr)),h=Math.max(10,Math.round(r.height*dpr)); if(c.width!==w||c.height!==h){c.width=w;c.height=h} return dpr}
 function rad(d){return d*Math.PI/180}
@@ -120,6 +162,19 @@ function bendCoord(t,angleDeg){const a=rad(angleDeg); if(Math.abs(a)<1e-5)return
 function rot3(x,y,z){let a=rad(P.pitch),b=rad(P.yaw),c=rad(P.roll); let y1=y*Math.cos(a)-z*Math.sin(a),z1=y*Math.sin(a)+z*Math.cos(a),x1=x; let x2=x1*Math.cos(b)+z1*Math.sin(b),z2=-x1*Math.sin(b)+z1*Math.cos(b),y2=y1; return [x2*Math.cos(c)-y2*Math.sin(c),x2*Math.sin(c)+y2*Math.cos(c),z2]}
 function surfaceXYZ(u,v){
   let x=(u-.5), y=(v-.5)*P.aspect;
+  if(P.surfaceMode==='cylinder'){
+    // 標準圓柱：軸向保持直線，只在垂直於圓柱軸的方向產生單一固定半徑曲率。
+    const a=rad(P.cylAxis||0), ca=Math.cos(a), sa=Math.sin(a);
+    const along=x*ca+y*sa;
+    const perp=-x*sa+y*ca;
+    const R=Math.max(.02,Math.abs(P.cylRadius||.45));
+    const theta=perp/R;
+    const curved=R*Math.sin(theta);
+    const z=(P.cylSign>=0?1:-1)*R*(1-Math.cos(theta));
+    const Xs=along*ca-curved*sa;
+    const Ys=along*sa+curved*ca;
+    return [Xs,Ys,z];
+  }
   let [xb,zx]=bendCoord(x,P.bendX), [yb,zy]=bendCoord(y,P.bendY);
   let Xs=xb, Ys=yb, Zs=zx+zy;
   const rt=Math.SQRT1_2;
@@ -165,13 +220,43 @@ function projectImage(u,v){
 
 function drawGrid(){
  if(!fit)return;sctx.save();sctx.lineWidth=Math.max(1,srcC.width/1400);sctx.globalAlpha=.82;
- if(P.showGrid){sctx.strokeStyle='#78dcff';for(let i=0;i<=10;i++){sctx.beginPath();for(let j=0;j<=50;j++){let p=projectDisplay(i/10,j/50);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}for(let i=0;i<=8;i++){sctx.beginPath();for(let j=0;j<=60;j++){let p=projectDisplay(j/60,i/8);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}}
+ if(P.showGrid){
+   // 基準網格以模型空間的正方格為準：X、Y 都使用相同物理步距。
+   // 因此 H/W 改變時，縱向格數會自動增減；僅最外側可能出現不足一格的餘數。
+   sctx.strokeStyle='#78dcff';
+   const step=.10;
+   const uLines=[]; for(let x=-.5;x<=.500001;x+=step)uLines.push(x+.5);
+   if(uLines[uLines.length-1]<.9999)uLines.push(1);
+   const yHalf=P.aspect/2, yLines=[-yHalf,yHalf,0];
+   for(let y=step;y<yHalf-.000001;y+=step){yLines.push(y,-y)}
+   const vLines=[...new Set(yLines.map(y=>Math.max(0,Math.min(1,y/P.aspect+.5)).toFixed(6)))].map(Number).sort((a,b)=>a-b);
+   uLines.forEach(u=>{sctx.beginPath();for(let j=0;j<=50;j++){let p=projectDisplay(u,j/50);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()});
+   vLines.forEach(v=>{sctx.beginPath();for(let j=0;j<=60;j++){let p=projectDisplay(j/60,v);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()});
+ }
+ if(P.surfaceMode==='cylinder'){
+   const a=rad(P.cylAxis||0),ca=Math.cos(a),sa=Math.sin(a);
+   const tx=Math.abs(ca)<1e-7?1e9:.5/Math.abs(ca);
+   const ty=Math.abs(sa)<1e-7?1e9:(P.aspect/2)/Math.abs(sa);
+   const t=Math.min(tx,ty);
+   const x0=-t*ca,y0=-t*sa,x1=t*ca,y1=t*sa;
+   const p0=projectDisplay(x0+.5,y0/P.aspect+.5),p1=projectDisplay(x1+.5,y1/P.aspect+.5);
+   sctx.save();sctx.strokeStyle='#ff9f43';sctx.lineWidth=3;sctx.setLineDash([10,7]);sctx.beginPath();sctx.moveTo(p0[0],p0[1]);sctx.lineTo(p1[0],p1[1]);sctx.stroke();sctx.setLineDash([]);sctx.fillStyle='#ffb86b';sctx.font=Math.max(12,srcC.width/110)+'px system-ui';sctx.fillText('圓柱軸',p1[0]+7,p1[1]-7);sctx.restore();
+ }
  if(P.showL)drawL();
  const c=projectDisplay(.5,.5);sctx.fillStyle='#fff';sctx.strokeStyle='#111';sctx.lineWidth=2;sctx.beginPath();sctx.arc(c[0],c[1],6,0,Math.PI*2);sctx.fill();sctx.stroke();
- // 四角旋轉把手：只控制畫面平面內的 Roll，避免與 3D 中鍵操作衝突。
- const corners=[[0,0],[1,0],[1,1],[0,1]];
+ // 四角白色把手＝固定對角點、只拖動目前角落以調整框體尺寸/比例；角落外側圓形把手＝平面旋轉。
+ const corners=[[0,0],[1,0],[1,1],[0,1]], center=projectDisplay(.5,.5);
+ const handleGap=30*(srcC.width/Math.max(1,srcC.getBoundingClientRect().width));
  sctx.lineWidth=2.5;
- corners.forEach(([u,v])=>{const p=projectDisplay(u,v);sctx.fillStyle='rgba(255,255,255,.96)';sctx.strokeStyle='#ffd85c';sctx.beginPath();sctx.arc(p[0],p[1],9,0,Math.PI*2);sctx.fill();sctx.stroke();sctx.beginPath();sctx.arc(p[0],p[1],4,0,Math.PI*2);sctx.stroke();});
+ corners.forEach(([u,v])=>{
+   const p=projectDisplay(u,v);
+   sctx.fillStyle='rgba(255,255,255,.98)';sctx.strokeStyle='#ffd85c';
+   sctx.beginPath();sctx.arc(p[0],p[1],9,0,Math.PI*2);sctx.fill();sctx.stroke();
+   const vx=p[0]-center[0],vy=p[1]-center[1],len=Math.hypot(vx,vy)||1;
+   const rp=[p[0]+vx/len*handleGap,p[1]+vy/len*handleGap];
+   sctx.strokeStyle='rgba(255,216,92,.7)';sctx.beginPath();sctx.moveTo(p[0],p[1]);sctx.lineTo(rp[0],rp[1]);sctx.stroke();
+   sctx.fillStyle='#ffd85c';sctx.strokeStyle='#111';sctx.beginPath();sctx.arc(rp[0],rp[1],8,0,Math.PI*2);sctx.fill();sctx.stroke();
+ });
  sctx.restore();
 }
 function drawL(){const u0=P.lu,v0=P.lv,u1=Math.min(.98,u0+P.lx),v1=Math.max(.02,v0-P.ly);sctx.save();sctx.strokeStyle='#ffe56f';sctx.fillStyle='#ffe56f';sctx.lineWidth=4;function pathUV(a,b,c,d){sctx.beginPath();for(let i=0;i<=80;i++){let t=i/80,p=projectDisplay(a+(c-a)*t,b+(d-b)*t);i?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}pathUV(u0,v0,u1,v0);pathUV(u0,v0,u0,v1);
@@ -189,7 +274,7 @@ function drawTriFromImageCtx(ctx,sPts,dPts){
   ctx.beginPath();ctx.moveTo(...clipPts[0]);ctx.lineTo(...clipPts[1]);ctx.lineTo(...clipPts[2]);ctx.closePath();ctx.clip();
   ctx.setTransform(...M);ctx.drawImage(img,0,0);ctx.restore();
 }
-function geometryKey(){return JSON.stringify([P.cx,P.cy,P.scale,P.aspect,P.roll,P.yaw,P.pitch,P.persp,P.bendX,P.bendY,P.bendD1,P.bendD2,img.width,img.height,img.src.length])}
+function geometryKey(){return JSON.stringify([P.cx,P.cy,P.scale,P.aspect,P.roll,P.yaw,P.pitch,P.persp,P.surfaceMode,P.bendX,P.bendY,P.bendD1,P.bendD2,P.cylAxis,P.cylRadius,P.cylSign,img.width,img.height,img.src.length])}
 function hiResDimensions(){
   // P.scale 是以原始照片像素表示的模型寬度，因此輸出採 1:1 模型像素密度。
   const w=Math.max(64,Math.round(P.scale));
@@ -271,7 +356,7 @@ $('#file').addEventListener('change',e=>{
 });
 
 
-const PROJECT_VERSION=2;
+const PROJECT_VERSION=3;
 function showProjectStatus(msg,ms=2200){
   const el=$('#projectStatus'); if(!el)return;
   el.textContent=msg; el.style.display='block';
@@ -329,7 +414,7 @@ $('#projectFile').addEventListener('change',e=>{
 });
 
 $('#reset').onclick=()=>{Object.assign(P,defaults);imageView.zoom=1;imageView.panX=imageView.panY=0;hiResReady=false;lastHiResKey='';syncUI();render();renderHighResNow();showProjectStatus('參數與圖片檢視已重設（圖片保留）',2200)};
-$('#flat').onclick=()=>{P.yaw=P.pitch=P.roll=P.bendX=P.bendY=P.bendD1=P.bendD2=0;P.persp=.35;syncUI();render();renderHighResNow()};
+$('#flat').onclick=()=>{P.yaw=P.pitch=P.roll=P.bendX=P.bendY=P.bendD1=P.bendD2=0;P.cylRadius=5;P.persp=.35;syncUI();render();renderHighResNow()};
 let drag=null;
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function canvasPoint(e){const r=srcC.getBoundingClientRect();return [(e.clientX-r.left)*srcC.width/r.width,(e.clientY-r.top)*srcC.height/r.height]}
@@ -341,6 +426,36 @@ function nearestCorner(e){
   let best=null;
   corners.forEach((uv,i)=>{const p=projectDisplay(...uv),d=Math.hypot(x-p[0],y-p[1]);if(d<=hit&&(!best||d<best.d))best={i,d,p,uv}});
   return best;
+}
+function rotateHandles(){
+  if(!fit)return [];
+  const center=projectDisplay(.5,.5),corners=[[0,0],[1,0],[1,1],[0,1]];
+  const gap=30*(srcC.width/Math.max(1,srcC.getBoundingClientRect().width));
+  return corners.map(uv=>{const p=projectDisplay(...uv),vx=p[0]-center[0],vy=p[1]-center[1],len=Math.hypot(vx,vy)||1;return {uv,p:[p[0]+vx/len*gap,p[1]+vy/len*gap]}});
+}
+function nearestRotateHandle(e){
+  const [x,y]=canvasPoint(e),hit=18*(srcC.width/Math.max(1,srcC.getBoundingClientRect().width));let best=null;
+  rotateHandles().forEach((h,i)=>{const d=Math.hypot(x-h.p[0],y-h.p[1]);if(d<=hit&&(!best||d<best.d))best={i,d,...h}});
+  return best;
+}
+function resizeBasisForCorner(uv){
+  // 被拖角落的對角點固定。以對角點到兩個鄰角的向量作為寬/高基底。
+  const opp=[1-uv[0],1-uv[1]];
+  const anchor=projectDisplay(opp[0],opp[1]);
+  const xCorner=projectDisplay(uv[0],opp[1]);
+  const yCorner=projectDisplay(opp[0],uv[1]);
+  const wx=[xCorner[0]-anchor[0],xCorner[1]-anchor[1]];
+  const hy=[yCorner[0]-anchor[0],yCorner[1]-anchor[1]];
+  const det=wx[0]*hy[1]-wx[1]*hy[0];
+  return {opp,anchor,wx,hy,det};
+}
+function solveResizeFactors(px,py,b){
+  const vx=px-b.anchor[0],vy=py-b.anchor[1];
+  if(Math.abs(b.det)<1e-6)return [1,1];
+  // [vx,vy] = wf*wx + hf*hy
+  const wf=(vx*b.hy[1]-vy*b.hy[0])/b.det;
+  const hf=(b.wx[0]*vy-b.wx[1]*vx)/b.det;
+  return [wf,hf];
 }
 function modelBoundary(){
   const pts=[],n=24;
@@ -360,10 +475,24 @@ srcC.addEventListener('pointerdown',e=>{
   if(e.button!==0 && e.button!==1)return; e.preventDefault();
   const onModel=pointerOnModel(e);
   if(e.button===0){
-    const corner=onModel?nearestCorner(e):null;
-    if(corner){
+    const rotHandle=nearestRotateHandle(e);
+    const corner=nearestCorner(e);
+    if(rotHandle){
       const [x,y]=canvasPoint(e),c=projectDisplay(.5,.5);
       drag={mode:'cornerRoll',pointerId:e.pointerId,startAngle:angleDeg(x,y,c[0],c[1]),roll:P.roll};
+    }else if(corner){
+      const basis=resizeBasisForCorner(corner.uv);
+      const [sx,sy]=canvasPoint(e);
+      // 重要：曲面經 3D / 曲率投影後，對角角點不一定等於兩個鄰邊向量的線性相加。
+      // 因此記住按下當下真正的角點與基準係數；拖曳只套用「相對變化」，避免第一幀跳動。
+      const actualCorner=projectDisplay(corner.uv[0],corner.uv[1]);
+      const [baseWf,baseHf]=solveResizeFactors(actualCorner[0],actualCorner[1],basis);
+      drag={mode:'cornerResize',pointerId:e.pointerId,uv:corner.uv,basis,
+            scale:P.scale,aspect:P.aspect,cx:P.cx,cy:P.cy,
+            startCanvas:[sx,sy],actualCorner:[actualCorner[0],actualCorner[1]],
+            baseWf:Math.abs(baseWf)<1e-6?1:baseWf,
+            baseHf:Math.abs(baseHf)<1e-6?1:baseHf,
+            moved:false};
     }else if(onModel){
       drag={mode:'move',pointerId:e.pointerId,x:e.clientX,y:e.clientY,cx:P.cx,cy:P.cy};
     }else{
@@ -377,7 +506,7 @@ srcC.addEventListener('pointerdown',e=>{
 });
 srcC.addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.pointerId)return;
-  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  const dx=drag.x==null?0:e.clientX-drag.x,dy=drag.y==null?0:e.clientY-drag.y;
   if(drag.mode==='imagePan'){
     imageView.panX=drag.panX+dx;imageView.panY=drag.panY+dy;render();return;
   }
@@ -388,6 +517,32 @@ srcC.addEventListener('pointermove',e=>{
     P.yaw=clamp(drag.yaw+dx*.28,-70,70);P.pitch=clamp(drag.pitch-dy*.28,-70,70);syncUI();
   }else if(drag.mode==='roll'){
     P.roll=clamp(drag.roll+(dx-dy*.35)*.28,-180,180);syncUI();
+  }else if(drag.mode==='cornerResize'){
+    const [x,y]=canvasPoint(e),b=drag.basis;
+    const ddx=x-drag.startCanvas[0], ddy=y-drag.startCanvas[1];
+
+    // 單純點一下或只有極小手震時完全不改參數，避免「點到角落就跳一下」。
+    const cssScale=srcC.width/Math.max(1,srcC.getBoundingClientRect().width);
+    const threshold=2.0*cssScale;
+    if(!drag.moved && Math.hypot(ddx,ddy)<threshold)return;
+    drag.moved=true;
+
+    // 以「按下當下真正角點 + 滑鼠位移」作為目標。
+    // 再除以按下當下的基準係數，只取相對倍率，所以第一個有效拖曳幀從 1,1 平滑開始。
+    const targetX=drag.actualCorner[0]+ddx, targetY=drag.actualCorner[1]+ddy;
+    let [rawWf,rawHf]=solveResizeFactors(targetX,targetY,b);
+    let wf=rawWf/drag.baseWf, hf=rawHf/drag.baseHf;
+
+    // 不允許角落翻越固定對角點；維持同一方向並限制極端尺寸。
+    wf=clamp(wf,.12,8); hf=clamp(hf,.12,8);
+    P.scale=clamp(drag.scale*wf,180,2500);
+    P.aspect=clamp(drag.aspect*(hf/wf),.35,1.5);
+
+    // 尺寸改變後，只補償中心位置，使固定的對角錨點維持在「按下前」的位置。
+    const movedAnchor=projectDisplay(b.opp[0],b.opp[1]);
+    P.cx=clamp(P.cx+(b.anchor[0]-movedAnchor[0])/Math.max(1,fit.w),-.3,1.3);
+    P.cy=clamp(P.cy+(b.anchor[1]-movedAnchor[1])/Math.max(1,fit.h),-.3,1.3);
+    syncUI();
   }else if(drag.mode==='cornerRoll'){
     const [x,y]=canvasPoint(e),c=projectDisplay(.5,.5);let delta=angleDeg(x,y,c[0],c[1])-drag.startAngle;
     while(delta>180)delta-=360;while(delta<-180)delta+=360;P.roll=clamp(drag.roll+delta,-180,180);syncUI();
@@ -396,7 +551,11 @@ srcC.addEventListener('pointermove',e=>{
 });
 function endDrag(e){
   if(!drag)return;if(e&&e.pointerId!==drag.pointerId)return;
-  try{srcC.releasePointerCapture(drag.pointerId)}catch(_){ }const wasGeometry=drag.mode!=='imagePan';drag=null;if(wasGeometry)renderHighResNow();
+  try{srcC.releasePointerCapture(drag.pointerId)}catch(_){ }
+  const wasGeometry=drag.mode!=='imagePan';
+  const needsHiRes=wasGeometry && !(drag.mode==='cornerResize' && !drag.moved);
+  drag=null;
+  if(needsHiRes)renderHighResNow();
 }
 srcC.addEventListener('pointerup',endDrag);srcC.addEventListener('pointercancel',endDrag);
 srcC.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});srcC.addEventListener('contextmenu',e=>e.preventDefault());
