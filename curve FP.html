@@ -22,6 +22,7 @@ canvas.main{width:100%;height:100%;display:block}.tip{position:absolute;left:12p
 .miniWrap{display:grid;grid-template-columns:1fr 116px;gap:8px;align-items:start}.mini3d{width:116px;height:90px;background:#0d1015;border:1px solid var(--line);border-radius:6px}
 .badge{display:inline-block;font-size:10px;padding:2px 5px;border-radius:4px;background:#2c3542;color:#cfefff;margin-left:4px}
 .note{color:var(--warn)!important}.btnRow{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.viewTools{display:inline-flex;gap:5px;margin-left:8px;vertical-align:middle}.viewTools button{padding:3px 7px;font-size:11px;border-radius:5px}.viewInfo{color:#9fdcff!important}
 </style>
 </head>
 <body>
@@ -78,7 +79,7 @@ canvas.main{width:100%;height:100%;display:block}.tip{position:absolute;left:12p
     </div>
     <div class="group">
       <h3>操作</h3>
-      <p>左鍵拖曳＝移動模型；拖曳四角旋轉把手＝平面內旋轉；中鍵拖曳＝3D 旋轉；Shift + 中鍵＝Roll；滾輪＝縮放。滑桿仍可做精細數值修正。建議先對姿態，再調曲率，最後微調範圍。</p>
+      <p>滑鼠在參考平面內時操作模型；滑鼠在參考平面外時，左鍵拖曳與滾輪改為移動／縮放底圖。右側展平結果使用原始影像像素重新取樣，可拖曳與縮放檢查細節。</p>
       <div class="btnRow"><button id="flat">暫設平面</button></div>
       <p class="note">「另存專案」會下載一個 .fprj 專案檔，內含目前圖片與全部校正參數；每張圖片都可以各自保存成不同專案。</p>
     </div>
@@ -86,22 +87,26 @@ canvas.main{width:100%;height:100%;display:block}.tip{position:absolute;left:12p
   <section class="stage" id="leftStage">
     <div class="stageHead">原始影像 <small>模型投影 / 虛擬 L</small></div>
     <canvas id="src" class="main"></canvas>
-    <div class="tip">左鍵拖曳＝移動 · 四角把手＝平面旋轉 · 中鍵＝Yaw / Pitch · Shift + 中鍵＝Roll · 滾輪＝縮放</div>
+    <div class="tip">模型內：左鍵移動模型 · 四角旋轉 · 中鍵 3D · 滾輪模型縮放 ｜ 模型外：左鍵移動圖片 · 滾輪圖片縮放</div>
   </section>
-  <section class="stage">
-    <div class="stageHead">展平結果 <small>反算至正視平面</small></div>
+  <section class="stage" id="rightStage">
+    <div class="stageHead">展平結果 <small id="resultInfo" class="viewInfo">尚未產生</small><span class="viewTools"><button id="fitResult" type="button">適合視窗</button><button id="actualResult" type="button">100%</button></span></div>
     <canvas id="dst" class="main"></canvas>
-    <div class="tip">展平只做幾何重映射，不產生新的紋線</div>
+    <div class="tip">高解析結果：左鍵拖曳＝平移 · 滾輪＝縮放 · 100%＝1 影像像素 / 1 螢幕 CSS 像素</div>
   </section>
 </div>
 <script>
 const $=s=>document.querySelector(s);
 const srcC=$('#src'), dstC=$('#dst'), mini=$('#mini3d');
 const sctx=srcC.getContext('2d'), dctx=dstC.getContext('2d'), mctx=mini.getContext('2d');
-// 乾淨來源畫布：只放原始照片。所有展平與匯出都從這裡取樣，避免把操作格線/虛擬尺一起烙進影像。
-const cleanSrc=document.createElement('canvas');
-const cleanCtx=cleanSrc.getContext('2d');
 const img=new Image(); let imgReady=false;
+// 左側底圖視圖：zoom=1 為適合視窗，pan 以 CSS px 記錄。
+const imageView={zoom:1,panX:0,panY:0};
+// 右側高解析展平結果與檢視狀態。
+const hiRes=document.createElement('canvas');
+const hiCtx=hiRes.getContext('2d');
+const resultView={scale:0,panX:0,panY:0,mode:'fit'};
+let hiResReady=false,lastHiResKey='',hiResTimer=0,hiResBusy=false;
 const P={cx:.56,cy:.51,scale:520,aspect:.72,roll:-6,yaw:13,pitch:-18,persp:.72,bendX:58,bendY:-6,bendD1:0,bendD2:0,lu:.12,lv:.74,lx:.62,ly:.48,showL:true,showGrid:true};
 const defaults=JSON.parse(JSON.stringify(P));
 const ids=['scale','aspect','roll','yaw','pitch','persp','bendX','bendY','bendD1','bendD2','lu','lv','lx','ly'];
@@ -131,7 +136,18 @@ function project(u,v){
   return [P.cx*srcC.width + X*k, P.cy*srcC.height + Y*k, Z];
 }
 function model3(u,v){const [sx,sy,sz]=surfaceXYZ(u,v);return rot3(sx,sy,sz)}
-function drawImageContain(ctx,c){ctx.clearRect(0,0,c.width,c.height);if(!imgReady)return null; const sc=Math.min(c.width/img.width,c.height/img.height); const w=img.width*sc,h=img.height*sc,x=(c.width-w)/2,y=(c.height-h)/2;ctx.drawImage(img,x,y,w,h);return {x,y,w,h,sc}}
+function drawImageContain(ctx,c){
+  ctx.clearRect(0,0,c.width,c.height); if(!imgReady)return null;
+  const rect=c.getBoundingClientRect();
+  const dprX=c.width/Math.max(1,rect.width), dprY=c.height/Math.max(1,rect.height);
+  const baseCss=Math.min(rect.width/img.width,rect.height/img.height);
+  const scCss=baseCss*imageView.zoom;
+  const wCss=img.width*scCss,hCss=img.height*scCss;
+  const xCss=(rect.width-wCss)/2+imageView.panX, yCss=(rect.height-hCss)/2+imageView.panY;
+  const x=xCss*dprX,y=yCss*dprY,w=wCss*dprX,h=hCss*dprY,sc=scCss*dprX;
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(img,x,y,w,h); return {x,y,w,h,sc,xCss,yCss,wCss,hCss,scCss,dprX,dprY};
+}
 function imageToCanvas(px,py,fit){return [fit.x+px*fit.sc,fit.y+py*fit.sc]}
 // Projection operates in source-canvas coordinates. To keep mapping consistent, project on displayed image rect by temporarily mapping normalized model center/scale.
 let fit=null;
@@ -140,6 +156,13 @@ function projectDisplay(u,v){
  const base=P.scale*(fit?fit.sc:1); const k=base/Math.max(.18,q);
  const cx=fit.x+P.cx*fit.w, cy=fit.y+P.cy*fit.h; return [cx+X*k,cy+Y*k,Z];
 }
+// 直接以原始照片像素座標計算來源點；不經螢幕預覽縮圖。
+function projectImage(u,v){
+  let [sx,sy,sz]=surfaceXYZ(u,v); let [X,Y,Z]=rot3(sx,sy,sz); const q=1+P.persp*Z;
+  const k=P.scale/Math.max(.18,q);
+  return [P.cx*img.width+X*k,P.cy*img.height+Y*k,Z];
+}
+
 function drawGrid(){
  if(!fit)return;sctx.save();sctx.lineWidth=Math.max(1,srcC.width/1400);sctx.globalAlpha=.82;
  if(P.showGrid){sctx.strokeStyle='#78dcff';for(let i=0;i<=10;i++){sctx.beginPath();for(let j=0;j<=50;j++){let p=projectDisplay(i/10,j/50);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}for(let i=0;i<=8;i++){sctx.beginPath();for(let j=0;j<=60;j++){let p=projectDisplay(j/60,i/8);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}}
@@ -159,72 +182,80 @@ function expandTri(pts,pad){
   const cx=(pts[0][0]+pts[1][0]+pts[2][0])/3, cy=(pts[0][1]+pts[1][1]+pts[2][1])/3;
   return pts.map(([x,y])=>{const dx=x-cx,dy=y-cy,len=Math.hypot(dx,dy)||1;return [x+dx/len*pad,y+dy/len*pad]});
 }
-function drawTriFromDisplayCtx(ctx,sPts,dPts){
+function drawTriFromImageCtx(ctx,sPts,dPts){
   const M=affineFromTri(sPts,dPts); if(!M)return;
   const clipPts=expandTri(dPts,1.35);
-  ctx.save();
-  ctx.imageSmoothingEnabled=true;
+  ctx.save(); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   ctx.beginPath();ctx.moveTo(...clipPts[0]);ctx.lineTo(...clipPts[1]);ctx.lineTo(...clipPts[2]);ctx.closePath();ctx.clip();
-  ctx.setTransform(...M);ctx.drawImage(cleanSrc,0,0);ctx.restore();
+  ctx.setTransform(...M);ctx.drawImage(img,0,0);ctx.restore();
 }
-function drawTriFromDisplay(sPts,dPts){drawTriFromDisplayCtx(dctx,sPts,dPts)}
-function renderRectifiedTo(ctx,canvas,opts={}){
- const drawBorder=!!opts.drawBorder;
- const cropOnly=!!opts.cropOnly;
- const fillBg = opts.fillBg!==false;
- ctx.setTransform(1,0,0,1,0,0);
- ctx.clearRect(0,0,canvas.width,canvas.height);
- if(fillBg){ctx.fillStyle='#0b0d11';ctx.fillRect(0,0,canvas.width,canvas.height)}
- if(!imgReady||!fit)return;
- let ox,oy,outW,outH;
- if(cropOnly){
-   outW=canvas.width; outH=canvas.height; ox=0; oy=0;
- }else{
-   const margin=0.05*Math.min(canvas.width,canvas.height);
-   outW=canvas.width-2*margin; outH=Math.min(canvas.height-2*margin,outW*P.aspect);
-   ox=(canvas.width-outW)/2; oy=(canvas.height-outH)/2;
- }
- const nx=34,ny=Math.max(18,Math.round(nx*P.aspect));
- for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
-   const u0=i/nx,u1=(i+1)/nx,v0=j/ny,v1=(j+1)/ny;
-   const s00=projectDisplay(u0,v0),s10=projectDisplay(u1,v0),s01=projectDisplay(u0,v1),s11=projectDisplay(u1,v1);
-   const d00=[ox+u0*outW,oy+v0*outH],d10=[ox+u1*outW,oy+v0*outH],d01=[ox+u0*outW,oy+v1*outH],d11=[ox+u1*outW,oy+v1*outH];
-   drawTriFromDisplayCtx(ctx,[s00,s10,s11],[d00,d10,d11]);
-   drawTriFromDisplayCtx(ctx,[s00,s11,s01],[d00,d11,d01]);
- }
- if(drawBorder){ctx.setTransform(1,0,0,1,0,0);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.strokeRect(ox,oy,outW,outH);}
+function geometryKey(){return JSON.stringify([P.cx,P.cy,P.scale,P.aspect,P.roll,P.yaw,P.pitch,P.persp,P.bendX,P.bendY,P.bendD1,P.bendD2,img.width,img.height,img.src.length])}
+function hiResDimensions(){
+  // P.scale 是以原始照片像素表示的模型寬度，因此輸出採 1:1 模型像素密度。
+  const w=Math.max(64,Math.round(P.scale));
+  const h=Math.max(64,Math.round(w*P.aspect));
+  return [w,h];
 }
-function renderRectified(){renderRectifiedTo(dctx,dstC,{drawBorder:true,fillBg:true,cropOnly:false})}
+function renderHighResNow(){
+  if(!imgReady||hiResBusy)return;
+  const key=geometryKey(); if(key===lastHiResKey&&hiResReady){drawResultView();return;}
+  hiResBusy=true; const info=$('#resultInfo'); if(info)info.textContent='原始解析度更新中…';
+  const [w,h]=hiResDimensions(); hiRes.width=w;hiRes.height=h;
+  hiCtx.setTransform(1,0,0,1,0,0);hiCtx.clearRect(0,0,w,h);
+  const nx=Math.max(40,Math.min(72,Math.round(w/40))),ny=Math.max(24,Math.round(nx*P.aspect));
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+    const u0=i/nx,u1=(i+1)/nx,v0=j/ny,v1=(j+1)/ny;
+    const s00=projectImage(u0,v0),s10=projectImage(u1,v0),s01=projectImage(u0,v1),s11=projectImage(u1,v1);
+    const d00=[u0*w,v0*h],d10=[u1*w,v0*h],d01=[u0*w,v1*h],d11=[u1*w,v1*h];
+    drawTriFromImageCtx(hiCtx,[s00,s10,s11],[d00,d10,d11]);
+    drawTriFromImageCtx(hiCtx,[s00,s11,s01],[d00,d11,d01]);
+  }
+  hiResBusy=false;hiResReady=true;lastHiResKey=key;
+  if(resultView.mode==='fit'||resultView.scale<=0)fitResultView(false);
+  if(info)info.textContent=w+' × '+h+' px';
+  drawResultView();
+}
+function scheduleHighRes(delay=140){
+  if(!imgReady)return;
+  const key=geometryKey(); if(key===lastHiResKey&&hiResReady)return;
+  clearTimeout(hiResTimer); hiResTimer=setTimeout(renderHighResNow,delay);
+}
+function fitResultView(redraw=true){
+  if(!hiResReady||!hiRes.width||!hiRes.height)return;
+  const r=dstC.getBoundingClientRect(); const dpr=dstC.width/Math.max(1,r.width);
+  resultView.scale=Math.min(dstC.width/hiRes.width,dstC.height/hiRes.height);
+  resultView.panX=0;resultView.panY=0;resultView.mode='fit'; if(redraw)drawResultView();
+}
+function actualResultView(){
+  if(!hiResReady)return;
+  const r=dstC.getBoundingClientRect(); const dpr=dstC.width/Math.max(1,r.width);
+  resultView.scale=dpr;resultView.panX=0;resultView.panY=0;resultView.mode='manual';drawResultView();
+}
+function drawResultView(){
+  fitCanvas(dstC); dctx.setTransform(1,0,0,1,0,0);dctx.clearRect(0,0,dstC.width,dstC.height);
+  dctx.fillStyle='#0b0d11';dctx.fillRect(0,0,dstC.width,dstC.height);
+  if(!hiResReady||!imgReady)return;
+  if(resultView.mode==='fit'){
+    resultView.scale=Math.min(dstC.width/hiRes.width,dstC.height/hiRes.height);
+    resultView.panX=0;resultView.panY=0;
+  }
+  const w=hiRes.width*resultView.scale,h=hiRes.height*resultView.scale;
+  const x=(dstC.width-w)/2+resultView.panX,y=(dstC.height-h)/2+resultView.panY;
+  dctx.imageSmoothingEnabled=true;dctx.imageSmoothingQuality='high';dctx.drawImage(hiRes,x,y,w,h);
+}
 function drawMini(){mctx.clearRect(0,0,mini.width,mini.height);mctx.fillStyle='#0d1015';mctx.fillRect(0,0,mini.width,mini.height);const pts=[];for(let j=0;j<=5;j++){pts[j]=[];for(let i=0;i<=7;i++){let [x,y,z]=model3(i/7,j/5);let X=mini.width/2+x*150+z*45,Y=mini.height/2+y*150-z*35;pts[j][i]=[X,Y]}}mctx.strokeStyle='#72cff7';mctx.lineWidth=1.5;for(let j=0;j<pts.length;j++){mctx.beginPath();pts[j].forEach((p,i)=>i?mctx.lineTo(...p):mctx.moveTo(...p));mctx.stroke()}for(let i=0;i<pts[0].length;i++){mctx.beginPath();pts.forEach((r,j)=>j?mctx.lineTo(...r[i]):mctx.moveTo(...r[i]));mctx.stroke()}mctx.fillStyle='#bcd3df';mctx.font='20px system-ui';mctx.fillText('3D',12,24)}
 function render(){
   fitCanvas(srcC);fitCanvas(dstC);
-  // 左側操作畫布：原圖 + 輔助疊圖。
   fit=drawImageContain(sctx,srcC);
-  // 另建同尺寸的乾淨來源，只畫原圖，不畫格線、L尺、控制點。
-  if(cleanSrc.width!==srcC.width||cleanSrc.height!==srcC.height){cleanSrc.width=srcC.width;cleanSrc.height=srcC.height;}
-  cleanCtx.setTransform(1,0,0,1,0,0);
-  cleanCtx.clearRect(0,0,cleanSrc.width,cleanSrc.height);
-  if(imgReady)drawImageContain(cleanCtx,cleanSrc);
-  drawGrid();
-  renderRectified();
-  drawMini();
+  drawGrid(); drawMini(); drawResultView();
   if(!imgReady){
-    sctx.save();sctx.setTransform(1,0,0,1,0,0);
-    sctx.fillStyle='#0b0d11';sctx.fillRect(0,0,srcC.width,srcC.height);
-    sctx.fillStyle='#9aa8b8';sctx.textAlign='center';sctx.textBaseline='middle';
-    sctx.font=Math.max(20,Math.round(srcC.width/55))+'px system-ui';
-    sctx.fillText('請先載入照片',srcC.width/2,srcC.height/2);
-    sctx.restore();
-    dctx.save();dctx.setTransform(1,0,0,1,0,0);
-    dctx.fillStyle='#0b0d11';dctx.fillRect(0,0,dstC.width,dstC.height);
-    dctx.fillStyle='#667483';dctx.textAlign='center';dctx.textBaseline='middle';
-    dctx.font=Math.max(18,Math.round(dstC.width/60))+'px system-ui';
-    dctx.fillText('載入照片後顯示展平結果',dstC.width/2,dstC.height/2);
-    dctx.restore();
-  }
+    sctx.save();sctx.setTransform(1,0,0,1,0,0);sctx.fillStyle='#0b0d11';sctx.fillRect(0,0,srcC.width,srcC.height);
+    sctx.fillStyle='#9aa8b8';sctx.textAlign='center';sctx.textBaseline='middle';sctx.font=Math.max(20,Math.round(srcC.width/55))+'px system-ui';sctx.fillText('請先載入照片',srcC.width/2,srcC.height/2);sctx.restore();
+    dctx.save();dctx.setTransform(1,0,0,1,0,0);dctx.fillStyle='#0b0d11';dctx.fillRect(0,0,dstC.width,dstC.height);dctx.fillStyle='#667483';dctx.textAlign='center';dctx.textBaseline='middle';dctx.font=Math.max(18,Math.round(dstC.width/60))+'px system-ui';dctx.fillText('載入照片後顯示高解析展平結果',dstC.width/2,dstC.height/2);dctx.restore();
+  }else scheduleHighRes();
 }
-window.addEventListener('resize',render);
-img.onload=()=>{imgReady=true;requestAnimationFrame(render)};
+window.addEventListener('resize',()=>{render();drawResultView()});
+img.onload=()=>{imgReady=true;hiResReady=false;lastHiResKey='';imageView.zoom=1;imageView.panX=imageView.panY=0;resultView.mode='fit';resultView.scale=0;resultView.panX=resultView.panY=0;requestAnimationFrame(render)};
 requestAnimationFrame(render);
 let currentFileName='';
 $('#file').addEventListener('change',e=>{
@@ -233,14 +264,14 @@ $('#file').addEventListener('change',e=>{
   const r=new FileReader();
   r.onload=()=>{
     imgReady=false;
-    img.onload=()=>{imgReady=true;render();showProjectStatus('已載入：'+currentFileName,1800)};
+    img.onload=()=>{imgReady=true;hiResReady=false;lastHiResKey='';imageView.zoom=1;imageView.panX=imageView.panY=0;resultView.mode='fit';resultView.scale=0;resultView.panX=resultView.panY=0;render();renderHighResNow();showProjectStatus('已載入：'+currentFileName,1800)};
     img.src=r.result;
   };
   r.readAsDataURL(f);
 });
 
 
-const PROJECT_VERSION=1;
+const PROJECT_VERSION=2;
 function showProjectStatus(msg,ms=2200){
   const el=$('#projectStatus'); if(!el)return;
   el.textContent=msg; el.style.display='block';
@@ -260,7 +291,8 @@ function saveProjectFile(){
       savedAt:new Date().toISOString(),
       originalFileName:currentFileName||'',
       imageDataUrl:img.src,
-      params:JSON.parse(JSON.stringify(P))
+      params:JSON.parse(JSON.stringify(P)),
+      imageView:JSON.parse(JSON.stringify(imageView))
     };
     const blob=new Blob([JSON.stringify(project)],{type:'application/json'});
     const a=document.createElement('a');
@@ -276,10 +308,11 @@ function openProjectObject(project){
   if(!project || project.app!=='Fingerprint Surface Rectifier')throw new Error('不是有效的曲面指紋展平專案');
   if(!project.imageDataUrl)throw new Error('專案內沒有圖片資料');
   Object.assign(P,defaults,project.params||{});
+  if(project.imageView)Object.assign(imageView,{zoom:1,panX:0,panY:0},project.imageView);
   syncUI();
   currentFileName=project.originalFileName||'';
   imgReady=false;
-  img.onload=()=>{imgReady=true;render();showProjectStatus('專案已開啟'+(currentFileName?'：'+currentFileName:''),3000)};
+  img.onload=()=>{imgReady=true;hiResReady=false;lastHiResKey='';imageView.zoom=1;imageView.panX=imageView.panY=0;resultView.mode='fit';resultView.scale=0;resultView.panX=resultView.panY=0;render();renderHighResNow();showProjectStatus('專案已開啟'+(currentFileName?'：'+currentFileName:''),3000)};
   img.src=project.imageDataUrl;
 }
 $('#saveProject').onclick=saveProjectFile;
@@ -295,8 +328,8 @@ $('#projectFile').addEventListener('change',e=>{
   r.readAsText(f,'utf-8');
 });
 
-$('#reset').onclick=()=>{Object.assign(P,defaults);syncUI();render();showProjectStatus('參數已重設（圖片保留）',2200)};
-$('#flat').onclick=()=>{P.yaw=P.pitch=P.roll=P.bendX=P.bendY=P.bendD1=P.bendD2=0;P.persp=.35;syncUI();render()};
+$('#reset').onclick=()=>{Object.assign(P,defaults);imageView.zoom=1;imageView.panX=imageView.panY=0;hiResReady=false;lastHiResKey='';syncUI();render();renderHighResNow();showProjectStatus('參數與圖片檢視已重設（圖片保留）',2200)};
+$('#flat').onclick=()=>{P.yaw=P.pitch=P.roll=P.bendX=P.bendY=P.bendD1=P.bendD2=0;P.persp=.35;syncUI();render();renderHighResNow()};
 let drag=null;
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function canvasPoint(e){const r=srcC.getBoundingClientRect();return [(e.clientX-r.left)*srcC.width/r.width,(e.clientY-r.top)*srcC.height/r.height]}
@@ -309,59 +342,94 @@ function nearestCorner(e){
   corners.forEach((uv,i)=>{const p=projectDisplay(...uv),d=Math.hypot(x-p[0],y-p[1]);if(d<=hit&&(!best||d<best.d))best={i,d,p,uv}});
   return best;
 }
+function modelBoundary(){
+  const pts=[],n=24;
+  for(let i=0;i<=n;i++)pts.push(projectDisplay(i/n,0));
+  for(let i=1;i<=n;i++)pts.push(projectDisplay(1,i/n));
+  for(let i=1;i<=n;i++)pts.push(projectDisplay(1-i/n,1));
+  for(let i=1;i<n;i++)pts.push(projectDisplay(0,1-i/n));
+  return pts;
+}
+function pointInPoly(x,y,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+  const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+  const hit=((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/((yj-yi)||1e-9)+xi);if(hit)inside=!inside;
+}return inside}
+function pointerOnModel(e){if(!fit)return false;const [x,y]=canvasPoint(e);return pointInPoly(x,y,modelBoundary())}
+
 srcC.addEventListener('pointerdown',e=>{
-  // 左鍵空白：平移；左鍵四角：平面內旋轉；中鍵：3D 姿態。
-  if(e.button!==0 && e.button!==1)return;
-  e.preventDefault();
+  if(e.button!==0 && e.button!==1)return; e.preventDefault();
+  const onModel=pointerOnModel(e);
   if(e.button===0){
-    const corner=nearestCorner(e);
+    const corner=onModel?nearestCorner(e):null;
     if(corner){
-      const [x,y]=canvasPoint(e), c=projectDisplay(.5,.5);
+      const [x,y]=canvasPoint(e),c=projectDisplay(.5,.5);
       drag={mode:'cornerRoll',pointerId:e.pointerId,startAngle:angleDeg(x,y,c[0],c[1]),roll:P.roll};
-    }else{
+    }else if(onModel){
       drag={mode:'move',pointerId:e.pointerId,x:e.clientX,y:e.clientY,cx:P.cx,cy:P.cy};
+    }else{
+      drag={mode:'imagePan',pointerId:e.pointerId,x:e.clientX,y:e.clientY,panX:imageView.panX,panY:imageView.panY};
     }
   }else{
-    drag={mode:e.shiftKey?'roll':'orbit',pointerId:e.pointerId,x:e.clientX,y:e.clientY,yaw:P.yaw,pitch:P.pitch,roll:P.roll};
+    if(onModel)drag={mode:e.shiftKey?'roll':'orbit',pointerId:e.pointerId,x:e.clientX,y:e.clientY,yaw:P.yaw,pitch:P.pitch,roll:P.roll};
+    else drag={mode:'imagePan',pointerId:e.pointerId,x:e.clientX,y:e.clientY,panX:imageView.panX,panY:imageView.panY};
   }
   srcC.setPointerCapture(e.pointerId);
 });
 srcC.addEventListener('pointermove',e=>{
-  if(!drag||!fit||e.pointerId!==drag.pointerId)return;
-  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(!drag||e.pointerId!==drag.pointerId)return;
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(drag.mode==='imagePan'){
+    imageView.panX=drag.panX+dx;imageView.panY=drag.panY+dy;render();return;
+  }
+  if(!fit)return;
   if(drag.mode==='move'){
-    P.cx=clamp(drag.cx+dx/(fit.w/(devicePixelRatio||1)),-.3,1.3);
-    P.cy=clamp(drag.cy+dy/(fit.h/(devicePixelRatio||1)),-.3,1.3);
+    P.cx=clamp(drag.cx+dx/Math.max(1,fit.wCss),-.3,1.3);P.cy=clamp(drag.cy+dy/Math.max(1,fit.hCss),-.3,1.3);
   }else if(drag.mode==='orbit'){
-    // 0.28°/px：大幅拖曳仍可控，也保留滑桿做最後微調。
-    P.yaw=clamp(drag.yaw+dx*.28,-70,70);
-    P.pitch=clamp(drag.pitch-dy*.28,-70,70);
-    syncUI();
+    P.yaw=clamp(drag.yaw+dx*.28,-70,70);P.pitch=clamp(drag.pitch-dy*.28,-70,70);syncUI();
   }else if(drag.mode==='roll'){
-    // Roll 取水平位移為主，垂直位移少量參與，避免需要很長的滑鼠行程。
-    P.roll=clamp(drag.roll+(dx-dy*.35)*.28,-180,180);
-    syncUI();
+    P.roll=clamp(drag.roll+(dx-dy*.35)*.28,-180,180);syncUI();
   }else if(drag.mode==='cornerRoll'){
-    const [x,y]=canvasPoint(e), c=projectDisplay(.5,.5);
-    let delta=angleDeg(x,y,c[0],c[1])-drag.startAngle;
-    while(delta>180)delta-=360; while(delta<-180)delta+=360;
-    P.roll=clamp(drag.roll+delta,-180,180);
-    syncUI();
+    const [x,y]=canvasPoint(e),c=projectDisplay(.5,.5);let delta=angleDeg(x,y,c[0],c[1])-drag.startAngle;
+    while(delta>180)delta-=360;while(delta<-180)delta+=360;P.roll=clamp(drag.roll+delta,-180,180);syncUI();
   }
   render();
 });
 function endDrag(e){
-  if(!drag)return;
-  if(e && e.pointerId!==drag.pointerId)return;
-  try{srcC.releasePointerCapture(drag.pointerId)}catch(_){ }
-  drag=null;
+  if(!drag)return;if(e&&e.pointerId!==drag.pointerId)return;
+  try{srcC.releasePointerCapture(drag.pointerId)}catch(_){ }const wasGeometry=drag.mode!=='imagePan';drag=null;if(wasGeometry)renderHighResNow();
 }
-srcC.addEventListener('pointerup',endDrag);
-srcC.addEventListener('pointercancel',endDrag);
-srcC.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
-srcC.addEventListener('contextmenu',e=>e.preventDefault());
-srcC.addEventListener('wheel',e=>{e.preventDefault();P.scale=clamp(P.scale+(e.deltaY<0?20:-20),180,2500);syncUI();render()},{passive:false});
-$('#export').onclick=()=>{const out=document.createElement('canvas');const exportW=1600;const exportH=Math.max(1,Math.round(exportW*P.aspect));out.width=exportW;out.height=exportH;const octx=out.getContext('2d');renderRectifiedTo(octx,out,{drawBorder:false,fillBg:false,cropOnly:true});const a=document.createElement('a');a.download='fingerprint_rectified_clean_no_seams.png';a.href=out.toDataURL('image/png');a.click()};
+srcC.addEventListener('pointerup',endDrag);srcC.addEventListener('pointercancel',endDrag);
+srcC.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});srcC.addEventListener('contextmenu',e=>e.preventDefault());
+srcC.addEventListener('wheel',e=>{
+  e.preventDefault();
+  if(pointerOnModel(e)){
+    P.scale=clamp(P.scale+(e.deltaY<0?20:-20),180,2500);syncUI();render();scheduleHighRes(180);
+  }else if(imgReady){
+    const r=srcC.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
+    const old=imageView.zoom,newZoom=clamp(old*(e.deltaY<0?1.12:1/1.12),.15,8);
+    if(newZoom!==old){
+      // 保持游標指向的影像位置不跳動。
+      const base=Math.min(r.width/img.width,r.height/img.height);
+      const oldW=img.width*base*old,oldH=img.height*base*old;
+      const oldX=(r.width-oldW)/2+imageView.panX,oldY=(r.height-oldH)/2+imageView.panY;
+      const ux=(mx-oldX)/Math.max(1,oldW),uy=(my-oldY)/Math.max(1,oldH);
+      imageView.zoom=newZoom;
+      const newW=img.width*base*newZoom,newH=img.height*base*newZoom;
+      imageView.panX=mx-ux*newW-(r.width-newW)/2;imageView.panY=my-uy*newH-(r.height-newH)/2;
+      render();
+    }
+  }
+},{passive:false});
+
+// 右側高解析結果：拖曳平移、滾輪縮放。
+let resultDrag=null;
+dstC.addEventListener('pointerdown',e=>{if(e.button!==0||!hiResReady)return;e.preventDefault();resultView.mode='manual';resultDrag={id:e.pointerId,x:e.clientX,y:e.clientY,px:resultView.panX,py:resultView.panY};dstC.setPointerCapture(e.pointerId)});
+dstC.addEventListener('pointermove',e=>{if(!resultDrag||e.pointerId!==resultDrag.id)return;const r=dstC.getBoundingClientRect();const sx=dstC.width/Math.max(1,r.width),sy=dstC.height/Math.max(1,r.height);resultView.panX=resultDrag.px+(e.clientX-resultDrag.x)*sx;resultView.panY=resultDrag.py+(e.clientY-resultDrag.y)*sy;drawResultView()});
+function endResultDrag(e){if(!resultDrag||e.pointerId!==resultDrag.id)return;try{dstC.releasePointerCapture(e.pointerId)}catch(_){ }resultDrag=null}
+dstC.addEventListener('pointerup',endResultDrag);dstC.addEventListener('pointercancel',endResultDrag);
+dstC.addEventListener('wheel',e=>{if(!hiResReady)return;e.preventDefault();const r=dstC.getBoundingClientRect(),sx=dstC.width/Math.max(1,r.width),sy=dstC.height/Math.max(1,r.height);const mx=(e.clientX-r.left)*sx,my=(e.clientY-r.top)*sy;const old=resultView.scale||Math.min(dstC.width/hiRes.width,dstC.height/hiRes.height);const next=clamp(old*(e.deltaY<0?1.12:1/1.12),0.02,20);const cx=dstC.width/2+resultView.panX,cy=dstC.height/2+resultView.panY;const ux=(mx-cx)/old,uy=(my-cy)/old;resultView.scale=next;resultView.panX=mx-ux*next-dstC.width/2;resultView.panY=my-uy*next-dstC.height/2;resultView.mode='manual';drawResultView()},{passive:false});
+$('#fitResult').onclick=()=>fitResultView(true);$('#actualResult').onclick=actualResultView;
+$('#export').onclick=()=>{if(!imgReady){showProjectStatus('請先載入圖片',2200);return;}renderHighResNow();const a=document.createElement('a');a.download=(currentFileName||'fingerprint').replace(/\.[^.]+$/,'')+'_rectified.png';a.href=hiRes.toDataURL('image/png');a.click()};
 syncUI();
 </script>
 </body></html>
