@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>曲面指紋展平實驗室</title>
+<style>
+:root{--bg:#111318;--panel:#1a1e25;--panel2:#222731;--text:#edf1f7;--muted:#9da6b5;--accent:#7fd3ff;--line:#394250;--warn:#ffd479}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;overflow:hidden}
+header{height:54px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:#15181e}
+header b{font-size:17px} header span{font-size:12px;color:var(--muted)}
+button,.fileBtn{border:1px solid #4a5565;background:#242a34;color:var(--text);padding:7px 11px;border-radius:7px;cursor:pointer;font-size:13px}
+button:hover,.fileBtn:hover{background:#303846}.fileBtn input{display:none}
+.app{height:calc(100vh - 54px);display:grid;grid-template-columns:280px 1fr 1fr;min-width:1100px}
+.controls{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
+.group{padding:10px 0;border-bottom:1px solid var(--line)} .group h3{font-size:13px;margin:0 0 8px;color:#dfe8f3}.group p{font-size:11px;line-height:1.5;color:var(--muted);margin:6px 0}
+.row{display:grid;grid-template-columns:90px 1fr 46px;align-items:center;gap:8px;margin:8px 0}.row label{font-size:12px;color:#c8d0dc}.row output{font-size:11px;color:var(--accent);text-align:right}.row input[type=range]{width:100%}
+.chk{display:flex;align-items:center;gap:7px;font-size:12px;color:#c8d0dc;margin:6px 0}
+.stage{position:relative;min-width:0;min-height:0;background:#090b0f;border-right:1px solid var(--line)}.stage:last-child{border-right:0}
+.stageHead{position:absolute;left:12px;top:10px;z-index:3;background:rgba(10,12,16,.76);backdrop-filter:blur(4px);padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:7px;font-size:12px}.stageHead small{color:var(--muted);margin-left:8px}
+canvas.main{width:100%;height:100%;display:block}.tip{position:absolute;left:12px;bottom:10px;z-index:3;font-size:11px;color:#d8e0ec;background:rgba(10,12,16,.74);padding:6px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.1)}
+.miniWrap{display:grid;grid-template-columns:1fr 116px;gap:8px;align-items:start}.mini3d{width:116px;height:90px;background:#0d1015;border:1px solid var(--line);border-radius:6px}
+.badge{display:inline-block;font-size:10px;padding:2px 5px;border-radius:4px;background:#2c3542;color:#cfefff;margin-left:4px}
+.note{color:var(--warn)!important}.btnRow{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <b>曲面指紋展平實驗室 <span class="badge">Prototype</span></b>
+  <span>虛擬 L 貼紙尺 + X/Y/對角曲率 + 3D 姿態反算</span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <label class="fileBtn">載入照片<input id="file" type="file" accept="image/*"></label>
+    <button id="reset">重設參數</button>
+    <button id="saveProject">另存專案</button>
+    <label class="fileBtn">開啟專案<input id="projectFile" type="file" accept=".fprj,.json,application/json"></label>
+    <button id="export">匯出純變形 PNG</button>
+  </div>
+</header>
+<div id="projectStatus" style="position:absolute;right:12px;top:58px;z-index:20;font-size:12px;color:#cbd5e1;background:rgba(11,15,20,.88);border:1px solid #303844;border-radius:6px;padding:5px 8px;display:none"></div>
+<div class="app">
+  <aside class="controls">
+    <div class="group">
+      <h3>1. 表面範圍</h3>
+      <p>先讓半透明網格覆蓋要校正的指紋區。直接在左圖拖曳可移動整個模型。</p>
+      <div class="row"><label>模型寬度</label><input id="scale" type="range" min="180" max="2500" step="1"><output></output></div>
+      <div class="row"><label>長寬比 H/W</label><input id="aspect" type="range" min="0.35" max="1.5" step="0.01"><output></output></div>
+      <div class="row"><label>平面旋轉</label><input id="roll" type="range" min="-180" max="180" step="0.5"><output></output></div>
+    </div>
+    <div class="group">
+      <h3>2. 3D 拍攝姿態</h3>
+      <div class="miniWrap">
+        <div>
+          <div class="row"><label>Yaw 左右</label><input id="yaw" type="range" min="-70" max="70" step="0.5"><output></output></div>
+          <div class="row"><label>Pitch 上下</label><input id="pitch" type="range" min="-70" max="70" step="0.5"><output></output></div>
+          <div class="row"><label>透視強度</label><input id="persp" type="range" min="0" max="1.5" step="0.01"><output></output></div>
+        </div>
+        <canvas id="mini3d" class="mini3d" width="232" height="180"></canvas>
+      </div>
+      <p>這一層主要消除「斜拍」。可直接在左圖用中鍵拖曳旋轉：左右＝Yaw、上下＝Pitch；Shift + 中鍵＝Roll。滑桿保留作精細修正。</p>
+    </div>
+    <div class="group">
+      <h3>3. 貼紙 / 曲面彎曲</h3>
+      <div class="row"><label>X 方向彎曲</label><input id="bendX" type="range" min="-150" max="150" step="1"><output></output></div>
+      <div class="row"><label>Y 方向彎曲</label><input id="bendY" type="range" min="-150" max="150" step="1"><output></output></div>
+      <div class="row"><label>對角線彎曲 ↘</label><input id="bendD1" type="range" min="-150" max="150" step="1"><output></output></div>
+      <div class="row"><label>對角線彎曲 ↗</label><input id="bendD2" type="range" min="-150" max="150" step="1"><output></output></div>
+      <p>正負值代表凸 / 凹方向。這不是「拉紋線」，而是改變整張貼附表面的幾何。對角線彎曲可補足單純 X/Y 不夠時的斜向貼附變形。右側展平與匯出都直接從乾淨原圖取樣；格線、虛擬尺、控制點只存在於左側操作預覽。</p>
+    </div>
+    <div class="group">
+      <h3>4. 虛擬 L 比例尺</h3>
+      <div class="row"><label>L 水平位置</label><input id="lu" type="range" min="0.05" max="0.95" step="0.01"><output></output></div>
+      <div class="row"><label>L 垂直位置</label><input id="lv" type="range" min="0.05" max="0.95" step="0.01"><output></output></div>
+      <div class="row"><label>水平臂長</label><input id="lx" type="range" min="0.08" max="0.8" step="0.01"><output></output></div>
+      <div class="row"><label>垂直臂長</label><input id="ly" type="range" min="0.08" max="0.8" step="0.01"><output></output></div>
+      <label class="chk"><input id="showL" type="checkbox" checked> 顯示虛擬 L 尺與刻度</label>
+      <label class="chk"><input id="showGrid" type="checkbox" checked> 顯示曲面網格</label>
+      <p class="note">實際只有單邊比例尺時，也可先用其中一支對準；另一支當作曲面方向輔助，不視為真實量測資料。</p>
+    </div>
+    <div class="group">
+      <h3>操作</h3>
+      <p>左鍵拖曳＝移動模型；拖曳四角旋轉把手＝平面內旋轉；中鍵拖曳＝3D 旋轉；Shift + 中鍵＝Roll；滾輪＝縮放。滑桿仍可做精細數值修正。建議先對姿態，再調曲率，最後微調範圍。</p>
+      <div class="btnRow"><button id="flat">暫設平面</button></div>
+      <p class="note">「另存專案」會下載一個 .fprj 專案檔，內含目前圖片與全部校正參數；每張圖片都可以各自保存成不同專案。</p>
+    </div>
+  </aside>
+  <section class="stage" id="leftStage">
+    <div class="stageHead">原始影像 <small>模型投影 / 虛擬 L</small></div>
+    <canvas id="src" class="main"></canvas>
+    <div class="tip">左鍵拖曳＝移動 · 四角把手＝平面旋轉 · 中鍵＝Yaw / Pitch · Shift + 中鍵＝Roll · 滾輪＝縮放</div>
+  </section>
+  <section class="stage">
+    <div class="stageHead">展平結果 <small>反算至正視平面</small></div>
+    <canvas id="dst" class="main"></canvas>
+    <div class="tip">展平只做幾何重映射，不產生新的紋線</div>
+  </section>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const srcC=$('#src'), dstC=$('#dst'), mini=$('#mini3d');
+const sctx=srcC.getContext('2d'), dctx=dstC.getContext('2d'), mctx=mini.getContext('2d');
+// 乾淨來源畫布：只放原始照片。所有展平與匯出都從這裡取樣，避免把操作格線/虛擬尺一起烙進影像。
+const cleanSrc=document.createElement('canvas');
+const cleanCtx=cleanSrc.getContext('2d');
+const img=new Image(); let imgReady=false;
+const P={cx:.56,cy:.51,scale:520,aspect:.72,roll:-6,yaw:13,pitch:-18,persp:.72,bendX:58,bendY:-6,bendD1:0,bendD2:0,lu:.12,lv:.74,lx:.62,ly:.48,showL:true,showGrid:true};
+const defaults=JSON.parse(JSON.stringify(P));
+const ids=['scale','aspect','roll','yaw','pitch','persp','bendX','bendY','bendD1','bendD2','lu','lv','lx','ly'];
+const suffix={scale:' px',aspect:'',roll:'°',yaw:'°',pitch:'°',persp:'',bendX:'°',bendY:'°',bendD1:'°',bendD2:'°',lu:'',lv:'',lx:'',ly:''};
+function syncUI(){ids.forEach(id=>{const el=$('#'+id);el.value=P[id];el.nextElementSibling.value=(+P[id]).toFixed(['scale','roll','yaw','pitch','bendX','bendY','bendD1','bendD2'].includes(id)?0:2)+suffix[id]});$('#showL').checked=P.showL;$('#showGrid').checked=P.showGrid}
+ids.forEach(id=>$('#'+id).addEventListener('input',e=>{P[id]=+e.target.value;e.target.nextElementSibling.value=(+P[id]).toFixed(['scale','roll','yaw','pitch','bendX','bendY','bendD1','bendD2'].includes(id)?0:2)+suffix[id];render()}));
+$('#showL').onchange=e=>{P.showL=e.target.checked;render()};$('#showGrid').onchange=e=>{P.showGrid=e.target.checked;render()};
+function fitCanvas(c){const r=c.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2); const w=Math.max(10,Math.round(r.width*dpr)),h=Math.max(10,Math.round(r.height*dpr)); if(c.width!==w||c.height!==h){c.width=w;c.height=h} return dpr}
+function rad(d){return d*Math.PI/180}
+function bendCoord(t,angleDeg){const a=rad(angleDeg); if(Math.abs(a)<1e-5)return [t,0]; const R=1/a; return [R*Math.sin(a*t), R*(1-Math.cos(a*t))]}
+function rot3(x,y,z){let a=rad(P.pitch),b=rad(P.yaw),c=rad(P.roll); let y1=y*Math.cos(a)-z*Math.sin(a),z1=y*Math.sin(a)+z*Math.cos(a),x1=x; let x2=x1*Math.cos(b)+z1*Math.sin(b),z2=-x1*Math.sin(b)+z1*Math.cos(b),y2=y1; return [x2*Math.cos(c)-y2*Math.sin(c),x2*Math.sin(c)+y2*Math.cos(c),z2]}
+function surfaceXYZ(u,v){
+  let x=(u-.5), y=(v-.5)*P.aspect;
+  let [xb,zx]=bendCoord(x,P.bendX), [yb,zy]=bendCoord(y,P.bendY);
+  let Xs=xb, Ys=yb, Zs=zx+zy;
+  const rt=Math.SQRT1_2;
+  let d1=(x+y)*rt; const [d1b,zd1]=bendCoord(d1,P.bendD1); const dd1=d1b-d1;
+  Xs += dd1*rt; Ys += dd1*rt; Zs += zd1;
+  let d2=(x-y)*rt; const [d2b,zd2]=bendCoord(d2,P.bendD2); const dd2=d2b-d2;
+  Xs += dd2*rt; Ys -= dd2*rt; Zs += zd2;
+  return [Xs,Ys,Zs];
+}
+function project(u,v){
+  let [sx,sy,sz]=surfaceXYZ(u,v);
+  let [X,Y,Z]=rot3(sx,sy,sz);
+  const q=1+P.persp*Z; const k=P.scale/Math.max(.18,q);
+  return [P.cx*srcC.width + X*k, P.cy*srcC.height + Y*k, Z];
+}
+function model3(u,v){const [sx,sy,sz]=surfaceXYZ(u,v);return rot3(sx,sy,sz)}
+function drawImageContain(ctx,c){ctx.clearRect(0,0,c.width,c.height);if(!imgReady)return null; const sc=Math.min(c.width/img.width,c.height/img.height); const w=img.width*sc,h=img.height*sc,x=(c.width-w)/2,y=(c.height-h)/2;ctx.drawImage(img,x,y,w,h);return {x,y,w,h,sc}}
+function imageToCanvas(px,py,fit){return [fit.x+px*fit.sc,fit.y+py*fit.sc]}
+// Projection operates in source-canvas coordinates. To keep mapping consistent, project on displayed image rect by temporarily mapping normalized model center/scale.
+let fit=null;
+function projectDisplay(u,v){
+ let [sx,sy,sz]=surfaceXYZ(u,v); let [X,Y,Z]=rot3(sx,sy,sz); const q=1+P.persp*Z;
+ const base=P.scale*(fit?fit.sc:1); const k=base/Math.max(.18,q);
+ const cx=fit.x+P.cx*fit.w, cy=fit.y+P.cy*fit.h; return [cx+X*k,cy+Y*k,Z];
+}
+function drawGrid(){
+ if(!fit)return;sctx.save();sctx.lineWidth=Math.max(1,srcC.width/1400);sctx.globalAlpha=.82;
+ if(P.showGrid){sctx.strokeStyle='#78dcff';for(let i=0;i<=10;i++){sctx.beginPath();for(let j=0;j<=50;j++){let p=projectDisplay(i/10,j/50);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}for(let i=0;i<=8;i++){sctx.beginPath();for(let j=0;j<=60;j++){let p=projectDisplay(j/60,i/8);j?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}}
+ if(P.showL)drawL();
+ const c=projectDisplay(.5,.5);sctx.fillStyle='#fff';sctx.strokeStyle='#111';sctx.lineWidth=2;sctx.beginPath();sctx.arc(c[0],c[1],6,0,Math.PI*2);sctx.fill();sctx.stroke();
+ // 四角旋轉把手：只控制畫面平面內的 Roll，避免與 3D 中鍵操作衝突。
+ const corners=[[0,0],[1,0],[1,1],[0,1]];
+ sctx.lineWidth=2.5;
+ corners.forEach(([u,v])=>{const p=projectDisplay(u,v);sctx.fillStyle='rgba(255,255,255,.96)';sctx.strokeStyle='#ffd85c';sctx.beginPath();sctx.arc(p[0],p[1],9,0,Math.PI*2);sctx.fill();sctx.stroke();sctx.beginPath();sctx.arc(p[0],p[1],4,0,Math.PI*2);sctx.stroke();});
+ sctx.restore();
+}
+function drawL(){const u0=P.lu,v0=P.lv,u1=Math.min(.98,u0+P.lx),v1=Math.max(.02,v0-P.ly);sctx.save();sctx.strokeStyle='#ffe56f';sctx.fillStyle='#ffe56f';sctx.lineWidth=4;function pathUV(a,b,c,d){sctx.beginPath();for(let i=0;i<=80;i++){let t=i/80,p=projectDisplay(a+(c-a)*t,b+(d-b)*t);i?sctx.lineTo(p[0],p[1]):sctx.moveTo(p[0],p[1])}sctx.stroke()}pathUV(u0,v0,u1,v0);pathUV(u0,v0,u0,v1);
+ for(let i=0;i<=10;i++){let t=i/10,u=u0+(u1-u0)*t,p=projectDisplay(u,v0),q=projectDisplay(u,Math.max(0,v0-.025*(i%5===0?1.8:1)));sctx.lineWidth=2;sctx.beginPath();sctx.moveTo(p[0],p[1]);sctx.lineTo(q[0],q[1]);sctx.stroke();let v=v0+(v1-v0)*t,p2=projectDisplay(u0,v),q2=projectDisplay(Math.min(1,u0+.025*(i%5===0?1.8:1)),v);sctx.beginPath();sctx.moveTo(p2[0],p2[1]);sctx.lineTo(q2[0],q2[1]);sctx.stroke()}
+ const o=projectDisplay(u0,v0);sctx.beginPath();sctx.arc(o[0],o[1],5,0,Math.PI*2);sctx.fill();sctx.restore()}
+function affineFromTri(s,d){const [x0,y0]=s[0],[x1,y1]=s[1],[x2,y2]=s[2];const [X0,Y0]=d[0],[X1,Y1]=d[1],[X2,Y2]=d[2];const det=x0*(y1-y2)+x1*(y2-y0)+x2*(y0-y1);if(Math.abs(det)<1e-6)return null; const a=(X0*(y1-y2)+X1*(y2-y0)+X2*(y0-y1))/det;const c=(X0*(x2-x1)+X1*(x0-x2)+X2*(x1-x0))/det;const e=(X0*(x1*y2-x2*y1)+X1*(x2*y0-x0*y2)+X2*(x0*y1-x1*y0))/det;const b=(Y0*(y1-y2)+Y1*(y2-y0)+Y2*(y0-y1))/det;const dd=(Y0*(x2-x1)+Y1*(x0-x2)+Y2*(x1-x0))/det;const f=(Y0*(x1*y2-x2*y1)+Y1*(x2*y0-x0*y2)+Y2*(x0*y1-x1*y0))/det;return [a,b,c,dd,e,f]}
+function expandTri(pts,pad){
+  const cx=(pts[0][0]+pts[1][0]+pts[2][0])/3, cy=(pts[0][1]+pts[1][1]+pts[2][1])/3;
+  return pts.map(([x,y])=>{const dx=x-cx,dy=y-cy,len=Math.hypot(dx,dy)||1;return [x+dx/len*pad,y+dy/len*pad]});
+}
+function drawTriFromDisplayCtx(ctx,sPts,dPts){
+  const M=affineFromTri(sPts,dPts); if(!M)return;
+  const clipPts=expandTri(dPts,1.35);
+  ctx.save();
+  ctx.imageSmoothingEnabled=true;
+  ctx.beginPath();ctx.moveTo(...clipPts[0]);ctx.lineTo(...clipPts[1]);ctx.lineTo(...clipPts[2]);ctx.closePath();ctx.clip();
+  ctx.setTransform(...M);ctx.drawImage(cleanSrc,0,0);ctx.restore();
+}
+function drawTriFromDisplay(sPts,dPts){drawTriFromDisplayCtx(dctx,sPts,dPts)}
+function renderRectifiedTo(ctx,canvas,opts={}){
+ const drawBorder=!!opts.drawBorder;
+ const cropOnly=!!opts.cropOnly;
+ const fillBg = opts.fillBg!==false;
+ ctx.setTransform(1,0,0,1,0,0);
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ if(fillBg){ctx.fillStyle='#0b0d11';ctx.fillRect(0,0,canvas.width,canvas.height)}
+ if(!imgReady||!fit)return;
+ let ox,oy,outW,outH;
+ if(cropOnly){
+   outW=canvas.width; outH=canvas.height; ox=0; oy=0;
+ }else{
+   const margin=0.05*Math.min(canvas.width,canvas.height);
+   outW=canvas.width-2*margin; outH=Math.min(canvas.height-2*margin,outW*P.aspect);
+   ox=(canvas.width-outW)/2; oy=(canvas.height-outH)/2;
+ }
+ const nx=34,ny=Math.max(18,Math.round(nx*P.aspect));
+ for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+   const u0=i/nx,u1=(i+1)/nx,v0=j/ny,v1=(j+1)/ny;
+   const s00=projectDisplay(u0,v0),s10=projectDisplay(u1,v0),s01=projectDisplay(u0,v1),s11=projectDisplay(u1,v1);
+   const d00=[ox+u0*outW,oy+v0*outH],d10=[ox+u1*outW,oy+v0*outH],d01=[ox+u0*outW,oy+v1*outH],d11=[ox+u1*outW,oy+v1*outH];
+   drawTriFromDisplayCtx(ctx,[s00,s10,s11],[d00,d10,d11]);
+   drawTriFromDisplayCtx(ctx,[s00,s11,s01],[d00,d11,d01]);
+ }
+ if(drawBorder){ctx.setTransform(1,0,0,1,0,0);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.strokeRect(ox,oy,outW,outH);}
+}
+function renderRectified(){renderRectifiedTo(dctx,dstC,{drawBorder:true,fillBg:true,cropOnly:false})}
+function drawMini(){mctx.clearRect(0,0,mini.width,mini.height);mctx.fillStyle='#0d1015';mctx.fillRect(0,0,mini.width,mini.height);const pts=[];for(let j=0;j<=5;j++){pts[j]=[];for(let i=0;i<=7;i++){let [x,y,z]=model3(i/7,j/5);let X=mini.width/2+x*150+z*45,Y=mini.height/2+y*150-z*35;pts[j][i]=[X,Y]}}mctx.strokeStyle='#72cff7';mctx.lineWidth=1.5;for(let j=0;j<pts.length;j++){mctx.beginPath();pts[j].forEach((p,i)=>i?mctx.lineTo(...p):mctx.moveTo(...p));mctx.stroke()}for(let i=0;i<pts[0].length;i++){mctx.beginPath();pts.forEach((r,j)=>j?mctx.lineTo(...r[i]):mctx.moveTo(...r[i]));mctx.stroke()}mctx.fillStyle='#bcd3df';mctx.font='20px system-ui';mctx.fillText('3D',12,24)}
+function render(){
+  fitCanvas(srcC);fitCanvas(dstC);
+  // 左側操作畫布：原圖 + 輔助疊圖。
+  fit=drawImageContain(sctx,srcC);
+  // 另建同尺寸的乾淨來源，只畫原圖，不畫格線、L尺、控制點。
+  if(cleanSrc.width!==srcC.width||cleanSrc.height!==srcC.height){cleanSrc.width=srcC.width;cleanSrc.height=srcC.height;}
+  cleanCtx.setTransform(1,0,0,1,0,0);
+  cleanCtx.clearRect(0,0,cleanSrc.width,cleanSrc.height);
+  if(imgReady)drawImageContain(cleanCtx,cleanSrc);
+  drawGrid();
+  renderRectified();
+  drawMini();
+  if(!imgReady){
+    sctx.save();sctx.setTransform(1,0,0,1,0,0);
+    sctx.fillStyle='#0b0d11';sctx.fillRect(0,0,srcC.width,srcC.height);
+    sctx.fillStyle='#9aa8b8';sctx.textAlign='center';sctx.textBaseline='middle';
+    sctx.font=Math.max(20,Math.round(srcC.width/55))+'px system-ui';
+    sctx.fillText('請先載入照片',srcC.width/2,srcC.height/2);
+    sctx.restore();
+    dctx.save();dctx.setTransform(1,0,0,1,0,0);
+    dctx.fillStyle='#0b0d11';dctx.fillRect(0,0,dstC.width,dstC.height);
+    dctx.fillStyle='#667483';dctx.textAlign='center';dctx.textBaseline='middle';
+    dctx.font=Math.max(18,Math.round(dstC.width/60))+'px system-ui';
+    dctx.fillText('載入照片後顯示展平結果',dstC.width/2,dstC.height/2);
+    dctx.restore();
+  }
+}
+window.addEventListener('resize',render);
+img.onload=()=>{imgReady=true;requestAnimationFrame(render)};
+requestAnimationFrame(render);
+let currentFileName='';
+$('#file').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  currentFileName=f.name||'';
+  const r=new FileReader();
+  r.onload=()=>{
+    imgReady=false;
+    img.onload=()=>{imgReady=true;render();showProjectStatus('已載入：'+currentFileName,1800)};
+    img.src=r.result;
+  };
+  r.readAsDataURL(f);
+});
+
+
+const PROJECT_VERSION=1;
+function showProjectStatus(msg,ms=2200){
+  const el=$('#projectStatus'); if(!el)return;
+  el.textContent=msg; el.style.display='block';
+  clearTimeout(showProjectStatus._t);
+  if(ms>0)showProjectStatus._t=setTimeout(()=>el.style.display='none',ms);
+}
+function safeProjectName(name){
+  const base=(name||'fingerprint_project').replace(/\.[^.]+$/,'').replace(/[\\/:*?\"<>|]+/g,'_').trim();
+  return (base||'fingerprint_project')+'.fprj';
+}
+function saveProjectFile(){
+  if(!imgReady){showProjectStatus('請先載入圖片再另存專案',2800);return;}
+  try{
+    const project={
+      app:'Fingerprint Surface Rectifier',
+      version:PROJECT_VERSION,
+      savedAt:new Date().toISOString(),
+      originalFileName:currentFileName||'',
+      imageDataUrl:img.src,
+      params:JSON.parse(JSON.stringify(P))
+    };
+    const blob=new Blob([JSON.stringify(project)],{type:'application/json'});
+    const a=document.createElement('a');
+    const url=URL.createObjectURL(blob);
+    a.href=url;
+    a.download=safeProjectName(currentFileName||'fingerprint_project');
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    showProjectStatus('專案檔已下載',2200);
+  }catch(err){console.error(err);showProjectStatus('另存專案失敗：'+(err.message||err),4200)}
+}
+function openProjectObject(project){
+  if(!project || project.app!=='Fingerprint Surface Rectifier')throw new Error('不是有效的曲面指紋展平專案');
+  if(!project.imageDataUrl)throw new Error('專案內沒有圖片資料');
+  Object.assign(P,defaults,project.params||{});
+  syncUI();
+  currentFileName=project.originalFileName||'';
+  imgReady=false;
+  img.onload=()=>{imgReady=true;render();showProjectStatus('專案已開啟'+(currentFileName?'：'+currentFileName:''),3000)};
+  img.src=project.imageDataUrl;
+}
+$('#saveProject').onclick=saveProjectFile;
+$('#projectFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{openProjectObject(JSON.parse(r.result));}
+    catch(err){console.error(err);showProjectStatus('開啟專案失敗：'+(err.message||err),4200)}
+    e.target.value='';
+  };
+  r.onerror=()=>showProjectStatus('讀取專案檔失敗',3500);
+  r.readAsText(f,'utf-8');
+});
+
+$('#reset').onclick=()=>{Object.assign(P,defaults);syncUI();render();showProjectStatus('參數已重設（圖片保留）',2200)};
+$('#flat').onclick=()=>{P.yaw=P.pitch=P.roll=P.bendX=P.bendY=P.bendD1=P.bendD2=0;P.persp=.35;syncUI();render()};
+let drag=null;
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function canvasPoint(e){const r=srcC.getBoundingClientRect();return [(e.clientX-r.left)*srcC.width/r.width,(e.clientY-r.top)*srcC.height/r.height]}
+function angleDeg(x,y,cx,cy){return Math.atan2(y-cy,x-cx)*180/Math.PI}
+function nearestCorner(e){
+  if(!fit)return null;
+  const [x,y]=canvasPoint(e), corners=[[0,0],[1,0],[1,1],[0,1]];
+  const hit=18*(srcC.width/srcC.getBoundingClientRect().width);
+  let best=null;
+  corners.forEach((uv,i)=>{const p=projectDisplay(...uv),d=Math.hypot(x-p[0],y-p[1]);if(d<=hit&&(!best||d<best.d))best={i,d,p,uv}});
+  return best;
+}
+srcC.addEventListener('pointerdown',e=>{
+  // 左鍵空白：平移；左鍵四角：平面內旋轉；中鍵：3D 姿態。
+  if(e.button!==0 && e.button!==1)return;
+  e.preventDefault();
+  if(e.button===0){
+    const corner=nearestCorner(e);
+    if(corner){
+      const [x,y]=canvasPoint(e), c=projectDisplay(.5,.5);
+      drag={mode:'cornerRoll',pointerId:e.pointerId,startAngle:angleDeg(x,y,c[0],c[1]),roll:P.roll};
+    }else{
+      drag={mode:'move',pointerId:e.pointerId,x:e.clientX,y:e.clientY,cx:P.cx,cy:P.cy};
+    }
+  }else{
+    drag={mode:e.shiftKey?'roll':'orbit',pointerId:e.pointerId,x:e.clientX,y:e.clientY,yaw:P.yaw,pitch:P.pitch,roll:P.roll};
+  }
+  srcC.setPointerCapture(e.pointerId);
+});
+srcC.addEventListener('pointermove',e=>{
+  if(!drag||!fit||e.pointerId!==drag.pointerId)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(drag.mode==='move'){
+    P.cx=clamp(drag.cx+dx/(fit.w/(devicePixelRatio||1)),-.3,1.3);
+    P.cy=clamp(drag.cy+dy/(fit.h/(devicePixelRatio||1)),-.3,1.3);
+  }else if(drag.mode==='orbit'){
+    // 0.28°/px：大幅拖曳仍可控，也保留滑桿做最後微調。
+    P.yaw=clamp(drag.yaw+dx*.28,-70,70);
+    P.pitch=clamp(drag.pitch-dy*.28,-70,70);
+    syncUI();
+  }else if(drag.mode==='roll'){
+    // Roll 取水平位移為主，垂直位移少量參與，避免需要很長的滑鼠行程。
+    P.roll=clamp(drag.roll+(dx-dy*.35)*.28,-180,180);
+    syncUI();
+  }else if(drag.mode==='cornerRoll'){
+    const [x,y]=canvasPoint(e), c=projectDisplay(.5,.5);
+    let delta=angleDeg(x,y,c[0],c[1])-drag.startAngle;
+    while(delta>180)delta-=360; while(delta<-180)delta+=360;
+    P.roll=clamp(drag.roll+delta,-180,180);
+    syncUI();
+  }
+  render();
+});
+function endDrag(e){
+  if(!drag)return;
+  if(e && e.pointerId!==drag.pointerId)return;
+  try{srcC.releasePointerCapture(drag.pointerId)}catch(_){ }
+  drag=null;
+}
+srcC.addEventListener('pointerup',endDrag);
+srcC.addEventListener('pointercancel',endDrag);
+srcC.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
+srcC.addEventListener('contextmenu',e=>e.preventDefault());
+srcC.addEventListener('wheel',e=>{e.preventDefault();P.scale=clamp(P.scale+(e.deltaY<0?20:-20),180,2500);syncUI();render()},{passive:false});
+$('#export').onclick=()=>{const out=document.createElement('canvas');const exportW=1600;const exportH=Math.max(1,Math.round(exportW*P.aspect));out.width=exportW;out.height=exportH;const octx=out.getContext('2d');renderRectifiedTo(octx,out,{drawBorder:false,fillBg:false,cropOnly:true});const a=document.createElement('a');a.download='fingerprint_rectified_clean_no_seams.png';a.href=out.toDataURL('image/png');a.click()};
+syncUI();
+</script>
+</body></html>
