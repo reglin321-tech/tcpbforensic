@@ -113,7 +113,28 @@
         background: rgba(255,255,255,.25);
         border-radius: 10px;
     }
+    /* ===== 最近使用的分頁特殊顏色 ===== */
+    #navbar a.recent-tab {
+        background-color: #385066; /* 稍微亮一點的藍灰色背景 */
+        color: #8ab4f8; /* 淺藍色文字 */
+        border: 1px dashed rgba(138, 180, 248, 0.4); /* 加上淡淡的虛線邊框增加辨識度 */
+    }
+
+    /* 滑鼠移入最近使用的分頁 */
+    #navbar a.recent-tab:hover {
+        background-color: #4b6a85;
+        color: #ffffff;
+    }
+
+    /* 當「最近使用的分頁」是被點選的狀態 (active) 時 */
+    #navbar a.recent-tab.active {
+        background: #8ab4f8; /* 變成亮藍色背景 */
+        color: #1a252f;      /* 深色文字 */
+        border: none;        /* 移除虛線邊框 */
+        font-weight: 700;
+    }
 </style>
+
 </head>
 
 
@@ -191,16 +212,82 @@
     src="duty/equipment.html">
 </iframe>
 <script>
+    const navbar = document.getElementById("navbar");
+    const titleElement = document.querySelector(".navbar-title");
     const navLinks = document.querySelectorAll("#navbar a");
 
-    navLinks.forEach(link => {
-        link.addEventListener("click", function () {
+    // 建立一個分隔線元素，用來區分「最近使用」與「全部功能」
+    const separator = document.createElement("div");
+    separator.style.width = "1px";
+    separator.style.height = "24px";
+    separator.style.backgroundColor = "rgba(255,255,255,0.25)";
+    separator.style.margin = "0 8px";
+    navbar.insertBefore(separator, titleElement.nextSibling);
 
-            navLinks.forEach(item => {
-                item.classList.remove("active");
+    // 用陣列來記錄最近使用的功能標籤 (最多 3 個)
+    let recentTabs = [];
+
+    // 負責更新「最近使用」區塊的函數
+    function updateRecentTabs(clickedLink) {
+        const originalHref = clickedLink.getAttribute("href");
+        const originalLink = Array.from(navLinks).find(link => link.getAttribute("href") === originalHref);
+
+        // 1. 移除陣列中已存在的同名項目 (避免重複)
+        recentTabs = recentTabs.filter(tab => tab.getAttribute("href") !== originalHref);
+
+        // 2. 將最新點擊的加入陣列開頭
+        recentTabs.unshift(originalLink);
+
+        // 3. 確保最多只有 3 個
+        if (recentTabs.length > 3) {
+            recentTabs.pop();
+        }
+
+        // 4. 清除目前標題右側到分隔線之間的所有「複製按鈕」
+        let nextEl = titleElement.nextSibling;
+        while (nextEl && nextEl !== separator) {
+            let toRemove = nextEl;
+            nextEl = nextEl.nextSibling;
+            navbar.removeChild(toRemove);
+        }
+
+        // 5. 將陣列中的按鈕複製並插入到標題右側
+        [...recentTabs].reverse().forEach(tab => {
+            const clone = tab.cloneNode(true);
+            clone.classList.remove("active"); // 複製時先移除 active
+
+            // 🔥 新增這一行：為複製出來的按鈕加上特殊顏色的 class
+            clone.classList.add("recent-tab");
+
+            clone.addEventListener("click", function(e) {
+                e.preventDefault();
+
+                document.getElementById("content-frame").src = this.getAttribute("href");
+
+                navLinks.forEach(item => item.classList.remove("active"));
+                originalLink.classList.add("active");
+
+                updateRecentTabs(this);
             });
 
+            navbar.insertBefore(clone, titleElement.nextSibling);
+        });
+
+        // 確保目前的 clone 按鈕有正確的 active 狀態
+        let currentClones = document.querySelectorAll("#navbar a.recent-tab");
+        currentClones.forEach(c => {
+            if (c.getAttribute("href") === originalHref) {
+                c.classList.add("active");
+            }
+        });
+    }
+
+    // 為原始列表綁定點擊事件
+    navLinks.forEach(link => {
+        link.addEventListener("click", function (e) {
+            navLinks.forEach(item => item.classList.remove("active"));
             this.classList.add("active");
+            updateRecentTabs(this);
         });
     });
 </script>
