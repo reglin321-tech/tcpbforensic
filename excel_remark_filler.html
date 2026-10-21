@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>初鑑結果備註自動填寫</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111a2b;
+      --panel2: #162238;
+      --line: #2b3a55;
+      --text: #eef4ff;
+      --muted: #9fb0ca;
+      --accent: #6ea8fe;
+      --accent2: #8bc6ff;
+      --ok: #5dd39e;
+      --warn: #ffcc66;
+      --danger: #ff7a90;
+      --shadow: 0 16px 40px rgba(0,0,0,.22);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
+      background: radial-gradient(circle at top left, #17233c 0, var(--bg) 42%, #080d17 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 32px 22px 44px; }
+    h1 { margin: 0; font-size: 30px; letter-spacing: .04em; }
+    .subtitle { margin-top: 9px; color: var(--muted); line-height: 1.7; }
+    .grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; margin-top: 22px; }
+    .card {
+      background: rgba(17,26,43,.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-head { padding: 17px 20px 13px; border-bottom: 1px solid var(--line); font-weight: 700; }
+    .card-body { padding: 18px 20px; }
+    .drop {
+      min-height: 215px;
+      border: 2px dashed #425777;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(110,168,254,.07), rgba(110,168,254,.02));
+      transition: .18s ease;
+      text-align: center;
+      padding: 28px;
+    }
+    .drop:hover, .drop.drag { border-color: var(--accent); background: rgba(110,168,254,.11); transform: translateY(-1px); }
+    .drop .icon { font-size: 44px; line-height: 1; }
+    .drop strong { font-size: 18px; }
+    .drop small { color: var(--muted); }
+    input[type=file] { display: none; }
+    .rule { display: grid; grid-template-columns: 1fr 28px 1.25fr; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(43,58,85,.72); }
+    .rule:last-child { border-bottom: 0; }
+    .rule .arrow { color: var(--muted); text-align: center; }
+    .tag { display: inline-flex; align-items: center; min-height: 30px; padding: 5px 9px; border-radius: 9px; background: #0b1423; border: 1px solid #293c5a; width: fit-content; }
+    .tag.out { background: rgba(93,211,158,.08); border-color: rgba(93,211,158,.35); color: #baf2d8; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+    button {
+      border: 0; border-radius: 11px; padding: 11px 16px; font-size: 15px; font-weight: 700; cursor: pointer;
+      background: #22314a; color: var(--text); border: 1px solid #354a6b; transition: .15s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+    button.primary { background: linear-gradient(135deg, #4f8df7, #6ea8fe); color: #06101f; border-color: #8cb9ff; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    .checkline { display: inline-flex; gap: 9px; align-items: center; color: var(--muted); font-size: 14px; margin-left: auto; }
+    .checkline input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .status { margin-top: 16px; padding: 12px 14px; border-radius: 11px; background: #0b1423; border: 1px solid #283a57; color: var(--muted); line-height: 1.55; }
+    .status.ok { color: #c5f4de; border-color: rgba(93,211,158,.4); background: rgba(93,211,158,.07); }
+    .status.err { color: #ffd0d8; border-color: rgba(255,122,144,.45); background: rgba(255,122,144,.07); }
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+    .metric { background: #0d1626; border: 1px solid var(--line); border-radius: 13px; padding: 13px 14px; min-height: 82px; }
+    .metric .n { font-size: 25px; font-weight: 800; margin-top: 4px; }
+    .metric .k { font-size: 12px; color: var(--muted); }
+    .section { margin-top: 18px; }
+    .section-title { font-weight: 700; margin-bottom: 9px; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 13px; max-height: 430px; }
+    table { width: 100%; border-collapse: collapse; min-width: 880px; font-size: 14px; }
+    th, td { padding: 10px 11px; border-bottom: 1px solid #263650; text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #18253a; z-index: 1; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    td.muted { color: var(--muted); }
+    .pill { display: inline-block; padding: 3px 7px; border-radius: 999px; font-size: 12px; background: #17243a; border: 1px solid #344967; }
+    .pill.fill { color: #c7e4ff; }
+    .pill.archive { color: #dbd3ff; }
+    .pill.nosend { color: #ffdba0; }
+    .fileline { margin-top: 11px; color: var(--muted); font-size: 14px; word-break: break-all; }
+    .field { margin-top: 16px; }
+    .field label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 700; }
+    .field .hint { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.55; }
+    .text-input {
+      width: 100%; min-height: 43px; border-radius: 11px; border: 1px solid #354a6b;
+      background: #0b1423; color: var(--text); padding: 10px 12px; font-size: 15px;
+      outline: none; transition: .15s ease;
+    }
+    .text-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(110,168,254,.12); }
+    .hidden { display: none !important; }
+    .foot { margin-top: 18px; color: #7f91ad; font-size: 12px; line-height: 1.7; }
+    @media (max-width: 850px) {
+      .grid { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .checkline { width: 100%; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>初鑑結果備註自動填寫</h1>
+    <div class="subtitle">上傳 Excel 後，自動依「初鑑結果」及「是否送鑑」填入備註；匯出時只修改指定儲存格內容，不重新建立工作表，因此原字型、欄寬、列高、框線與合併儲存格會保留。</div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">1. 上傳待處理 Excel</div>
+        <div class="card-body">
+          <label id="drop" class="drop" for="fileInput">
+            <div class="icon">⇧</div>
+            <strong>拖曳 .xlsx 到這裡，或點擊選擇檔案</strong>
+            <small>會自動尋找「初鑑結果／是否送鑑／備註」欄位，不限制欄位固定在第幾欄。</small>
+          </label>
+          <input id="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          <div id="fileLine" class="fileline">尚未選擇檔案</div>
+
+          <div class="field">
+            <label for="caseText">標題第二行（案由／補充文字）</label>
+            <input id="caseText" class="text-input" type="text" placeholder="例如：0871-115121XXX4-XXX遭詐欺證物採證案" autocomplete="off" />
+            <div class="hint">有填寫時，會放在「案件編號：……指(掌)紋初鑑結果彙整表」的下一行；未填則保留原 Excel 內容。</div>
+          </div>
+
+          <div class="toolbar">
+            <button id="reanalyzeBtn" disabled>重新分析</button>
+            <button id="downloadBtn" class="primary" disabled>下載已填寫 Excel</button>
+            <label class="checkline" title="關閉後，若備註已有內容也會依規則覆寫">
+              <input id="blankOnly" type="checkbox" checked />
+              只填空白備註（建議）
+            </label>
+          </div>
+          <div id="status" class="status">正在載入 Excel 處理元件…</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">填寫規則</div>
+        <div class="card-body">
+          <div class="rule"><span class="tag">可資比對</span><span class="arrow">→</span><span class="tag out">存入指紋電腦系統</span></div>
+          <div class="rule"><span class="tag">比中排除對象</span><span class="arrow">→</span><span class="tag out">結案歸檔</span></div>
+          <div class="rule"><span class="tag">無法比對</span><span class="arrow">→</span><span class="tag out">結案歸檔</span></div>
+          <div class="rule"><span class="tag">比中＋未勾送鑑</span><span class="arrow">→</span><span class="tag out">不予送鑑</span></div>
+          <div class="rule"><span class="tag">比中＋已勾送鑑</span><span class="arrow">→</span><span class="tag">不處理</span></div>
+          <div class="foot">「已勾送鑑」會辨識範例中的 <b>ü</b>，並相容 ✓、✔、☑、√ 等常見勾選符號。其他初鑑結果不會被改動。</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultCard" class="card hidden" style="margin-top:18px;">
+      <div class="card-head">2. 處理預覽</div>
+      <div class="card-body">
+        <div id="sheetInfo" class="fileline" style="margin-top:0"></div>
+        <div class="summary">
+          <div class="metric"><div class="k">預計填入</div><div id="mChanges" class="n">0</div></div>
+          <div class="metric"><div class="k">存入指紋系統</div><div id="mStore" class="n">0</div></div>
+          <div class="metric"><div class="k">結案歸檔</div><div id="mArchive" class="n">0</div></div>
+          <div class="metric"><div class="k">不予送鑑</div><div id="mNoSend" class="n">0</div></div>
+        </div>
+        <div class="section">
+          <div class="section-title">將被修改的資料</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>工作表</th><th>Excel列</th><th>編號</th><th>初鑑結果</th><th>是否送鑑</th><th>原備註</th><th>新備註</th></tr>
+              </thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+          <div id="previewFoot" class="foot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ExcelJS 只負責讀取與預覽；實際匯出採 OOXML 原檔局部修改，避免重新序列化後改變字型/樣式。
+    // 離線使用時，可把 exceljs.min.js 與 jszip.min.js 放在此 HTML 同一資料夾。
+    const EXCELJS_SOURCES = [
+      './exceljs.min.js',
+      'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+      'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'
+    ];
+    const JSZIP_SOURCES = [
+      './jszip.min.js',
+      'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+      'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+    ];
+
+    const els = {
+      drop: document.getElementById('drop'),
+      fileInput: document.getElementById('fileInput'),
+      fileLine: document.getElementById('fileLine'),
+      status: document.getElementById('status'),
+      blankOnly: document.getElementById('blankOnly'),
+      caseText: document.getElementById('caseText'),
+      reanalyzeBtn: document.getElementById('reanalyzeBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      resultCard: document.getElementById('resultCard'),
+      sheetInfo: document.getElementById('sheetInfo'),
+      previewBody: document.getElementById('previewBody'),
+      previewFoot: document.getElementById('previewFoot'),
+      mChanges: document.getElementById('mChanges'),
+      mStore: document.getElementById('mStore'),
+      mArchive: document.getElementById('mArchive'),
+      mNoSend: document.getElementById('mNoSend')
+    };
+
+    let excelReady = false;
+    let zipReady = false;
+    let originalFile = null;
+    let originalBuffer = null;
+    let analysis = null;
+
+    function setStatus(msg, type='') {
+      els.status.className = 'status' + (type ? ' ' + type : '');
+      els.status.textContent = msg;
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    async function ensureLibrary(globalName, sources) {
+      if (window[globalName]) return true;
+      for (const src of sources) {
+        try {
+          await loadScript(src);
+          if (window[globalName]) return true;
+        } catch (_) {}
+      }
+      return false;
+    }
+
+    async function ensureExcelJS() {
+      return ensureLibrary('ExcelJS', EXCELJS_SOURCES);
+    }
+
+    async function ensureJSZip() {
+      return ensureLibrary('JSZip', JSZIP_SOURCES);
+    }
+
+    function norm(v) {
+      return String(v ?? '').replace(/[\r\n\t ]+/g, '').trim();
+    }
+
+    function textOf(cell) {
+      if (!cell) return '';
+      try { return String(cell.text ?? ''); } catch (_) { return String(cell.value ?? ''); }
+    }
+
+    function isChecked(v) {
+      const s = norm(v).toLowerCase();
+      if (!s) return false;
+      const marks = new Set(['ü','✓','✔','☑','√','v','y','yes','true','1','是']);
+      return marks.has(s);
+    }
+
+    function decide(initialResult, sendValue) {
+      const r = norm(initialResult);
+      if (r === '可資比對') return { note: '存入指紋電腦系統', kind: 'store' };
+      if (r === '比中排除對象' || r === '無法比對') return { note: '結案歸檔', kind: 'archive' };
+      if (r === '比中') {
+        if (isChecked(sendValue)) return { note: null, kind: 'sendChecked' };
+        return { note: '不予送鑑', kind: 'noSend' };
+      }
+      return { note: null, kind: 'unmatched' };
+    }
+
+    function findHeader(ws) {
+      const maxRows = Math.min(Math.max(ws.rowCount, 1), 30);
+      for (let r = 1; r <= maxRows; r++) {
+        const row = ws.getRow(r);
+        const map = {};
+        const maxCols = Math.max(row.cellCount, ws.columnCount, 12);
+        for (let c = 1; c <= maxCols; c++) {
+          const t = norm(textOf(row.getCell(c)));
+          if (t === '初鑑結果') map.initial = c;
+          else if (t === '備註') map.note = c;
+          else if (t.includes('是否送鑑')) map.send = c;
+          else if (t === '編號') map.number = c;
+        }
+        if (map.initial && map.note && map.send) return { row: r, ...map };
+      }
+      return null;
+    }
+
+    function findTitleCell(ws) {
+      const maxRows = Math.min(Math.max(ws.rowCount, 1), 12);
+      const maxCols = Math.min(Math.max(ws.columnCount, 1), 12);
+      for (let r = 1; r <= maxRows; r++) {
+        const row = ws.getRow(r);
+        for (let c = 1; c <= maxCols; c++) {
+          const cell = row.getCell(c);
+          const t = String(textOf(cell) || '');
+          if (t.includes('案件編號') && t.includes('初鑑結果彙整表')) {
+            return { cell, row, rowNumber: r, colNumber: c, originalText: t };
+          }
+        }
+      }
+      return null;
+    }
+
+    function colLetter(n) {
+      let s = '';
+      while (n > 0) {
+        n--;
+        s = String.fromCharCode(65 + (n % 26)) + s;
+        n = Math.floor(n / 26);
+      }
+      return s;
+    }
+
+    function xmlParse(text) {
+      const doc = new DOMParser().parseFromString(text, 'application/xml');
+      const err = doc.getElementsByTagName('parsererror')[0];
+      if (err) throw new Error('Excel XML 解析失敗');
+      return doc;
+    }
+
+    function xmlString(doc) {
+      const body = new XMLSerializer().serializeToString(doc);
+      return body.startsWith('<?xml') ? body : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + body;
+    }
+
+    function byLocal(parent, name) {
+      return Array.from(parent.getElementsByTagName('*')).filter(x => x.localName === name);
+    }
+
+    function directChild(parent, name) {
+      return Array.from(parent.childNodes).find(x => x.nodeType === 1 && x.localName === name) || null;
+    }
+
+    function setInlineString(doc, cell, value) {
+      // 關鍵：只改 cell 的內容，保留原本 s=樣式索引、列欄寬、合併儲存格、字型等所有格式。
+      Array.from(cell.childNodes).forEach(n => {
+        if (n.nodeType === 1 && ['v','is','f'].includes(n.localName)) cell.removeChild(n);
+      });
+      cell.setAttribute('t', 'inlineStr');
+      const ns = cell.namespaceURI || 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+      const is = doc.createElementNS(ns, 'is');
+      const t = doc.createElementNS(ns, 't');
+      t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+      t.textContent = String(value ?? '');
+      is.appendChild(t);
+      cell.appendChild(is);
+    }
+
+    function findCell(doc, ref) {
+      return byLocal(doc.documentElement, 'c').find(c => c.getAttribute('r') === ref) || null;
+    }
+
+    function findRow(doc, rowNumber) {
+      return byLocal(doc.documentElement, 'row').find(r => Number(r.getAttribute('r')) === Number(rowNumber)) || null;
+    }
+
+    function ensureCell(doc, rowNumber, colNumber) {
+      const ref = colLetter(colNumber) + rowNumber;
+      let cell = findCell(doc, ref);
+      if (cell) return cell;
+      const row = findRow(doc, rowNumber);
+      if (!row) throw new Error(`找不到 Excel 第 ${rowNumber} 列`);
+      const ns = row.namespaceURI || 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+      cell = doc.createElementNS(ns, 'c');
+      cell.setAttribute('r', ref);
+      // 若是新建的備註格，優先沿用同欄上一格的樣式；避免出現格式不同。
+      const sameColPrev = findCell(doc, colLetter(colNumber) + (rowNumber - 1));
+      if (sameColPrev?.hasAttribute('s')) cell.setAttribute('s', sameColPrev.getAttribute('s'));
+      const cells = Array.from(row.childNodes).filter(n => n.nodeType === 1 && n.localName === 'c');
+      const targetCol = colNumber;
+      const cellCol = c => {
+        const m = (c.getAttribute('r') || '').match(/^([A-Z]+)/);
+        if (!m) return 99999;
+        let n = 0;
+        for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64);
+        return n;
+      };
+      const before = cells.find(c => cellCol(c) > targetCol);
+      if (before) row.insertBefore(cell, before); else row.appendChild(cell);
+      return cell;
+    }
+
+    async function getSheetXmlMap(zip) {
+      const wbDoc = xmlParse(await zip.file('xl/workbook.xml').async('text'));
+      const relDoc = xmlParse(await zip.file('xl/_rels/workbook.xml.rels').async('text'));
+      const rels = new Map();
+      byLocal(relDoc.documentElement, 'Relationship').forEach(r => rels.set(r.getAttribute('Id'), r.getAttribute('Target')));
+      const map = new Map();
+      byLocal(wbDoc.documentElement, 'sheet').forEach(s => {
+        const name = s.getAttribute('name');
+        const rid = s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || s.getAttribute('r:id');
+        let target = rels.get(rid);
+        if (!target) return;
+        target = target.replace(/^\//, '');
+        if (!target.startsWith('xl/')) target = 'xl/' + target.replace(/^\.\//, '');
+        map.set(name, target);
+      });
+      return map;
+    }
+
+    function firstLineOfTitle(titleText) {
+      return String(titleText || '').replace(/\r\n/g, '\n').split('\n')[0].trimEnd();
+    }
+
+    async function patchOriginalXlsx() {
+      if (!window.JSZip) throw new Error('JSZip 尚未載入');
+      const zip = await JSZip.loadAsync(originalBuffer.slice(0));
+      const sheetMap = await getSheetXmlMap(zip);
+      const changesBySheet = new Map();
+      for (const c of analysis.changes) {
+        if (!changesBySheet.has(c.sheet)) changesBySheet.set(c.sheet, []);
+        changesBySheet.get(c.sheet).push(c);
+      }
+      const caseText = els.caseText.value.trim();
+      let titleUpdated = 0;
+
+      // 用 ExcelJS 只讀取得標題實際位置與原文字；不把 ExcelJS 產出的 workbook 寫回檔案。
+      const readWb = await parseWorkbook(originalBuffer);
+
+      for (const [sheetName, xmlPath] of sheetMap) {
+        const f = zip.file(xmlPath);
+        if (!f) continue;
+        const doc = xmlParse(await f.async('text'));
+
+        for (const c of (changesBySheet.get(sheetName) || [])) {
+          const cell = ensureCell(doc, c.row, c.noteCol);
+          setInlineString(doc, cell, c.newNote);
+        }
+
+        if (caseText) {
+          const ws = readWb.getWorksheet(sheetName);
+          const found = ws ? findTitleCell(ws) : null;
+          if (found) {
+            const ref = colLetter(found.colNumber) + found.rowNumber;
+            const titleCell = findCell(doc, ref);
+            if (titleCell) {
+              setInlineString(doc, titleCell, firstLineOfTitle(found.originalText) + '\n' + caseText);
+              // 只在來源列太矮時補足兩行高度；不碰字型、粗斜體、對齊、框線。
+              const titleRow = findRow(doc, found.rowNumber);
+              if (titleRow) {
+                const h = Number(titleRow.getAttribute('ht') || 0);
+                if (!h || h < 55.15) {
+                  titleRow.setAttribute('ht', '55.15');
+                  titleRow.setAttribute('customHeight', '1');
+                }
+              }
+              titleUpdated++;
+            }
+          }
+        }
+
+        zip.file(xmlPath, xmlString(doc));
+      }
+
+      const out = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      return { blob: out, titleUpdated };
+    }
+
+    async function parseWorkbook(buffer) {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(buffer.slice(0));
+      return wb;
+    }
+
+    async function analyze() {
+      if (!excelReady || !originalBuffer) return;
+      setStatus('正在讀取 Excel 並分析資料…');
+      els.downloadBtn.disabled = true;
+      try {
+        const wb = await parseWorkbook(originalBuffer);
+        const changes = [];
+        const detected = [];
+        const stats = { changes: 0, store: 0, archive: 0, noSend: 0, sendChecked: 0, existingSkipped: 0, unmatched: 0 };
+        const blankOnly = els.blankOnly.checked;
+
+        wb.eachSheet((ws) => {
+          const h = findHeader(ws);
+          if (!h) return;
+          detected.push({ name: ws.name, headerRow: h.row });
+          const lastRow = Math.max(ws.rowCount, h.row + 1);
+          for (let r = h.row + 1; r <= lastRow; r++) {
+            const row = ws.getRow(r);
+            const initial = textOf(row.getCell(h.initial));
+            if (!norm(initial)) continue;
+            const send = textOf(row.getCell(h.send));
+            const oldNote = textOf(row.getCell(h.note));
+            const number = h.number ? textOf(row.getCell(h.number)) : '';
+            const d = decide(initial, send);
+
+            if (d.kind === 'sendChecked') { stats.sendChecked++; continue; }
+            if (d.kind === 'unmatched') { stats.unmatched++; continue; }
+            if (!d.note) continue;
+            if (blankOnly && norm(oldNote)) { stats.existingSkipped++; continue; }
+            if (oldNote === d.note) continue;
+
+            changes.push({ sheet: ws.name, row: r, number, initial, send, oldNote, newNote: d.note, kind: d.kind, noteCol: h.note });
+            stats.changes++;
+            stats[d.kind]++;
+          }
+        });
+
+        if (!detected.length) throw new Error('找不到同時包含「初鑑結果」、「是否送鑑」、「備註」的欄位標題。');
+
+        analysis = { detected, changes, stats, blankOnly };
+        renderAnalysis();
+        els.downloadBtn.disabled = false;
+        setStatus(`分析完成：找到 ${detected.length} 個符合格式的工作表，預計填入 ${stats.changes} 格備註。`, 'ok');
+      } catch (err) {
+        console.error(err);
+        analysis = null;
+        els.resultCard.classList.add('hidden');
+        setStatus('讀取失敗：' + (err?.message || err), 'err');
+      }
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    }
+
+    function kindPill(c) {
+      const cls = c.kind === 'store' ? 'fill' : c.kind === 'archive' ? 'archive' : 'nosend';
+      return `<span class="pill ${cls}">${escapeHtml(c.newNote)}</span>`;
+    }
+
+    function renderAnalysis() {
+      if (!analysis) return;
+      els.resultCard.classList.remove('hidden');
+      const s = analysis.stats;
+      els.mChanges.textContent = s.changes;
+      els.mStore.textContent = s.store;
+      els.mArchive.textContent = s.archive;
+      els.mNoSend.textContent = s.noSend;
+      els.sheetInfo.textContent = '偵測到：' + analysis.detected.map(x => `${x.name}（標題列第 ${x.headerRow} 列）`).join('、');
+
+      const limit = 300;
+      const rows = analysis.changes.slice(0, limit).map(c => `
+        <tr>
+          <td>${escapeHtml(c.sheet)}</td>
+          <td>${c.row}</td>
+          <td>${escapeHtml(c.number || '')}</td>
+          <td>${escapeHtml(c.initial)}</td>
+          <td>${escapeHtml(c.send || '空白')}</td>
+          <td class="muted">${escapeHtml(c.oldNote || '空白')}</td>
+          <td>${kindPill(c)}</td>
+        </tr>`).join('');
+      els.previewBody.innerHTML = rows || '<tr><td colspan="7" class="muted">目前沒有需要修改的資料。</td></tr>';
+
+      const more = analysis.changes.length > limit ? ` 預覽僅顯示前 ${limit} 筆。` : '';
+      const skips = [];
+      if (s.sendChecked) skips.push(`比中且已勾送鑑 ${s.sendChecked} 筆不處理`);
+      if (s.existingSkipped) skips.push(`既有備註 ${s.existingSkipped} 筆因「只填空白備註」而保留`);
+      if (s.unmatched) skips.push(`其他初鑑結果 ${s.unmatched} 筆不處理`);
+      els.previewFoot.textContent = (skips.length ? skips.join('；') + '。' : '') + more;
+    }
+
+    async function downloadResult() {
+      if (!analysis || !originalBuffer || !originalFile) return;
+      if (!zipReady) {
+        setStatus('匯出元件尚未就緒，請稍後再試。', 'err');
+        return;
+      }
+      els.downloadBtn.disabled = true;
+      setStatus('正在以原始 Excel 格式產生新檔…');
+      try {
+        const { blob, titleUpdated } = await patchOriginalXlsx();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const base = originalFile.name.replace(/\.xlsx$/i, '');
+        a.href = url;
+        a.download = `${base}_已填備註.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        const caseText = els.caseText.value.trim();
+        const titleMsg = caseText ? `；標題第二行已更新 ${titleUpdated} 個工作表` : '';
+        setStatus(`完成：已依規則填入 ${analysis.stats.changes} 格備註${titleMsg}。匯出採原檔局部修改，原字型與格式不會被重新套用。`, 'ok');
+      } catch (err) {
+        console.error(err);
+        setStatus('匯出失敗：' + (err?.message || err), 'err');
+      } finally {
+        els.downloadBtn.disabled = false;
+      }
+    }
+
+    async function acceptFile(file) {
+      if (!file) return;
+      if (!/\.xlsx$/i.test(file.name)) {
+        setStatus('請選擇 .xlsx 檔案。', 'err');
+        return;
+      }
+      originalFile = file;
+      els.fileLine.textContent = `已選擇：${file.name}（${(file.size / 1024).toFixed(1)} KB）`;
+      originalBuffer = await file.arrayBuffer();
+      els.reanalyzeBtn.disabled = false;
+      await analyze();
+    }
+
+    els.fileInput.addEventListener('change', e => acceptFile(e.target.files?.[0]));
+    els.reanalyzeBtn.addEventListener('click', analyze);
+    els.downloadBtn.addEventListener('click', downloadResult);
+    els.blankOnly.addEventListener('change', () => { if (originalBuffer) analyze(); });
+
+    ['dragenter','dragover'].forEach(evt => els.drop.addEventListener(evt, e => { e.preventDefault(); els.drop.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(evt => els.drop.addEventListener(evt, e => { e.preventDefault(); els.drop.classList.remove('drag'); }));
+    els.drop.addEventListener('drop', e => acceptFile(e.dataTransfer.files?.[0]));
+
+    (async () => {
+      [excelReady, zipReady] = await Promise.all([ensureExcelJS(), ensureJSZip()]);
+      if (excelReady && zipReady) {
+        setStatus('Excel 處理元件已就緒，請上傳檔案。', 'ok');
+      } else {
+        const missing = [];
+        if (!excelReady) missing.push('exceljs.min.js');
+        if (!zipReady) missing.push('jszip.min.js');
+        setStatus(`Excel 處理元件載入失敗：${missing.join('、')}。若此電腦無法連網，請把這些檔案放在 HTML 同一資料夾後重新開啟。`, 'err');
+      }
+    })();
+  </script>
+</body>
+</html>
