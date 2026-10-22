@@ -2,303 +2,216 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>鑑識工具箱</title>
-
 <style>
-    * {
-        box-sizing: border-box;
-    }
+:root{
+  --bg:#ffffff;
+  --soft:#f5f6f7;
+  --soft-hover:#e9edf1;
+  --line:#e2e5e8;
+  --text:#343a40;
+  --muted:#737b84;
+  --bar:#575757;
+  --bar-active:#43566b;
+  --blue:#4c65c8;
+  --orange:#ee6b39;
+  --green:#47a957;
+  --gold:#d5a21a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;color:var(--text);background:var(--bg)}
+body{display:flex;flex-direction:column;min-width:1180px}
 
-    html, body {
-        margin: 0;
-        height: 100%;
-        font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
-        background: #f3f5f7;
-    }
+/* 頁首：刻意保持單純 */
+.site-head{background:#fff;border-bottom:1px solid #e6e6e6}
+.top-visual{
+  width:100%;
+  aspect-ratio:1898 / 176;
+  min-height:110px;
+  max-height:180px;
+  background-color:#f8fbff;
+  background-image: url("image/top.png");
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
 
-    body {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
+.topbar{height:48px;background:var(--bar)}
+.topbar-inner{max-width:1584px;height:100%;margin:auto;display:flex;align-items:stretch;padding:0 24px}
+.topbar-item{display:flex;align-items:center;padding:0 28px;color:#fff;text-decoration:none;font-size:22px;background:transparent;font-weight:700;border-bottom:4px solid #9fb7cf}
 
-    /* ===== 上方標頭 ===== */
-    #navbar {
-        min-height: 64px;
-        padding: 10px 18px;
 
-        display: flex;
-        align-items: center;
-        gap: 8px;
+.topbar-item:hover{background:rgba(255,255,255,.08)}
 
-        background: #263746;
-        border-bottom: 1px solid #182631;
+#workspace{flex:1;min-height:0;position:relative}
+#dashboard{height:100%;overflow:auto;padding:34px 24px 48px}
+.container{max-width:1584px;margin:auto}
+.intro{text-align:center;margin:0 auto 32px;max-width:940px;font-size:21px;line-height:1.8;color:#555}
 
-        overflow-x: auto;
-        white-space: nowrap;
-    }
+.section{margin-bottom:32px}
+.section-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:12px;padding:0 2px}
+.section-title{font-size:30px;font-weight:700;color:#333}
+.section-note{font-size:18px;color:var(--muted)}
 
-    /* 系統名稱 */
-    .navbar-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+.quick-grid{display:grid;grid-template-columns:repeat(4,minmax(264px,1fr));gap:14px}
+.quick-btn,.category-btn{border:0;background:#efefef;color:#4a4a4a;border-radius:14px;cursor:pointer;transition:.12s;font-family:inherit}
+.quick-btn{position:relative;min-height:82px;padding:18px 34px;font-size:23px;font-weight:600;text-align:center;border:1px solid #e8e8e8}
+.quick-btn:hover,.category-btn:hover{background:#e4e7ea;color:#222}
+.star{position:absolute;right:11px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:23px;color:#b6b6b6;cursor:pointer;padding:2px 4px}
+.quick-btn .star{opacity:0;transition:opacity .15s}
+.quick-btn:hover .star,.quick-btn .star:focus{opacity:1}
+.star.on{color:var(--gold);opacity:.5}
 
-        margin-right: 12px;
-        padding-right: 18px;
 
-        color: white;
-        font-size: 18px;
-        font-weight: 700;
+.category-grid{display:grid;grid-template-columns:repeat(5,minmax(252px,1fr));gap:18px}
+.category{background:#f5f5f5;padding:24px 18px 20px;border-radius:16px;border:1px solid #eeeeee;box-shadow:0 2px 7px rgba(0,0,0,.05)}
+.category h3{margin:0 0 18px;text-align:center;font-size:28px;font-weight:700}
+.category:nth-child(1) h3{color:var(--orange)}
+.category:nth-child(2) h3{color:var(--blue)}
+.category:nth-child(3) h3{color:var(--green)}
+.category:nth-child(4) h3{color:#8a6bc5}
+.category:nth-child(5) h3{color:#777}
+.category-list{display:grid;gap:8px}
+.category-btn{position:relative;width:100%;min-height:72px;padding:14px 24px;font-size:21px;line-height:1.35;border:1px solid #e3e3e3;background:#e9e9e9}
+.category-btn .mini-star{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#aaa;font-size:21px;cursor:pointer;opacity:0;transition:opacity .15s}
+.category-btn:hover .mini-star,.category-btn .mini-star:focus,.category-btn .mini-star.on{opacity:1}
+.category-btn .mini-star.on{color:var(--gold);opacity:.65}
 
-        border-right: 1px solid rgba(255,255,255,.25);
-        flex-shrink: 0;
-    }
+.empty{grid-column:1/-1;padding:18px;text-align:center;color:#8a8f94;border:1px dashed #d5d8db;background:#fafafa;border-radius:12px;font-size:20px}
 
-    .navbar-title .icon {
-        font-size: 22px;
-    }
-
-    /* 功能按鈕 */
-    #navbar a {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-
-        height: 38px;
-        padding: 0 14px;
-
-        color: #e8eef3;
-        text-decoration: none;
-
-        font-size: 14px;
-        font-weight: 500;
-
-        border-radius: 7px;
-
-        transition:
-            background-color .15s ease,
-            color .15s ease,
-            transform .15s ease;
-    }
-
-    /* 滑鼠移入 */
-    #navbar a:hover {
-        background: rgba(255,255,255,.14);
-        color: #ffffff;
-    }
-
-    /* 點選中的功能 */
-    #navbar a.active {
-        background: #ffffff;
-        color: #263746;
-        font-weight: 700;
-        box-shadow: 0 2px 6px rgba(0,0,0,.18);
-    }
-
-    /* iframe */
-    #content-frame {
-        flex: 1;
-        width: 100%;
-        border: none;
-        background: white;
-    }
-
-    /* scrollbar */
-    #navbar::-webkit-scrollbar {
-        height: 5px;
-    }
-
-    #navbar::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,.25);
-        border-radius: 10px;
-    }
-    /* ===== 最近使用的分頁特殊顏色 ===== */
-    #navbar a.recent-tab {
-        background-color: #385066; /* 稍微亮一點的藍灰色背景 */
-        color: #8ab4f8; /* 淺藍色文字 */
-        border: 1px dashed rgba(138, 180, 248, 0.4); /* 加上淡淡的虛線邊框增加辨識度 */
-    }
-
-    /* 滑鼠移入最近使用的分頁 */
-    #navbar a.recent-tab:hover {
-        background-color: #4b6a85;
-        color: #ffffff;
-    }
-
-    /* 當「最近使用的分頁」是被點選的狀態 (active) 時 */
-    #navbar a.recent-tab.active {
-        background: #8ab4f8; /* 變成亮藍色背景 */
-        color: #1a252f;      /* 深色文字 */
-        border: none;        /* 移除虛線邊框 */
-        font-weight: 700;
-    }
+@media(max-width:1180px){
+  .category-grid{grid-template-columns:repeat(2,1fr)}
+  .quick-grid{grid-template-columns:repeat(3,1fr)}
+}
 </style>
-
 </head>
-
-
 <body>
-
-<div id="navbar">
-
-    <div class="navbar-title">
-        <span class="icon">🧰</span>
-        <span>鑑識工具箱</span>
+<header class="site-head">
+  <div class="top-visual" aria-label="鑑識工具箱"></div>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a class="topbar-item" href="#" id="topHome">鑑識工具箱</a>
     </div>
+  </nav>
+</header>
 
-    <a href="duty/equipment.html"
-       target="contentFrame"
-       class="active">
-        裝備檢查
-    </a>
 
-    <a href="contacts/phonebook.html"
-       target="contentFrame">
-        分機查詢
-    </a>
+<div id="workspace">
+  <main id="dashboard">
+    <div class="container">
+      
 
-    <a href="LABELPRINT/labelprint.html"
-       target="contentFrame">
-        標籤列印
-    </a>
+      <section class="section">
+        <div class="section-head">
+          <div class="section-title">我的最愛</div>
+          <div class="section-note">常用功能快速入口</div>
+        </div>
+        <div class="quick-grid" id="favoriteGrid"></div>
+      </section>
 
-    <a href="timeline_pic_v12.html"
-       target="contentFrame">
-        時間線
-    </a>
 
-    <a href="ramanspec_compare_v2.html"
-       target="contentFrame">
-        光譜標記
-    </a>
-
-    <a href="card_mindmap_timeline_style.html"
-       target="contentFrame">
-        心智圖
-    </a>
-
-    <a href="pdf_to_image.html"
-       target="contentFrame">
-        PDF轉JPG
-    </a>
-
-    <a href="image_to_pdf.html"
-       target="contentFrame">
-        JPG彙整為PDF
-    </a>
-
-    <a href="pdf_to_ppt_v4.html"
-       target="contentFrame">
-        PDF回復PPT/PNG
-    </a>
-    <a href="batch_cropper.html"
-       target="contentFrame">
-        批次圖片手動剪裁
-    </a>
-    <a href="curve FP.html"
-       target="contentFrame">
-        曲面FP校正
-    </a>
-    </a>
-    <a href="360viewer.html"
-       target="contentFrame">
-        360影像標記
-    </a>
-    <a href="Toolmarkcompare_HTML_v5.html"
-       target="contentFrame">
-        工具痕跡比對
-    </a>
-    <a href="excel_remark_filler.html"
-       target="contentFrame">
-        臺中懶人彙整表
-    </a>
+      <section class="section">
+        <div class="section-head">
+          <div class="section-title">全部功能</div>
+          <div class="section-note">依用途分類</div>
+        </div>
+        <div class="category-grid" id="categoryGrid"></div>
+      </section>
+    </div>
+  </main>
 </div>
-<iframe
-    id="content-frame"
-    name="contentFrame"
-    src="duty/equipment.html">
-</iframe>
+
 <script>
-    const navbar = document.getElementById("navbar");
-    const titleElement = document.querySelector(".navbar-title");
-    const navLinks = document.querySelectorAll("#navbar a");
+const tools = [
+  {name:'分機查詢', href:'contacts/phonebook.html', category:'行政工作'},
+  {name:'時間線', href:'timeline_pic_v12.html', category:'行政工作'},
+  {name:'心智圖', href:'card_mindmap_timeline_style.html', category:'行政工作'},
 
-    // 建立一個分隔線元素，用來區分「最近使用」與「全部功能」
-    const separator = document.createElement("div");
-    separator.style.width = "1px";
-    separator.style.height = "24px";
-    separator.style.backgroundColor = "rgba(255,255,255,0.25)";
-    separator.style.margin = "0 8px";
-    navbar.insertBefore(separator, titleElement.nextSibling);
+  {name:'裝備檢查', href:'duty/equipment.html', category:'現場勘察'},
+  {name:'標籤列印', href:'LABELPRINT/labelprint.html', category:'現場勘察'},
+  {name:'360影像標記', href:'360viewer.html', category:'現場勘察'},
 
-    // 用陣列來記錄最近使用的功能標籤 (最多 3 個)
-    let recentTabs = [];
+  {name:'PDF轉JPG', href:'pdf_to_image.html', category:'文書工具'},
+  {name:'JPG彙整為PDF', href:'image_to_pdf.html', category:'文書工具'},
+  {name:'PDF回復PPT/PNG', href:'pdf_to_ppt_v4.html', category:'文書工具'},
 
-    // 負責更新「最近使用」區塊的函數
-    function updateRecentTabs(clickedLink) {
-        const originalHref = clickedLink.getAttribute("href");
-        const originalLink = Array.from(navLinks).find(link => link.getAttribute("href") === originalHref);
+  {name:'批次圖片手動剪裁', href:'batch_cropper.html', category:'影像處理'},
+  {name:'曲面FP校正', href:'curve FP.html', category:'影像處理'},
+  {name:'光譜標記', href:'ramanspec_compare_v2.html', category:'影像處理'},
+  {name:'工具痕跡比對', href:'Toolmarkcompare_HTML_v5.html', category:'影像處理'},
+  {name:'指紋排除比對', href:'fpexclude.html', category:'影像處理'},
 
-        // 1. 移除陣列中已存在的同名項目 (避免重複)
-        recentTabs = recentTabs.filter(tab => tab.getAttribute("href") !== originalHref);
+  {name:'臺中懶人彙整表', href:'excel_remark_filler.html', category:'其他'}
+];
 
-        // 2. 將最新點擊的加入陣列開頭
-        recentTabs.unshift(originalLink);
+const DEFAULT_FAVORITES = [
+  'LABELPRINT/labelprint.html',
+  'pdf_to_image.html',
+  'Toolmarkcompare_HTML_v5.html',
+  'contacts/phonebook.html'
+];
+const LS_FAV = 'forensicToolbox.favorites';
+let favorites = loadArray(LS_FAV, DEFAULT_FAVORITES);
 
-        // 3. 確保最多只有 3 個
-        if (recentTabs.length > 3) {
-            recentTabs.pop();
-        }
-
-        // 4. 清除目前標題右側到分隔線之間的所有「複製按鈕」
-        let nextEl = titleElement.nextSibling;
-        while (nextEl && nextEl !== separator) {
-            let toRemove = nextEl;
-            nextEl = nextEl.nextSibling;
-            navbar.removeChild(toRemove);
-        }
-
-        // 5. 將陣列中的按鈕複製並插入到標題右側
-        [...recentTabs].reverse().forEach(tab => {
-            const clone = tab.cloneNode(true);
-            clone.classList.remove("active"); // 複製時先移除 active
-
-            // 🔥 新增這一行：為複製出來的按鈕加上特殊顏色的 class
-            clone.classList.add("recent-tab");
-
-            clone.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                document.getElementById("content-frame").src = this.getAttribute("href");
-
-                navLinks.forEach(item => item.classList.remove("active"));
-                originalLink.classList.add("active");
-
-                updateRecentTabs(this);
-            });
-
-            navbar.insertBefore(clone, titleElement.nextSibling);
-        });
-
-        // 確保目前的 clone 按鈕有正確的 active 狀態
-        let currentClones = document.querySelectorAll("#navbar a.recent-tab");
-        currentClones.forEach(c => {
-            if (c.getAttribute("href") === originalHref) {
-                c.classList.add("active");
-            }
-        });
-    }
-
-    // 為原始列表綁定點擊事件
-    navLinks.forEach(link => {
-        link.addEventListener("click", function (e) {
-            navLinks.forEach(item => item.classList.remove("active"));
-            this.classList.add("active");
-            updateRecentTabs(this);
-        });
+function loadArray(key, fallback){
+  try{
+    const v = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(v) ? v : [...fallback];
+  }catch(e){return [...fallback]}
+}
+function save(){
+  localStorage.setItem(LS_FAV, JSON.stringify(favorites));
+}
+function toolByHref(h){return tools.find(t => t.href === h)}
+function toggleFavorite(h){
+  favorites = favorites.includes(h) ? favorites.filter(x => x !== h) : [...favorites, h];
+  save(); renderAll();
+}
+function openTool(h){
+  const t = toolByHref(h); if(!t) return;
+  save();
+  window.open(h, '_blank', 'noopener,noreferrer');
+}
+function renderFavorites(){
+  const grid = document.getElementById('favoriteGrid'); grid.innerHTML = '';
+  const arr = favorites.map(toolByHref).filter(Boolean);
+  if(!arr.length){grid.innerHTML = '<div class="empty">尚未加入常用功能。</div>'; return;}
+  arr.forEach(t => {
+    const b = document.createElement('button'); b.className = 'quick-btn';
+    b.innerHTML = `${t.name}<span class="star on" title="移除最愛">★</span>`;
+    b.addEventListener('click', e => {if(e.target.classList.contains('star')) return; openTool(t.href)});
+    b.querySelector('.star').addEventListener('click', e => {e.stopPropagation(); toggleFavorite(t.href)});
+    grid.appendChild(b);
+  });
+}
+function renderCategories(){
+  const labels = {
+    '現場勘察':'現場勘察',
+    '影像處理':'影像處理',
+    '文書工具':'文書工具',
+    '行政工作':'行政工作',
+    '其他':'其他'
+  };
+  const grid = document.getElementById('categoryGrid'); grid.innerHTML = '';
+  ['現場勘察','影像處理','文書工具','行政工作','其他'].forEach(cat => {
+    const box = document.createElement('div'); box.className = 'category';
+    box.innerHTML = `<h3>${labels[cat]}</h3><div class="category-list"></div>`;
+    const list = box.querySelector('.category-list');
+    tools.filter(t => t.category === cat).forEach(t => {
+      const b = document.createElement('button'); b.className = 'category-btn';
+      b.innerHTML = `<span>${t.name}</span><span class="mini-star ${favorites.includes(t.href)?'on':''}" title="加入/移除最愛">★</span>`;
+      b.addEventListener('click', e => {if(e.target.classList.contains('mini-star')) return; openTool(t.href)});
+      b.querySelector('.mini-star').addEventListener('click', e => {e.stopPropagation(); toggleFavorite(t.href)});
+      list.appendChild(b);
     });
-</script>
+    grid.appendChild(box);
+  });
+}
+function renderAll(){renderFavorites();renderCategories()}
 
+document.getElementById('topHome').onclick = e => { e.preventDefault(); window.scrollTo({top:0,behavior:'smooth'}); };
+renderAll();
+</script>
 </body>
 </html>
