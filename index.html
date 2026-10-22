@@ -21,7 +21,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;color:var(--text);background:var(--bg)}
-body{display:flex;flex-direction:column;min-width:1180px}
+body{display:flex;flex-direction:column;min-width:0}
 
 /* 頁首：刻意保持單純 */
 .site-head{background:#fff;border-bottom:1px solid #e6e6e6}
@@ -80,10 +80,45 @@ body{display:flex;flex-direction:column;min-width:1180px}
 
 .empty{grid-column:1/-1;padding:18px;text-align:center;color:#8a8f94;border:1px dashed #d5d8db;background:#fafafa;border-radius:12px;font-size:20px}
 
-@media(max-width:1180px){
-  .category-grid{grid-template-columns:repeat(2,1fr)}
-  .quick-grid{grid-template-columns:repeat(3,1fr)}
+
+/* 響應式：不改變大螢幕五欄設計 */
+@media(max-width:1450px){
+  .category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+@media(max-width:900px){
+  .category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .top-visual{aspect-ratio:auto;height:130px;min-height:0;background-size:cover}
+  .section-title{font-size:26px}
+}
+@media(max-width:600px){
+  .top-visual{height:94px;background-size:cover;background-position:center}
+  .topbar{height:44px}
+  .topbar-inner{padding:0 16px}
+  .topbar-item{font-size:17px;padding:0 14px}
+  #dashboard{height:auto;overflow:visible;padding:22px 14px 40px}
+  .section{margin-bottom:25px}
+  .section-head{align-items:center;margin-bottom:11px}
+  .section-title{font-size:23px}
+  .section-note{font-size:12px}
+  .category-grid{grid-template-columns:minmax(0,1fr);gap:13px}
+  .quick-grid{grid-template-columns:minmax(0,1fr);gap:9px}
+  .category{padding:17px 15px;border-radius:15px}
+  .category h3{font-size:23px;margin-bottom:12px}
+  .category-list{gap:8px}
+  .category-btn{font-size:18px;min-height:54px;padding:11px 42px}
+  .quick-btn{font-size:19px;min-height:58px;padding:12px 42px}
+  .empty{font-size:16px}
+}
+/* 觸控裝置沒有 hover，保留可操作的星號 */
+@media(hover:none), (pointer:coarse){
+  .quick-btn .star{opacity:1}
+  .category-btn .mini-star{opacity:.55}
+  .category-btn .mini-star.on{opacity:1}
+  .star,.category-btn .mini-star{min-width:36px;min-height:40px;display:flex;align-items:center;justify-content:center}
+}
+
 </style>
 </head>
 <body>
@@ -140,7 +175,6 @@ const tools = [
   {name:'曲面FP校正', href:'curve FP.html', category:'影像處理'},
   {name:'光譜標記', href:'ramanspec_compare_v2.html', category:'影像處理'},
   {name:'工具痕跡比對', href:'Toolmarkcompare_HTML_v5.html', category:'影像處理'},
-  {name:'指紋排除比對', href:'fpexclude.html', category:'影像處理'},
 
   {name:'臺中懶人彙整表', href:'excel_remark_filler.html', category:'其他'}
 ];
