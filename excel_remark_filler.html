@@ -116,7 +116,7 @@
 <body>
   <div class="wrap">
     <h1>初鑑結果備註自動填寫</h1>
-    <div class="subtitle">上傳 Excel 後，自動依「初鑑結果」及「是否送鑑」填入備註；匯出時只修改指定儲存格內容，不重新建立工作表，因此原字型、欄寬、列高、框線與合併儲存格會保留。</div>
+    <div class="subtitle">上傳 Excel 後，自動依「初鑑結果」及「是否送鑑」填入備註；匯出時只修改指定儲存格內容，不重新建立工作表；自動填入的備註固定為標楷體 12 號、粗體、底線，其餘原格式保留。</div>
 
     <div class="grid">
       <div class="card">
@@ -132,7 +132,7 @@
 
           <div class="field">
             <label for="caseText">標題第二行（案由／補充文字）</label>
-            <input id="caseText" class="text-input" type="text" placeholder="例如：0871-115121XXX4-XXX遭詐欺證物採證案" autocomplete="off" />
+            <input id="caseText" class="text-input" type="text" placeholder="例如：0871-1151210004-吳炳圻遭詐欺證物採證案" autocomplete="off" />
             <div class="hint">有填寫時，會放在「案件編號：……指(掌)紋初鑑結果彙整表」的下一行；未填則保留原 Excel 內容。</div>
           </div>
 
@@ -400,6 +400,61 @@
       return cell;
     }
 
+    async function createRemarkStyleManager(zip) {
+      const stylesFile = zip.file('xl/styles.xml');
+      if (!stylesFile) throw new Error('Excel 缺少 styles.xml，無法套用備註格式');
+      const doc = xmlParse(await stylesFile.async('text'));
+      const root = doc.documentElement;
+      const ns = root.namespaceURI || 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+
+      const fonts = directChild(root, 'fonts');
+      const cellXfs = directChild(root, 'cellXfs');
+      if (!fonts || !cellXfs) throw new Error('Excel 樣式表結構不完整');
+
+      // 新增「標楷體、12號、粗體、底線」字型。
+      const font = doc.createElementNS(ns, 'font');
+      const b = doc.createElementNS(ns, 'b');
+      const u = doc.createElementNS(ns, 'u');
+      const sz = doc.createElementNS(ns, 'sz');
+      sz.setAttribute('val', '12');
+      const name = doc.createElementNS(ns, 'name');
+      name.setAttribute('val', '標楷體');
+      font.appendChild(b);
+      font.appendChild(u);
+      font.appendChild(sz);
+      font.appendChild(name);
+      fonts.appendChild(font);
+
+      const fontId = Array.from(fonts.childNodes).filter(n => n.nodeType === 1 && n.localName === 'font').length - 1;
+      fonts.setAttribute('count', String(fontId + 1));
+
+      const baseXfs = Array.from(cellXfs.childNodes).filter(n => n.nodeType === 1 && n.localName === 'xf');
+      const styleMap = new Map();
+
+      function styleFor(baseStyleId) {
+        const baseId = Number.isFinite(Number(baseStyleId)) ? Number(baseStyleId) : 0;
+        if (styleMap.has(baseId)) return styleMap.get(baseId);
+
+        const base = baseXfs[baseId] || baseXfs[0];
+        if (!base) throw new Error('找不到可沿用的儲存格樣式');
+        const xf = base.cloneNode(true);
+        xf.setAttribute('fontId', String(fontId));
+        xf.setAttribute('applyFont', '1');
+        cellXfs.appendChild(xf);
+        const newId = Array.from(cellXfs.childNodes).filter(n => n.nodeType === 1 && n.localName === 'xf').length - 1;
+        styleMap.set(baseId, newId);
+        return newId;
+      }
+
+      function save() {
+        const count = Array.from(cellXfs.childNodes).filter(n => n.nodeType === 1 && n.localName === 'xf').length;
+        cellXfs.setAttribute('count', String(count));
+        zip.file('xl/styles.xml', xmlString(doc));
+      }
+
+      return { styleFor, save };
+    }
+
     async function getSheetXmlMap(zip) {
       const wbDoc = xmlParse(await zip.file('xl/workbook.xml').async('text'));
       const relDoc = xmlParse(await zip.file('xl/_rels/workbook.xml.rels').async('text'));
@@ -426,6 +481,7 @@
       if (!window.JSZip) throw new Error('JSZip 尚未載入');
       const zip = await JSZip.loadAsync(originalBuffer.slice(0));
       const sheetMap = await getSheetXmlMap(zip);
+      const remarkStyles = await createRemarkStyleManager(zip);
       const changesBySheet = new Map();
       for (const c of analysis.changes) {
         if (!changesBySheet.has(c.sheet)) changesBySheet.set(c.sheet, []);
@@ -444,6 +500,8 @@
 
         for (const c of (changesBySheet.get(sheetName) || [])) {
           const cell = ensureCell(doc, c.row, c.noteCol);
+          const baseStyle = cell.hasAttribute('s') ? cell.getAttribute('s') : '0';
+          cell.setAttribute('s', String(remarkStyles.styleFor(baseStyle)));
           setInlineString(doc, cell, c.newNote);
         }
 
@@ -471,6 +529,9 @@
 
         zip.file(xmlPath, xmlString(doc));
       }
+
+      // 最後才寫回新增的備註專用樣式；只影響本次自動填入的備註格。
+      remarkStyles.save();
 
       const out = await zip.generateAsync({
         type: 'blob',
@@ -599,7 +660,7 @@
         setTimeout(() => URL.revokeObjectURL(url), 1500);
         const caseText = els.caseText.value.trim();
         const titleMsg = caseText ? `；標題第二行已更新 ${titleUpdated} 個工作表` : '';
-        setStatus(`完成：已依規則填入 ${analysis.stats.changes} 格備註${titleMsg}。匯出採原檔局部修改，原字型與格式不會被重新套用。`, 'ok');
+        setStatus(`完成：已依規則填入 ${analysis.stats.changes} 格備註${titleMsg}。匯出採原檔局部修改；自動填入的備註已套用標楷體 12 號、粗體、底線，其餘格式保留。`, 'ok');
       } catch (err) {
         console.error(err);
         setStatus('匯出失敗：' + (err?.message || err), 'err');
