@@ -232,8 +232,7 @@
         <div class="subtitle">先完成申請資料；匯出時直接回填正式 Word 範本，申請人及主管欄位保留空白。</div>
       </div>
       <div class="actions">
-        <button class="btn secondary" type="button" id="testSampleBtn">載入 2 枚測試範例</button>
-        <button class="btn secondary" type="button" id="wordBtn">匯出申請單</button>
+        <button class="btn secondary" type="button" id="testSampleBtn">載入 4 枚測試範例</button>
       </div>
     </div>
 
@@ -313,7 +312,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px">
         <div>
           <h2 style="margin-bottom:4px">特定／比中對象</h2>
-          <div class="hint">對象與證物互相獨立。特定對象可不指定證物；比中對象必須指定比中的證物，且可複選一筆或多筆。</div>
+          <div class="hint">特定對象只填寫人員資料，不指定證物；比中對象才指定相符證物，且可複選一筆或多筆。</div>
         </div>
       </div>
       <div id="targetList" class="target-list"></div>
@@ -352,7 +351,7 @@
     <div class="topbar">
       <div>
         <h1>Step 2｜ACEV 資料</h1>
-        <div class="subtitle">只有「比中對象」所指定的指（掌）紋證物會建立 ACEV；每筆符合條件的證物各一頁，左右各上傳一張比對圖，最後整合成同一份 Word。</div>
+        <div class="subtitle">只有「比中對象」所指定的指（掌）紋證物會建立 ACEV；每筆符合條件的證物各一頁，左右比對圖可選擇上傳；未上傳時 Word 保留空白圖片區，最後仍可整合成同一份 Word。</div>
       </div>
       <div class="actions">
         <button class="btn secondary" type="button" id="backStep1Btn">← 回申請單</button>
@@ -363,7 +362,7 @@
     <div id="acevList" class="acev-list"></div>
 
     <div class="acev-footer-actions">
-      <span class="status" id="acevStatus">請為每一筆有對應比中對象的指（掌）紋證物上傳左右兩張比對圖。</span>
+      <span class="status" id="acevStatus">ACEV 比對圖為選填；未上傳不影響下一步或 Word 匯出。</span>
       <div class="actions">
         <button class="btn secondary" type="button" id="backStep1BottomBtn">← 上一步</button>
         <button class="btn primary" type="button" id="nextStep3Btn">下一步｜採驗紀錄表</button>
@@ -450,7 +449,7 @@
   <div class="acev-shell">
     <div class="acev-toolbar">
       <div class="acev-toolbar-title">ACEV｜指紋 <span class="acev-index"></span>　<span class="acev-finger-label"></span></div>
-      <div class="actions"><span class="hint">左右圖片皆為必填</span></div>
+      <div class="actions"><span class="hint">左右圖片選填</span></div>
     </div>
     <div class="acev-page">
       <div class="acev-title">送鑑指（掌）<span class="light">紋照片檢視及比對情形</span></div>
@@ -662,8 +661,8 @@
       <div class="field"><label>姓名</label><input type="text" class="target-name"></div>
       <div class="field"><label>身分證統編</label><input type="text" class="target-id"></div>
       <div class="field"><label>生日</label><input type="text" class="target-age" placeholder="例如：87/11/21"></div>
-      <div class="field" style="grid-column:1/-1">
-        <label class="target-evidence-label">指定對應指（掌）紋證物 <span class="hint">（特定對象選填；比中對象必填，可複選）</span></label>
+      <div class="field target-evidence-area hidden" style="grid-column:1/-1">
+        <label class="target-evidence-label">比中證物 <span class="req">＊必填</span> <span class="hint">（可複選；每枚證物只能屬於一個比中對象）</span></label>
         <div class="evidence-check-list"></div>
       </div>
       <div class="field hit-only hidden">
@@ -764,6 +763,37 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
     }));
   }
 
+  function normalizeHitEvidenceAssignments(preferredCard=null, preferredIndex=null){
+    const hitCards=[...targetList.children].filter(card=>
+      card.querySelector('.target-type:checked')?.value==='比中對象'
+    );
+    const claimed=new Map();
+
+    // 若這次是使用者剛勾選，先讓目前這位比中對象取得該證物。
+    if(preferredCard && preferredIndex!==null){
+      claimed.set(String(preferredIndex),preferredCard);
+    }
+
+    hitCards.forEach(card=>{
+      card.querySelectorAll('.target-evidence-check:checked').forEach(cb=>{
+        const key=String(cb.dataset.index);
+        const owner=claimed.get(key);
+        if(!owner){
+          claimed.set(key,card);
+        }else if(owner!==card){
+          cb.checked=false;
+        }
+      });
+    });
+  }
+
+  function onTargetEvidenceChanged(card,cb){
+    const type=card.querySelector('.target-type:checked')?.value||'特定對象';
+    if(type==='比中對象' && cb.checked){
+      normalizeHitEvidenceAssignments(card,cb.dataset.index);
+    }
+  }
+
   function refreshHitEvidenceOptions(){
     const evidences=getEvidenceOptionRows();
     [...targetList.children].forEach((card,targetIndex)=>{
@@ -772,17 +802,29 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       const selected=new Set([...box.querySelectorAll('input:checked')].map(x=>x.dataset.evidenceKey));
       box.innerHTML='';
       if(!evidences.length){
-        const empty=document.createElement('div');empty.className='evidence-check-empty';empty.textContent='請先新增指（掌）紋證物';box.appendChild(empty);return;
+        const empty=document.createElement('div');
+        empty.className='evidence-check-empty';
+        empty.textContent='請先新增指（掌）紋證物';
+        box.appendChild(empty);
+        return;
       }
       evidences.forEach((e,i)=>{
         const key=e.no ? `no:${e.no}` : `idx:${i}`;
         const label=document.createElement('label');
-        const cb=document.createElement('input');cb.type='checkbox';cb.className='target-evidence-check';cb.dataset.evidenceKey=key;cb.dataset.index=String(i);
+        const cb=document.createElement('input');
+        cb.type='checkbox';
+        cb.className='target-evidence-check';
+        cb.dataset.evidenceKey=key;
+        cb.dataset.index=String(i);
         cb.checked=selected.has(key);
-        const text=document.createElement('span');text.textContent=`${e.no||`證物${String(i+1).padStart(2,'0')}`}｜${e.type}${e.location?`｜${e.location}`:''}`;
-        label.append(cb,text);box.appendChild(label);
+        cb.addEventListener('change',()=>onTargetEvidenceChanged(card,cb));
+        const text=document.createElement('span');
+        text.textContent=`${e.no||`證物${String(i+1).padStart(2,'0')}`}｜${e.type}${e.location?`｜${e.location}`:''}`;
+        label.append(cb,text);
+        box.appendChild(label);
       });
     });
+    normalizeHitEvidenceAssignments();
   }
 
   function addFinger(){
@@ -814,13 +856,16 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
 
   function updateTargetFields(card){
     const type=card.querySelector('.target-type:checked')?.value||'特定對象';
-    card.querySelectorAll('.hit-only').forEach(el=>el.classList.toggle('hidden',type!=='比中對象'));
-    const label=card.querySelector('.target-evidence-label');
-    if(label){
-      label.innerHTML=type==='比中對象'
-        ? '比中證物 <span class="req">＊必填</span> <span class="hint">（可複選）</span>'
-        : '指定對應指（掌）紋證物 <span class="hint">（選填，可不指定）</span>';
+    const isHit=type==='比中對象';
+
+    card.querySelectorAll('.hit-only').forEach(el=>el.classList.toggle('hidden',!isHit));
+    const evidenceArea=card.querySelector('.target-evidence-area');
+    if(evidenceArea) evidenceArea.classList.toggle('hidden',!isHit);
+
+    if(!isHit){
+      card.querySelectorAll('.target-evidence-check').forEach(cb=>cb.checked=false);
     }
+
     refreshHitEvidenceOptions();
   }
 
@@ -844,6 +889,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       updateTargetFields(card);
       const prevSelected=new Set([...prev.querySelectorAll('.target-evidence-check:checked')].map(x=>x.dataset.evidenceKey));
       card.querySelectorAll('.target-evidence-check').forEach(cb=>cb.checked=prevSelected.has(cb.dataset.evidenceKey));
+      normalizeHitEvidenceAssignments();
     });
     if(copyFrom){
       const t=copyFrom.querySelector('.target-type:checked')?.value||'特定對象';
@@ -914,34 +960,48 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
     updateItemVisibility(); updateSummaryVisibility();
 
     fingerList.innerHTML=''; fingerSeed=0;
-    const a=addFinger();
-    a.querySelectorAll('.evidence-type').forEach(r=>r.checked=r.value==='指紋');
-    a.querySelector('.finger-no').value='A1';
-    a.querySelector('.finger-location').value='客廳玻璃桌面';
-    const b=addFinger();
-    b.querySelectorAll('.evidence-type').forEach(r=>r.checked=r.value==='指紋');
-    b.querySelector('.finger-no').value='A2';
-    b.querySelector('.finger-location').value='臥室門把';
+    const samples=[
+      ['指紋','A1','客廳玻璃桌面'],
+      ['指紋','A2','臥室門把'],
+      ['指紋','B1','玄關門把'],
+      ['掌紋','P1','玻璃門面']
+    ];
+    samples.forEach(([type,no,location])=>{
+      const card=addFinger();
+      card.querySelectorAll('.evidence-type').forEach(r=>r.checked=r.value===type);
+      card.querySelector('.finger-no').value=no;
+      card.querySelector('.finger-location').value=location;
+    });
     renumberFingers();
 
     targetList.innerHTML=''; targetSeed=0;
-    const t1=addTarget();
-    t1.querySelectorAll('.target-type').forEach(r=>r.checked=r.value==='特定對象');
-    t1.querySelector('.target-name').value='王小明';
-    t1.querySelector('.target-id').value='A123456789';
-    t1.querySelector('.target-age').value='87/11/21';
-    updateTargetFields(t1);
-    const t2=addTarget();
-    t2.querySelectorAll('.target-type').forEach(r=>r.checked=r.value==='比中對象');
-    t2.querySelector('.target-name').value='陳小華';
-    t2.querySelector('.target-id').value='B223456789';
-    t2.querySelector('.target-age').value='82/05/06';
-    t2.querySelector('.computer-no').value='12345678';
-    updateTargetFields(t2);
+
+    const specific=addTarget();
+    specific.querySelectorAll('.target-type').forEach(r=>r.checked=r.value==='特定對象');
+    specific.querySelector('.target-name').value='王小明';
+    specific.querySelector('.target-id').value='A123456789';
+    specific.querySelector('.target-age').value='87/11/21';
+    updateTargetFields(specific);
+
+    const hit=addTarget();
+    hit.querySelectorAll('.target-type').forEach(r=>r.checked=r.value==='比中對象');
+    hit.querySelector('.target-name').value='陳小華';
+    hit.querySelector('.target-id').value='B223456789';
+    hit.querySelector('.target-age').value='82/05/06';
+    hit.querySelector('.computer-no').value='12345678';
+    updateTargetFields(hit);
+
     refreshHitEvidenceOptions();
-    t1.querySelectorAll('.target-evidence-check').forEach(cb=>cb.checked=['no:A1','no:A2'].includes(cb.dataset.evidenceKey));
-    t2.querySelectorAll('.target-evidence-check').forEach(cb=>cb.checked=['no:A1','no:A2'].includes(cb.dataset.evidenceKey));
-    renumberTargets(); updateAttachmentNote();
+
+    // 特定對象不指定證物；比中對象才指定相符證物。
+    specific.querySelectorAll('.target-evidence-check').forEach(cb=>cb.checked=false);
+    hit.querySelectorAll('.target-evidence-check').forEach(
+      cb=>cb.checked=['no:A1','no:A2'].includes(cb.dataset.evidenceKey)
+    );
+    normalizeHitEvidenceAssignments();
+
+    renumberTargets();
+    updateAttachmentNote();
   }
   $('#testSampleBtn').addEventListener('click',loadTestSample);
 
@@ -957,13 +1017,31 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       if(!f.no) missing.push(`證物${i+1}－編號`);
       if(!f.location) missing.push(`證物${i+1}－採證位置`);
     });
-    getTargetData().forEach((t,i)=>{
+    const targetData=getTargetData();
+    targetData.forEach((t,i)=>{
       if(!t.name) missing.push(`對象${i+1}－姓名`);
       if(!t.id) missing.push(`對象${i+1}－身分證`);
       if(!t.age) missing.push(`對象${i+1}－生日`);
       if(t.type==='比中對象' && !t.evidenceNos.length) missing.push(`對象${i+1}－比中對象尚未指定比中證物`);
     });
+
+    // 保險檢核：同一枚證物只能對應一個比中對象。
+    const hitOwner=new Map();
+    targetData.filter(t=>t.type==='比中對象').forEach(t=>{
+      t.evidenceNos.forEach(no=>{
+        if(hitOwner.has(no) && hitOwner.get(no)!==t.name){
+          missing.push(`證物 ${no} 同時指定給多個比中對象`);
+        }else{
+          hitOwner.set(no,t.name);
+        }
+      });
+    });
     return missing;
+  }
+
+  function warnIncomplete(items,title='資料尚未完成'){
+    if(!items || !items.length) return;
+    alert(title+'：\n\n'+items.map(x=>'• '+x).join('\n')+'\n\n系統仍會繼續執行。');
   }
 
   function safeFilename(name){
@@ -1015,7 +1093,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
     return fingers.filter(f=>f.no && hitNos.has(f.no));
   }
 
-  function commonReplacements(count){
+  function commonReplacements(totalCount){
     const [gy,gm,gd] = ($('#date').value || '').split('-').map(Number);
     const rocY = gy ? gy - 1911 : '';
     const scan = document.querySelector('input[name="scan"]:checked')?.value || '是';
@@ -1034,7 +1112,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       '@@SUMMARY@@': $('#typeSummary').checked ? xmlMultiline($('#summary').value.trim()) : '',
       '@@EV_FP@@': '▓',
       '@@EV_PHOTO@@': '▓',
-      '@@COUNT@@': xmlEscape(count),
+      '@@COUNT@@': xmlEscape(totalCount),
       '@@CMP_URG@@': $('#compareUrgent').checked ? '▓' : '□',
       '@@CMP_PHOTO@@': $('#comparePhoto').checked ? '▓' : '□',
       '@@SCAN_Y@@': scan === '是' ? '▓' : '□',
@@ -1044,37 +1122,142 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
     };
   }
 
-  function pageReplacements(evidenceChunk,targets){
-    const rep=commonReplacements(evidenceChunk.length);
+  function aggregateTargetsByPerson(targets,type){
+    const map=new Map();
+    targets.filter(t=>t.type===type).forEach(t=>{
+      const key=[t.name.trim(),t.id.trim()].join('|');
+      if(!map.has(key)){
+        map.set(key,{
+          type,
+          name:t.name,
+          id:t.id,
+          age:t.age,
+          evidenceNos:[],
+          computerNos:[]
+        });
+      }
+      const row=map.get(key);
+      (t.evidenceNos||[]).forEach(no=>{
+        if(no && !row.evidenceNos.includes(no)) row.evidenceNos.push(no);
+      });
+      if(t.computerNo && !row.computerNos.includes(t.computerNo)) row.computerNos.push(t.computerNo);
+    });
+    return [...map.values()];
+  }
+
+  function replaceLiteralEvidenceSerials(tableXml,serials){
+    // 以 @@F1_NO@@ ~ @@F4_NO@@ 定位各證物欄位段落。
+    // 必須在 token 被 replaceTokens() 移除前執行。
+    for(let slot=1;slot<=4;slot++){
+      const serial=serials[slot-1];
+      if(serial==null) continue;
+
+      const token=`@@F${slot}_NO@@`;
+      const tokenPos=tableXml.indexOf(token);
+      if(tokenPos<0) continue;
+
+      const pStart=tableXml.lastIndexOf('<w:p',tokenPos);
+      const pEnd=tableXml.indexOf('</w:p>',tokenPos);
+      if(pStart<0 || pEnd<0) continue;
+
+      let paragraph=tableXml.slice(pStart,pEnd+6);
+      const texts=[...paragraph.matchAll(/<w:t([^>]*)>([\s\S]*?)<\/w:t>/g)];
+
+      // 在 token 之前的文字節點中，由後往前找範本的 1~4 流水號。
+      let replaceStart=-1, replaceEnd=-1, replacement='';
+      for(let i=texts.length-1;i>=0;i--){
+        const m=texts[i];
+        const absoluteInParagraph=m.index;
+        if(absoluteInParagraph > paragraph.indexOf(token)) continue;
+        const plain=m[2].trim();
+
+        if(/^[1-4]\.指紋編號/.test(plain)){
+          replaceStart=m.index;
+          replaceEnd=m.index+m[0].length;
+          replacement=m[0].replace(/>([1-4])\./,`>${serial}.`);
+          break;
+        }
+        if(/^[1-4]\.$/.test(plain)){
+          replaceStart=m.index;
+          replaceEnd=m.index+m[0].length;
+          replacement=m[0].replace(/>[1-4]\.</,`>${serial}.</`);
+          break;
+        }
+        if(/^[1-4]$/.test(plain)){
+          replaceStart=m.index;
+          replaceEnd=m.index+m[0].length;
+          replacement=m[0].replace(/>[1-4]</,`>${serial}<`);
+          break;
+        }
+      }
+
+      if(replaceStart>=0){
+        paragraph=paragraph.slice(0,replaceStart)+replacement+paragraph.slice(replaceEnd);
+      }else{
+        // 最後保險：只在該 token 所在段落內找第一個「1.～4. 指紋編號」。
+        paragraph=paragraph.replace(/([>])([1-4])(\.指紋編號)/,`$1${serial}$3`);
+      }
+
+      tableXml=tableXml.slice(0,pStart)+paragraph+tableXml.slice(pEnd+6);
+    }
+    return tableXml;
+  }
+
+  function pageReplacements(evidenceChunk,specificChunk,hitChunk,evidenceOffset,totalCount){
+    const rep=commonReplacements(totalCount);
+
+    // 證物：本頁最多 4 筆；實際證物編號/位置照原資料填。
     for(let slot=1;slot<=4;slot++){
       const f=evidenceChunk[slot-1];
-      const no=f?.no||'';
-      const specials=f?targets.filter(t=>t.type==='特定對象'&&t.evidenceNos.includes(no)):[];
-      const hits=f?targets.filter(t=>t.type==='比中對象'&&t.evidenceNos.includes(no)):[];
       rep[`@@F${slot}_NO@@`]=f?xmlEscape(f.no):'';
       rep[`@@F${slot}_LOC@@`]=f?xmlEscape(f.location):'';
-      rep[`@@F${slot}_SPEC_NAME@@`]=specials.length?xmlMultiline(specials.map(t=>t.name).filter(Boolean).join('\n')):'';
-      rep[`@@F${slot}_SPEC_ID@@`]=specials.length?xmlMultiline(specials.map(t=>t.id).filter(Boolean).join('\n')):'';
-      rep[`@@F${slot}_HIT_NAME@@`]=hits.length?xmlMultiline(hits.map(t=>t.name).filter(Boolean).join('\n')):'';
-      rep[`@@F${slot}_HIT_ID@@`]=hits.length?xmlMultiline(hits.map(t=>t.id).filter(Boolean).join('\n')):'';
-      rep[`@@F${slot}_HIT_FINGERNO@@`]=hits.length?xmlEscape(no):'';
-      rep[`@@F${slot}_COMP@@`]=hits.length?xmlMultiline(hits.map(t=>t.computerNo).filter(Boolean).join('\n')):'';
     }
+
+    // 特定對象：獨立名單，不記錄對應證物。
+    for(let slot=1;slot<=4;slot++){
+      const spec=specificChunk[slot-1];
+      rep[`@@F${slot}_SPEC_NAME@@`]=spec?xmlEscape(spec.name):'';
+      rep[`@@F${slot}_SPEC_ID@@`]=spec?xmlEscape(spec.id):'';
+    }
+
+    // 比中對象：獨立名單；同一人可有多枚比中證物，用「、」合併。
+    for(let slot=1;slot<=4;slot++){
+      const hit=hitChunk[slot-1];
+      rep[`@@F${slot}_HIT_NAME@@`]=hit?xmlEscape(hit.name):'';
+      rep[`@@F${slot}_HIT_ID@@`]=hit?xmlEscape(hit.id):'';
+      rep[`@@F${slot}_HIT_FINGERNO@@`]=hit?xmlEscape(hit.evidenceNos.join('、')):'';
+      rep[`@@F${slot}_COMP@@`]=hit?xmlMultiline(hit.computerNos.join('\n')):'';
+    }
+
+    rep.__EVIDENCE_SERIALS__=evidenceChunk.map((_,i)=>evidenceOffset+i+1);
     return rep;
   }
 
+  function tidyOfficialDataParagraphs(xml){
+    const tokenRe=/<w:p\b[^>]*>[\s\S]*?@@F[1-4]_(?:NO|LOC|SPEC_NAME|SPEC_ID|HIT_NAME|HIT_ID|HIT_FINGERNO|COMP)@@[\s\S]*?<\/w:p>/g;
+    return xml.replace(tokenRe,p=>{
+      if(/<w:pPr>/.test(p)){
+        return p.replace(/<w:pPr>([\s\S]*?)<\/w:pPr>/,(m,inner)=>{
+          inner=inner.replace(/<w:spacing\b[^>]*\/>/g,'');
+          return `<w:pPr>${inner}<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>`;
+        });
+      }
+      return p.replace(/<w:p\b([^>]*)>/,'<w:p$1><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>');
+    });
+  }
+
   function replaceTokens(xml, rep){
-    for(const [key,val] of Object.entries(rep)) xml = xml.split(key).join(val);
+    for(const [key,val] of Object.entries(rep)){
+      if(key.startsWith('__')) continue;
+      xml = xml.split(key).join(val);
+    }
     return xml;
   }
 
   async function exportOfficialWord(){
     updateAttachmentNote();
     const missing = validate();
-    if(missing.length){
-      alert('以下必填欄位尚未完成：\n\n' + missing.map(x=>'• '+x).join('\n'));
-      return;
-    }
+    warnIncomplete(missing,'申請單尚有未完成欄位');
 
     const fingers = getFingerData();
 
@@ -1086,11 +1269,28 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       if(!match) throw new Error('找不到正式申請單表格');
       const tableTemplate = match[0];
       const targets=getTargetData();
-      const pageCount=Math.max(1,Math.ceil(fingers.length/4));
+      const specials=aggregateTargetsByPerson(targets,'特定對象');
+      const hits=aggregateTargetsByPerson(targets,'比中對象');
+
+      const pageCount=Math.max(
+        1,
+        Math.ceil(fingers.length/4),
+        Math.ceil(specials.length/4),
+        Math.ceil(hits.length/4)
+      );
       const pages=[];
       for(let page=0;page<pageCount;page++){
-        const evidenceChunk=fingers.slice(page*4,page*4+4);
-        pages.push(replaceTokens(tableTemplate,pageReplacements(evidenceChunk,targets)));
+        const offset=page*4;
+        const evidenceChunk=fingers.slice(offset,offset+4);
+        const specificChunk=specials.slice(offset,offset+4);
+        const hitChunk=hits.slice(offset,offset+4);
+        const rep=pageReplacements(evidenceChunk,specificChunk,hitChunk,offset,fingers.length);
+        let pageXml=tidyOfficialDataParagraphs(tableTemplate);
+        // 先利用尚未被替換掉的 @@F*_NO@@ token 定位證物段落，改跨頁流水號。
+        pageXml=replaceLiteralEvidenceSerials(pageXml,rep.__EVIDENCE_SERIALS__);
+        // 再回填實際證物編號、位置、特定對象與比中對象資料。
+        pageXml=replaceTokens(pageXml,rep);
+        pages.push(pageXml);
       }
       const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
       const joined = pages.join(pageBreak);
@@ -1119,19 +1319,34 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
 
   function setXlsxInlineCell(xml, ref, value){
     const text=xlsxXmlEscape(value ?? '');
-    const content=`<is><t xml:space="preserve">${text}</t></is>`;
-    const full=new RegExp(`<c r="${ref}"([^>]*)>[\\s\\S]*?<\\/c>`);
-    const self=new RegExp(`<c r="${ref}"([^>]*)\\/>`);
-    const build=(attrs)=>{
-      attrs=String(attrs||'')
-        .replace(/\s+t="[^"]*"/g,'')
-        .replace(/\/\s*$/,'');
-      return `<c r="${ref}"${attrs} t="inlineStr">${content}</c>`;
+    const prefix=/<x:worksheet\b/.test(xml)?'x:':'';
+    const content=`<${prefix}is><${prefix}t xml:space="preserve">${text}</${prefix}t></${prefix}is>`;
+
+    const cellName='(?:[A-Za-z_][\\w.-]*:)?c';
+    const self=new RegExp(`<(${cellName})\\s+r="${ref}"([^>]*)\\/>`);
+    const full=new RegExp(`<(${cellName})\\s+r="${ref}"([^>]*)>[\\s\\S]*?<\\/\\1>`);
+
+    const build=(tag,attrs)=>{
+      attrs=String(attrs||'').replace(/\s+t="[^"]*"/g,'');
+      return `<${tag} r="${ref}"${attrs} t="inlineStr">${content}</${tag}>`;
     };
-    // 先處理自閉合儲存格，避免 full 規則跨到下一個 </c>。
-    if(self.test(xml)) return xml.replace(self,(_,attrs)=>build(attrs));
-    if(full.test(xml)) return xml.replace(full,(_,attrs)=>build(attrs));
-    throw new Error(`臺中申請表 Excel 範本找不到儲存格 ${ref}`);
+
+    if(self.test(xml)) return xml.replace(self,(_,tag,attrs)=>build(tag,attrs));
+    if(full.test(xml)) return xml.replace(full,(_,tag,attrs)=>build(tag,attrs));
+
+    // 空白模板可能直接省略儲存格：必要時自動補建。
+    const rowNum=(String(ref).match(/\d+/)||[])[0];
+    if(!rowNum) throw new Error(`臺中申請表 Excel 儲存格格式錯誤 ${ref}`);
+
+    const rowName='(?:[A-Za-z_][\\w.-]*:)?row';
+    const rowRe=new RegExp(`<(${rowName})\\b([^>]*)\\br="${rowNum}"([^>]*)>([\\s\\S]*?)<\\/\\1>`);
+    if(!rowRe.test(xml)) throw new Error(`臺中申請表 Excel 範本找不到第 ${rowNum} 列`);
+
+    const cellTag=prefix+'c';
+    const cell=build(cellTag,'');
+    return xml.replace(rowRe,(all,tag,a,b,inner)=>
+      `<${tag}${a}r="${rowNum}"${b}>${inner}${cell}</${tag}>`
+    );
   }
 
   function rocDateText(){
@@ -1156,9 +1371,11 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
   }
 
   function getNewFormSpecificTargets(){
-    return getTargetData()
-      .filter(t=>t.type==='特定對象')
-      .map(t=>[t.name,t.id].filter(Boolean).join(' / '))
+    return aggregateTargetsByPerson(getTargetData(),'特定對象')
+      .map((t,i)=>{
+        const info=[t.name,t.id].filter(Boolean).join(' / ');
+        return info ? `${i+1}. ${info}` : '';
+      })
       .filter(Boolean)
       .join('\n');
   }
@@ -1177,69 +1394,82 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
 
   function confirmDraft1106Limit(fingers){
     if(fingers.length<=15) return true;
-    return confirm(`臺中申請表 Excel 單張範本最多顯示 15 筆送鑑資料。\n目前共有 ${fingers.length} 筆，將先匯出前 15 筆。\n\n仍要繼續嗎？`);
+    alert(`臺中申請表 Excel 單張範本最多顯示 15 筆送鑑資料。
+目前共有 ${fingers.length} 筆，本次會先匯出前 15 筆。`);
+    return true;
   }
 
   async function forceTaichungFormA4OnePageWide(zip){
     const sheetPath='xl/worksheets/sheet1.xml';
     const f=zip.file(sheetPath);
     if(!f) throw new Error('臺中申請表缺少工作表設定');
-    let xml=await f.async('string');
 
-    // 啟用 Fit-to-page。sheetPr 必須位於 worksheet 前段。
-    if(/<sheetPr\b/.test(xml)){
-      if(/<pageSetUpPr\b/.test(xml)){
-        xml=xml.replace(/<pageSetUpPr\b([^>]*)\/>/, (m,attrs)=>{
+    let xml=await f.async('string');
+    const prefix=/<x:worksheet\b/.test(xml)?'x:':'';
+    const tag=(name)=>prefix+name;
+
+    const sheetPrRe=new RegExp(`<${tag('sheetPr')}\\b`);
+    const pageSetUpPrRe=new RegExp(`<${tag('pageSetUpPr')}\\b([^>]*)\\/>`);
+
+    if(sheetPrRe.test(xml)){
+      if(pageSetUpPrRe.test(xml)){
+        xml=xml.replace(pageSetUpPrRe,(m,attrs)=>{
           attrs=attrs.replace(/\s+fitToPage="[^"]*"/g,'');
-          return `<pageSetUpPr${attrs} fitToPage="1"/>`;
+          return `<${tag('pageSetUpPr')}${attrs} fitToPage="1"/>`;
         });
       }else{
-        xml=xml.replace(/<sheetPr\b([^>]*)>/, '<sheetPr$1><pageSetUpPr fitToPage="1"/>');
+        xml=xml.replace(
+          new RegExp(`</${tag('sheetPr')}>`),
+          `<${tag('pageSetUpPr')} fitToPage="1"/></${tag('sheetPr')}>`
+        );
       }
     }else{
-      xml=xml.replace(/(<worksheet\b[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+      xml=xml.replace(
+        new RegExp(`(<${tag('worksheet')}\\b[^>]*>)`),
+        `$1<${tag('sheetPr')}><${tag('pageSetUpPr')} fitToPage="1"/></${tag('sheetPr')}>`
+      );
     }
 
-    // A4 = paperSize 9；直向；固定一頁寬，高度自動延伸。
-    if(/<pageSetup\b/.test(xml)){
-      xml=xml.replace(/<pageSetup\b([^>]*)\/>/, (m,attrs)=>{
+    const pageSetupRe=new RegExp(`<${tag('pageSetup')}\\b([^>]*)\\/>`);
+    if(pageSetupRe.test(xml)){
+      xml=xml.replace(pageSetupRe,(m,attrs)=>{
         attrs=attrs
           .replace(/\s+paperSize="[^"]*"/g,'')
           .replace(/\s+orientation="[^"]*"/g,'')
           .replace(/\s+fitToWidth="[^"]*"/g,'')
           .replace(/\s+fitToHeight="[^"]*"/g,'')
           .replace(/\s+scale="[^"]*"/g,'');
-        return `<pageSetup${attrs} paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>`;
+        return `<${tag('pageSetup')}${attrs} paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>`;
       });
     }else{
-      xml=xml.replace('</worksheet>','<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/></worksheet>');
+      xml=xml.replace(
+        new RegExp(`</${tag('worksheet')}>`),
+        `<${tag('pageSetup')} paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/></${tag('worksheet')}>`
+      );
     }
 
     zip.file(sheetPath,xml);
   }
 
   async function forceTaichungFormKaiTi(zip){
-    // 保留原範本的字級、粗體、框線與對齊，只統一字型為標楷體。
+    // 保留字級、粗體、框線與對齊，只統一字型為標楷體。
     const stylesPath='xl/styles.xml';
     const stylesFile=zip.file(stylesPath);
     if(stylesFile){
       let styles=await stylesFile.async('string');
-      styles=styles.replace(/<fonts\b([^>]*)>([\s\S]*?)<\/fonts>/, (all,attrs,body)=>{
-        body=body.replace(/<name\s+val="[^"]*"\s*\/>/g,'<name val="DFKai-SB"/>');
-        body=body.replace(/<scheme\s+val="[^"]*"\s*\/>/g,'');
-        return `<fonts${attrs}>${body}</fonts>`;
-      });
+      styles=styles
+        .replace(/<((?:[A-Za-z_][\w.-]*:)?name)\s+val="[^"]*"\s*\/>/g,'<$1 val="DFKai-SB"/>')
+        .replace(/<((?:[A-Za-z_][\w.-]*:)?scheme)\s+val="[^"]*"\s*\/>/g,'');
       zip.file(stylesPath,styles);
     }
 
-    // 若範本含有 rich text，共用字串內的字型也一起統一。
     const sharedPath='xl/sharedStrings.xml';
     const sharedFile=zip.file(sharedPath);
     if(sharedFile){
       let shared=await sharedFile.async('string');
       shared=shared
-        .replace(/<rFont\s+val="[^"]*"\s*\/>/g,'<rFont val="DFKai-SB"/>')
-        .replace(/<scheme\s+val="[^"]*"\s*\/>/g,'');
+        .replace(/<((?:[A-Za-z_][\w.-]*:)?rFont)\s+val="[^"]*"\s*\/>/g,'<$1 val="DFKai-SB"/>')
+        .replace(/<((?:[A-Za-z_][\w.-]*:)?scheme)\s+val="[^"]*"\s*\/>/g,'');
       zip.file(sharedPath,shared);
     }
   }
@@ -1247,10 +1477,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
   async function exportDraft1106Xlsx(){
     updateAttachmentNote();
     const missing=validate();
-    if(missing.length){
-      const go=confirm('以下資料尚未完成：\n\n'+missing.map(x=>'• '+x).join('\n')+'\n\n仍要匯出臺中申請表 Excel 嗎？');
-      if(!go) return;
-    }
+    warnIncomplete(missing,'臺中申請表尚有未完成欄位');
 
     const fingers=getFingerData();
     if(!confirmDraft1106Limit(fingers)) return;
@@ -1280,16 +1507,15 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       for(let i=0;i<15;i++){
         const row=8+i;
         const f=fingers[i];
-        const hits=f ? targets.filter(t=>t.type==='比中對象' && (t.evidenceNos||[]).includes(f.no)) : [];
-        const hitNames=[...new Set(hits.map(t=>t.name).filter(Boolean))];
-        const hitIds=[...new Set(hits.map(t=>t.id).filter(Boolean))];
-        const workNos=[...new Set(hits.map(t=>t.computerNo).filter(Boolean))];
+        const hitMatches=f ? targets.filter(t=>t.type==='比中對象' && (t.evidenceNos||[]).includes(f.no)) : [];
+        const hit=hitMatches[0]||null;
+        if(hitMatches.length>1) console.warn(`證物 ${f.no} 同時有多個比中對象，臺中申請表僅採第一位。`);
 
         sheet=setXlsxInlineCell(sheet,`B${row}`,f?.no||'');
         sheet=setXlsxInlineCell(sheet,`C${row}`,f?.location||'');
-        sheet=setXlsxInlineCell(sheet,`D${row}`,f ? (hitNames.length?`比中${hitNames.join('、')}`:'未比中') : '');
-        sheet=setXlsxInlineCell(sheet,`E${row}`,f ? hitIds.join('\n') : '');
-        sheet=setXlsxInlineCell(sheet,`F${row}`,f ? workNos.join('\n') : '');
+        sheet=setXlsxInlineCell(sheet,`D${row}`,f ? (hit?.name?`比中${hit.name}`:'未比中') : '');
+        sheet=setXlsxInlineCell(sheet,`E${row}`,f ? (hit?.id||'') : '');
+        sheet=setXlsxInlineCell(sheet,`F${row}`,f ? (hit?.computerNo||'') : '');
       }
 
       zip.file(sheetPath,sheet);
@@ -1298,11 +1524,17 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       const wbPath='xl/workbook.xml';
       let workbookXml=await zip.file(wbPath).async('string');
       workbookXml=workbookXml.replace(/activeTab="\d+"/,'activeTab="0"');
-      workbookXml=workbookXml.replace(/<sheet name="格式"/,'<sheet name="臺中申請表"');
-      workbookXml=workbookXml.replace(/<sheet name="(範例1|範例2|範例3|範例4|Sheet10)"([^>]*)\/>/g,(m,name,attrs)=>{
-        if(/\bstate=/.test(attrs)) return m;
-        return `<sheet name="${name}"${attrs} state="hidden"/>`;
-      });
+      workbookXml=workbookXml.replace(
+        /<((?:[A-Za-z_][\w.-]*:)?sheet) name="格式"/,
+        '<$1 name="臺中申請表"'
+      );
+      workbookXml=workbookXml.replace(
+        /<((?:[A-Za-z_][\w.-]*:)?sheet) name="(範例1|範例2|範例3|範例4|Sheet10)"([^>]*)\/>/g,
+        (m,tag,name,attrs)=>{
+          attrs=attrs.replace(/\s+state="[^"]*"/g,'');
+          return `<${tag} name="${name}"${attrs} state="hidden"/>`;
+        }
+      );
       zip.file(wbPath,workbookXml);
 
       await forceTaichungFormA4OnePageWide(zip);
@@ -1537,7 +1769,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       ? '目前沒有證物對應到比中對象，因此不需建立 ACEV。'
       : (miss===0
         ? `共 ${sheets.length} 張 ACEV，左右比對圖皆已上傳。`
-        : `共 ${sheets.length} 張 ACEV，尚缺 ${miss} 張比對圖。`);
+        : `共 ${sheets.length} 張 ACEV，有 ${miss} 個圖片位置未上傳；可留白繼續。`);
   }
 
   function checkbox(on){ return on ? '■' : '□'; }
@@ -1619,7 +1851,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
   }
 
   // 僅針對有比中對象的證物建立 ACEV；匯出時合併至同一份原 Word 範本，逐頁填入。
-  async function exportAllACEVWord({returnBlob=false,allowIncomplete=false}={}){
+  async function exportAllACEVWord({returnBlob=false,allowIncomplete=true}={}){
     const shells=[...acevList.querySelectorAll('.acev-shell')];
     const fingers=getACEVEvidenceData();
     if(!shells.length){
@@ -1634,13 +1866,11 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
     const missing=[];
     shells.forEach((shell,i)=>{
       const label=fingers[i]?.no||`第 ${i+1} 枚`;
-      if(!shell.querySelector('.acev-left-img').getAttribute('src')) missing.push(`${label}：左側比對圖`);
-      if(!shell.querySelector('.acev-right-img').getAttribute('src')) missing.push(`${label}：右側比對圖`);
+      if(!shell.querySelector('.acev-left-img').getAttribute('src')) missing.push(`${label}：左側比對圖未上傳`);
+      if(!shell.querySelector('.acev-right-img').getAttribute('src')) missing.push(`${label}：右側比對圖未上傳`);
     });
-    if(missing.length && !allowIncomplete){
-      if(returnBlob) throw new Error('尚有 ACEV 必要圖片未上傳：'+missing.join('、'));
-      alert('尚有 ACEV 必要圖片未上傳：\n\n'+missing.map(x=>'• '+x).join('\n'));
-      return;
+    if(missing.length && !returnBlob){
+      warnIncomplete(missing,'ACEV 圖片尚未完整上傳');
     }
     const btn=$('#exportAllACEVBtn');
     if(!returnBlob){btn.disabled=true; btn.textContent='正在整合 ACEV Word…';}
@@ -1693,7 +1923,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
         for(let j=0;j<imgs.length;j++){
           const x=imgs[j];
           // 允許未上傳的比對圖保持原範本的空白位置。
-          if(allowIncomplete && !shell.querySelector(`.acev-${x.side}-img`).getAttribute('src')){
+          if(!shell.querySelector(`.acev-${x.side}-img`).getAttribute('src')){
             pageXml=replaceImageParagraph(pageXml,x.token,'');
             continue;
           }
@@ -1888,11 +2118,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
     const acevFingers=getACEVEvidenceData();
     const shells=[...acevList.querySelectorAll('.acev-shell')];
     add(shells.length===acevFingers.length,'Step 2：ACEV 數量與比中證物數量不一致');
-    shells.forEach((shell,i)=>{
-      const label=acevFingers[i]?.no||`第 ${i+1} 筆`;
-      add(!!shell.querySelector('.acev-left-img')?.getAttribute('src'),`Step 2：證物 ${label} 缺左側比對圖`);
-      add(!!shell.querySelector('.acev-right-img')?.getAttribute('src'),`Step 2：證物 ${label} 缺右側比對圖`);
-    });
+    // ACEV 左右比對圖為選填，不列入缺漏項目。
     return {issues,photos};
   }
   function renderPackageReview(){
@@ -1906,7 +2132,7 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
       ['採驗紀錄表 PDF',!!uploadedPdfs.sampling],
       ['申請表 PDF',!!uploadedPdfs.application],
       ...($('#attachNotice').checked?[['通報單 PDF',!!uploadedPdfs.notice]]:[]),
-      ['ACEV Word 左右比對圖',getACEVEvidenceData().length===0 || !issues.some(x=>x.includes('Step 2'))],
+      ['ACEV Word（圖片可留白）',getACEVEvidenceData().length===0 || !issues.some(x=>x.includes('Step 2'))],
       [`現場指（掌）紋照片 ${photos.length} 張（JPG）`,!issues.some(x=>x.includes('Step 4'))]
     ];
     const ul=$('#packageChecklist');ul.replaceChildren();
@@ -1945,11 +2171,14 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
   $('#nextStep3Btn').addEventListener('click',()=>gotoStep(3));
   function confirmIncompleteExport(){
     const {issues}=packageItems();
-    if(!issues.length) return true;
-    return confirm('以下資料尚未完成（共 '+issues.length+' 項）：\n\n'
-      +issues.map(x=>'• '+x).join('\n')
-      +'\n\n仍要輸出已完成的檔案嗎？\n未上傳的附件會略過，ACEV 缺少的圖片位置會保持空白。\n\n「確定」繼續輸出／「取消」返回補填。');
+    if(issues.length){
+      alert('以下資料尚未完成（共 '+issues.length+' 項）：\n\n'
+        +issues.map(x=>'• '+x).join('\n')
+        +'\n\n系統仍會繼續輸出；未上傳的附件會略過，ACEV 未上傳的圖片位置會保持空白。');
+    }
+    return true;
   }
+
   function uniquePackageName(filename,used){
     const dot=filename.lastIndexOf('.');
     const stem=dot>0?filename.slice(0,dot):filename;
@@ -2059,7 +2288,6 @@ const OFFICIAL_DOCX_TEMPLATE_BASE64 = "UEsDBBQAAAAIAM05ZF0cQuk0hwEAADAHAAATAAAAW
   $('#backStep1Btn').addEventListener('click',()=>{snapshotACEV();setActiveStep(1);});
   $('#backStep1BottomBtn').addEventListener('click',()=>{snapshotACEV();setActiveStep(1);});
 
-  $('#wordBtn').addEventListener('click', exportApplication);
   $('#wordBtnBottom').addEventListener('click', exportApplication);
 })();
 </script>
