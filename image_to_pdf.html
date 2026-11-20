@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>圖片轉 PDF 工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #d9e1ee;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, #eef4ff 0%, #f8fafc 45%, #f5f7fb 100%);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 24px 28px 12px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: .04em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 12px 28px 32px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, .88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(217, 225, 238, .9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      padding: 18px;
+      position: sticky;
+      top: 18px;
+      align-self: start;
+    }
+
+    .dropzone {
+      border: 2px dashed #93c5fd;
+      border-radius: 16px;
+      background: #eff6ff;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: .18s ease;
+      user-select: none;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      background: #dbeafe;
+      border-color: var(--primary);
+    }
+
+    .dropzone .big {
+      font-size: 34px;
+      margin-bottom: 8px;
+    }
+
+    .dropzone strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .dropzone span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    input[type="file"] { display: none; }
+
+    .section {
+      padding-top: 18px;
+      margin-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .section:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+
+    .label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 9px;
+      font-size: 14px;
+    }
+
+    select, input[type="number"], input[type="text"] {
+      width: 100%;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 7px;
+    }
+
+    .checkbox {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      color: #374151;
+      margin: 10px 0;
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      height: 44px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 15px;
+      transition: .15s ease;
+    }
+
+    .btn-primary {
+      color: white;
+      background: var(--primary);
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    .btn-light {
+      background: #eef2ff;
+      color: #3730a3;
+      margin-top: 10px;
+    }
+
+    .btn-light:hover { background: #e0e7ff; }
+
+    .stage {
+      padding: 18px;
+      min-height: 560px;
+    }
+
+    .stage-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      min-height: 430px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.8;
+      background: rgba(248, 250, 252, .75);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 5px 14px rgba(15, 23, 42, .05);
+    }
+
+    .card.sortable-ghost { opacity: .45; }
+
+    .thumb-wrap {
+      height: 178px;
+      background:
+        linear-gradient(45deg, #f3f4f6 25%, transparent 25%),
+        linear-gradient(-45deg, #f3f4f6 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f3f4f6 75%),
+        linear-gradient(-45deg, transparent 75%, #f3f4f6 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .thumb-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      transition: transform .15s ease;
+    }
+
+    .order-badge {
+      position: absolute;
+      top: 9px;
+      left: 9px;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, .92);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .card-body { padding: 11px; }
+
+    .filename {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .tools {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      border-radius: 9px;
+      height: 34px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    .mini:hover { background: #eef2ff; }
+    .mini.delete { color: var(--danger); }
+    .mini.delete:hover { background: #fee2e2; }
+
+    .progress {
+      margin-top: 12px;
+      height: 9px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+      display: none;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: var(--primary);
+      transition: width .15s ease;
+    }
+
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; padding: 10px 14px 24px; }
+      header { padding: 20px 16px 8px; }
+      .controls { position: static; }
+      .stage-top { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>圖片轉 PDF 工具</h1>
+    <p class="subtitle">可匯入 PNG / JPG，多張圖片拖曳排序後轉成 PDF。檔案只在瀏覽器本機處理，不會上傳到伺服器。</p>
+  </header>
+
+  <main class="app">
+    <aside class="panel controls">
+      <div class="dropzone" id="dropzone">
+        <div class="big">＋</div>
+        <strong>選擇或拖曳圖片</strong>
+        <span>支援 PNG、JPG、JPEG<br>可一次選多張</span>
+      </div>
+      <input id="fileInput" type="file" accept="image/png,image/jpeg" multiple />
+
+      <div class="section">
+        <label class="label" for="fileName">PDF 檔名</label>
+        <input id="fileName" type="text" value="圖片彙整.pdf" />
+        <div class="hint">未輸入副檔名時，會自動補上 .pdf。</div>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <div>
+            <label class="label" for="pageSize">頁面大小</label>
+            <select id="pageSize">
+              <option value="a4" selected>A4</option>
+              <option value="letter">Letter</option>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="orientation">方向</label>
+            <select id="orientation">
+              <option value="portrait" selected>直式</option>
+              <option value="landscape">橫式</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label class="label" for="margin">邊距 mm</label>
+            <input id="margin" type="number" min="0" max="50" step="1" value="8" />
+          </div>
+          <div>
+            <label class="label" for="quality">JPG 品質</label>
+            <input id="quality" type="number" min="0.3" max="1" step="0.05" value="0.92" />
+          </div>
+        </div>
+
+        <label class="label" for="fitMode">圖片放入方式</label>
+        <select id="fitMode">
+          <option value="contain" selected>完整顯示：等比例塞入頁面，可能留白</option>
+          <option value="cover">填滿頁面：等比例放大，可能裁切</option>
+        </select>
+
+        <label class="checkbox">
+          <input id="showFileName" type="checkbox" />
+          每頁圖片上方加入原始檔名
+        </label>
+      </div>
+
+      <div class="section">
+        <button class="btn btn-primary" id="exportBtn" disabled>匯出 PDF</button>
+        <button class="btn btn-light" id="clearBtn">清空圖片</button>
+        <div class="progress" id="progress"><div class="bar" id="bar"></div></div>
+        <div class="hint" id="status">目前尚未加入圖片。</div>
+      </div>
+    </aside>
+
+    <section class="panel stage">
+      <div class="stage-top">
+        <div>
+          <strong>圖片清單</strong>
+          <div class="hint">拖曳縮圖可以調整 PDF 頁面順序。</div>
+        </div>
+        <div class="count" id="count">0 張圖片</div>
+      </div>
+      <div class="empty" id="empty">
+        尚未加入圖片<br>請從左側選擇圖片，或直接把圖片拖到視窗內。
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const { jsPDF } = window.jspdf;
+
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const count = document.getElementById('count');
+    const exportBtn = document.getElementById('exportBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusEl = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const bar = document.getElementById('bar');
+
+    const fileNameEl = document.getElementById('fileName');
+    const pageSizeEl = document.getElementById('pageSize');
+    const orientationEl = document.getElementById('orientation');
+    const marginEl = document.getElementById('margin');
+    const qualityEl = document.getElementById('quality');
+    const fitModeEl = document.getElementById('fitMode');
+    const showFileNameEl = document.getElementById('showFileName');
+
+    let items = [];
+    let seq = 1;
+
+    new Sortable(grid, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: syncOrderFromDom
+    });
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+    ['dragenter', 'dragover'].forEach(type => {
+      document.addEventListener(type, e => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(type => {
+      document.addEventListener(type, e => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    document.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+    clearBtn.addEventListener('click', () => {
+      if (!items.length) return;
+      if (!confirm('確定要清空所有圖片嗎？')) return;
+      items.forEach(item => URL.revokeObjectURL(item.url));
+      items = [];
+      render();
+    });
+
+    exportBtn.addEventListener('click', exportPDF);
+
+    function addFiles(fileList) {
+      const files = Array.from(fileList || []).filter(file => /^image\/(png|jpe?g)$/i.test(file.type));
+      if (!files.length) {
+        statusEl.textContent = '沒有偵測到 PNG 或 JPG 圖片。';
+        return;
+      }
+
+      files.forEach(file => {
+        const url = URL.createObjectURL(file);
+        const id = String(seq++);
+        const img = new Image();
+        const item = {
+          id,
+          file,
+          url,
+          name: file.name,
+          size: file.size,
+          width: 0,
+          height: 0,
+          rotation: 0
+        };
+        img.onload = () => {
+          item.width = img.naturalWidth;
+          item.height = img.naturalHeight;
+          render();
+        };
+        img.src = url;
+        items.push(item);
+      });
+
+      fileInput.value = '';
+      render();
+    }
+
+    function syncOrderFromDom() {
+      const ids = Array.from(grid.children).map(el => el.dataset.id);
+      items.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+      render(false);
+    }
+
+    function render(rebuild = true) {
+      empty.style.display = items.length ? 'none' : 'flex';
+      grid.style.display = items.length ? 'grid' : 'none';
+      exportBtn.disabled = !items.length;
+      count.textContent = `${items.length} 張圖片`;
+      statusEl.textContent = items.length ? `已加入 ${items.length} 張圖片。` : '目前尚未加入圖片。';
+
+      if (!rebuild) {
+        updateBadges();
+        return;
+      }
+
+      grid.innerHTML = '';
+      items.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = item.id;
+        card.innerHTML = `
+          <div class="thumb-wrap">
+            <div class="order-badge">${index + 1}</div>
+            <img src="${item.url}" alt="${escapeHtml(item.name)}" style="transform: rotate(${item.rotation}deg);" />
+          </div>
+          <div class="card-body">
+            <div class="filename" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+            <div class="meta">${item.width || '?'} × ${item.height || '?'} px｜${formatBytes(item.size)}</div>
+            <div class="tools">
+              <button class="mini" data-action="left">左轉</button>
+              <button class="mini" data-action="right">右轉</button>
+              <button class="mini delete" data-action="delete">刪除</button>
+            </div>
+          </div>`;
+
+        card.querySelectorAll('.mini').forEach(btn => {
+          btn.addEventListener('click', () => handleAction(item.id, btn.dataset.action));
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function updateBadges() {
+      Array.from(grid.children).forEach((card, index) => {
+        const badge = card.querySelector('.order-badge');
+        if (badge) badge.textContent = String(index + 1);
+      });
+    }
+
+    function handleAction(id, action) {
+      const item = items.find(x => x.id === id);
+      if (!item) return;
+
+      if (action === 'left') item.rotation = (item.rotation + 270) % 360;
+      if (action === 'right') item.rotation = (item.rotation + 90) % 360;
+      if (action === 'delete') {
+        URL.revokeObjectURL(item.url);
+        items = items.filter(x => x.id !== id);
+      }
+      render();
+    }
+
+    async function exportPDF() {
+      if (!items.length) return;
+
+      const orientation = orientationEl.value;
+      const pageSize = pageSizeEl.value;
+      const margin = clamp(Number(marginEl.value || 0), 0, 50);
+      const quality = clamp(Number(qualityEl.value || 0.92), 0.3, 1);
+      const fitMode = fitModeEl.value;
+      const showFileName = showFileNameEl.checked;
+
+      const pdf = new jsPDF({ orientation, unit: 'mm', format: pageSize, compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const usableW = Math.max(1, pageW - margin * 2);
+      const reservedTitleH = showFileName ? 16 : 0;
+      const imageTopY = margin + reservedTitleH;
+      const usableH = Math.max(1, pageH - margin * 2 - reservedTitleH);
+
+      setProgress(0, true);
+      exportBtn.disabled = true;
+      statusEl.textContent = '正在產生 PDF...';
+
+      try {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (i > 0) pdf.addPage(pageSize, orientation);
+
+          const dataUrl = await imageToJpegDataUrl(item, quality);
+          const dim = rotatedDimensions(item.width, item.height, item.rotation);
+          const box = fitRect(dim.width, dim.height, usableW, usableH, fitMode);
+          const x = margin + (usableW - box.w) / 2;
+          const y = imageTopY + (usableH - box.h) / 2;
+
+          if (showFileName) {
+            const titleDataUrl = makeTitleCanvas(item.name.replace(/\.[^.]+$/, ''), usableW);
+            pdf.addImage(titleDataUrl, 'PNG', margin, margin, usableW, reservedTitleH - 2.5, undefined, 'FAST');
+            pdf.setDrawColor(210);
+            pdf.line(margin, margin + reservedTitleH - 2.5, pageW - margin, margin + reservedTitleH - 2.5);
+          }
+
+          pdf.addImage(dataUrl, 'JPEG', x, y, box.w, box.h, undefined, 'FAST');
+
+          setProgress(((i + 1) / items.length) * 100, true);
+          await sleep(20);
+        }
+
+        pdf.save(normalizePdfName(fileNameEl.value));
+        statusEl.textContent = `完成匯出，共 ${items.length} 頁。`;
+      } catch (err) {
+        console.error(err);
+        alert('PDF 產生失敗，請確認圖片是否正常。');
+        statusEl.textContent = 'PDF 產生失敗。';
+      } finally {
+        exportBtn.disabled = !items.length;
+        setTimeout(() => setProgress(0, false), 650);
+      }
+    }
+
+    function makeTitleCanvas(title, widthMm) {
+      // jsPDF 內建字型不支援中文，所以把檔名先畫到 Canvas，再以圖片放進 PDF。
+      // 這樣中文、日文、全形符號與特殊字元都比較穩定。
+      const pxPerMm = 4;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(320, Math.round(widthMm * pxPerMm));
+      canvas.height = 54;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 18px "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", sans-serif';
+      ctx.textBaseline = 'top';
+
+      const safeTitle = String(title || '').trim() || '未命名圖片';
+      const lines = wrapCanvasText(ctx, safeTitle, canvas.width - 8, 2);
+      lines.forEach((line, index) => ctx.fillText(line, 4, 4 + index * 23));
+      return canvas.toDataURL('image/png');
+    }
+
+    function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+      const chars = Array.from(text);
+      const lines = [];
+      let line = '';
+
+      for (const ch of chars) {
+        const test = line + ch;
+        if (ctx.measureText(test).width <= maxWidth || !line) {
+          line = test;
+        } else {
+          lines.push(line);
+          line = ch;
+          if (lines.length === maxLines - 1) break;
+        }
+      }
+
+      if (line && lines.length < maxLines) lines.push(line);
+      if (lines.length && chars.join('') !== lines.join('')) {
+        let last = lines[lines.length - 1];
+        while (ctx.measureText(last + '…').width > maxWidth && last.length > 0) {
+          last = Array.from(last).slice(0, -1).join('');
+        }
+        lines[lines.length - 1] = last + '…';
+      }
+      return lines;
+    }
+
+    function imageToJpegDataUrl(item, quality) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const rotated = item.rotation % 180 !== 0;
+          const canvas = document.createElement('canvas');
+          canvas.width = rotated ? img.naturalHeight : img.naturalWidth;
+          canvas.height = rotated ? img.naturalWidth : img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(item.rotation * Math.PI / 180);
+          ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = item.url;
+      });
+    }
+
+    function rotatedDimensions(w, h, rotation) {
+      return rotation % 180 === 0 ? { width: w, height: h } : { width: h, height: w };
+    }
+
+    function fitRect(srcW, srcH, maxW, maxH, mode) {
+      const scaleContain = Math.min(maxW / srcW, maxH / srcH);
+      const scaleCover = Math.max(maxW / srcW, maxH / srcH);
+      const scale = mode === 'cover' ? scaleCover : scaleContain;
+      return { w: srcW * scale, h: srcH * scale };
+    }
+
+    function setProgress(percent, visible) {
+      progress.style.display = visible ? 'block' : 'none';
+      bar.style.width = `${percent}%`;
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let size = bytes;
+      let unit = 0;
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit++;
+      }
+      return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
+
+    function normalizePdfName(name) {
+      const trimmed = (name || '').trim() || '圖片彙整.pdf';
+      return /\.pdf$/i.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>'"]/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[ch]));
+    }
+
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+</body>
+</html>

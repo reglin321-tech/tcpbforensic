@@ -1,0 +1,78 @@
+:root {
+    /* 主色調：溫潤的馬卡龍粉藍色 (Macaron Blue) */
+    --primary-color: #8da9c4;
+
+    /* 背景色：極淡的暖灰色，營造舒適感 */
+    --bg-color: #f7f9fb;
+
+    /* 卡片背景：你要求的淡灰色，比背景深一點點，增加層次 */
+    --card-bg: #edf2f4;
+
+    /* 裝飾色：柔和的灰紫色或淡藍灰 */
+    --accent-color: #d1d9e6;
+
+    /* 文字顏色：深鐵灰色，避免純黑帶來的視覺壓力 */
+    --text-main: #4a5568;
+    --text-muted: #718096;
+
+    /* 邊框顏色：與背景相近的線條 */
+    --border-color: #dae1e7;
+
+    /* 畫布背景：純白 */
+    --canvas-bg: #ffffff;
+}
+
+body {
+    font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+}
+
+/* 強化馬卡龍風格的卡片 */
+.card {
+    background: var(--card-bg);
+    border-radius: 16px; /* 更圓潤的轉角 */
+    padding: 20px;
+    /* 柔和的內陰影與外陰影組合 */
+    box-shadow: 6px 6px 12px #e2e8f0, -6px -6px 12px #ffffff;
+    margin: 15px auto;
+    border: 1px solid var(--border-color);
+}
+
+/* 按鈕文字縮放與配色優化 */
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    /* 加入剛才討論的文字自動縮放 */
+    font-size: clamp(16px, 4vw, 20px);
+    transition: all 0.2s ease;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+    filter: brightness(0.9);
+}
+
+/* 針對通訊錄分組按鈕的特別微調 */
+.group-btn {
+    background: var(--accent-color);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    font-weight: bold;
+    /* 自動縮放文字 */
+    font-size: clamp(16px, 3.5vw, 22px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 3 / 1;
+    cursor: pointer;
+    box-shadow: 3px 3px 6px #d1d9e6, -3px -3px 6px #ffffff;
+}

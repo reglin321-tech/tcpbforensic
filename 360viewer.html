@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Pro 360 Viewer - 專業現場勘查工具</title>
+    <style>
+        body {
+            margin: 0; overflow: hidden; background-color: #111;
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            color: white; user-select: none;
+        }
+        
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        #drop-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 120, 215, 0.8); z-index: 9999;
+            display: none; justify-content: center; align-items: center;
+            font-size: 3rem; font-weight: bold; pointer-events: none;
+        }
+
+        #ui-panel {
+            position: absolute; top: 20px; right: 20px; width: 320px;
+            background: rgba(30, 30, 30, 0.9); padding: 20px;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            border: 1px solid #555; z-index: 10;
+        }
+        .control-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: #ddd; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        
+        button {
+            background: #444; color: white; border: 1px solid #666;
+            padding: 10px 15px; border-radius: 4px; cursor: pointer;
+            font-weight: bold; font-family: 'Microsoft JhengHei';
+            transition: 0.2s;
+        }
+        button:hover { background: #555; }
+        .btn-primary { background: #0078d7; border-color: #005a9e; width: 100%; margin-top: 10px; }
+        .btn-primary:hover { background: #005a9e; }
+        .btn-danger { background: #d32f2f; border-color: #b71c1c; }
+        .btn-danger:hover { background: #b71c1c; }
+        
+        .flex-row { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+        .flex-row button { flex: 1; }
+
+        #file-status {
+            text-align: center; font-size: 13px; color: #aaa; margin-bottom: 15px;
+            background: #222; padding: 10px; border-radius: 4px; border: 1px dashed #777;
+            cursor: pointer;
+        }
+        #file-status:hover { background: #333; }
+
+        .annotation {
+            position: absolute; padding: 6px 12px; border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-weight: bold; color: white;
+            /* 將座標原點設在正下方中心，方便對齊 3D 空間點 */
+            transform: translate(-50%, calc(-100% - 12px));
+            z-index: 5; display: none; cursor: grab;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: auto;
+            white-space: nowrap;
+        }
+        .annotation:active { cursor: grabbing; }
+        
+        .annotation::after {
+            content: ''; position: absolute; bottom: -12px; left: 50%;
+            transform: translateX(-50%); width: 8px; height: 8px;
+            background: inherit; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px black;
+        }
+
+        #dialog-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.6); z-index: 100; display: none;
+            justify-content: center; align-items: center;
+        }
+        #dialog-box {
+            background: #2b2b2b; padding: 20px; border-radius: 8px; width: 300px;
+            border: 1px solid #666; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+        }
+        #dialog-box h3 { margin-top: 0; font-size: 18px; }
+        #dialog-box input[type=text] {
+            width: 90%; padding: 10px; margin: 10px 0 15px 0; border-radius: 4px;
+            border: 1px solid #555; background: #111; color: white; font-size: 15px;
+        }
+        #dialog-box select {
+            width: 100%; padding: 8px; margin-bottom: 15px; background: #111; color: white; border: 1px solid #555;
+        }
+        
+        #instructions {
+            position: absolute; top: 20px; left: 20px; z-index: 10;
+            font-size: 15px; line-height: 1.8; text-shadow: 1px 1px 4px black;
+            background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="drop-overlay">📥 鬆開滑鼠，載入圖片</div>
+    <div id="canvas-container"></div>
+
+    <div id="instructions">
+        👉 <b>視角控制</b>：滑鼠拖曳旋轉 / 滾輪縮放<br>
+        📌 <b>新增標記</b>：按住 <b>Ctrl + 滑鼠左鍵</b> 點擊畫面<br>
+        🖐️ <b>移動標記</b>：直接<b>拖曳</b>標記即可<br>
+        ⚙️ <b>編輯標記</b>：對標記點擊 <b>滑鼠右鍵</b> (修改大小/顏色/刪除)
+    </div>
+
+    <div id="ui-panel">
+        <div id="file-status" onclick="document.getElementById('file-input').click()">
+            📁 點擊此處或將多張照片拖放進來<br>(支援 JPG, PNG 全景圖)
+        </div>
+        <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+        
+        <div class="flex-row">
+            <button id="btn-prev">◀ 上一張</button>
+            <button id="btn-next">下一張 ▶</button>
+        </div>
+
+        <div class="control-group">
+            <label id="lbl-gamma">Gamma (暗部細節): 1.00</label>
+            <input type="range" id="slider-gamma" min="0.1" max="5.0" step="0.05" value="1.0">
+        </div>
+
+        <div class="control-group">
+            <label id="lbl-bright">整體亮度: 1.00</label>
+            <input type="range" id="slider-bright" min="0.1" max="5.0" step="0.05" value="1.0">
+        </div>
+
+        <button class="btn-primary" id="btn-save">📸 截圖存檔 (包含標記)</button>
+    </div>
+
+    <div id="dialog-overlay">
+        <div id="dialog-box">
+            <h3 id="dialog-title">新增/編輯標記</h3>
+            
+            <label>標記文字：</label>
+            <input type="text" id="ann-input" placeholder="例如: 血跡、起火點">
+            
+            <label>標籤顏色：</label>
+            <select id="ann-color">
+                <option value="rgba(0, 0, 0, 0.7)">預設 (半透明黑)</option>
+                <option value="rgba(211, 47, 47, 0.8)">紅色 (緊急/警告)</option>
+                <option value="rgba(56, 142, 60, 0.8)">綠色 (安全/確認)</option>
+                <option value="rgba(25, 118, 210, 0.8)">藍色 (資訊/一般)</option>
+            </select>
+
+            <label style="margin-top: 5px;">標籤大小：<span id="ann-size-val">15</span>px</label>
+            <input type="range" id="ann-size" min="10" max="40" step="1" value="15" style="margin-bottom: 15px;">
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-primary" id="btn-ann-save" style="margin-top: 0;">儲存</button>
+                <button id="btn-ann-delete" class="btn-danger">刪除</button>
+                <button id="btn-ann-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        let scene, camera, renderer, material, sphereMesh;
+        let isDraggingView = false, onMouseDownMouseX = 0, onMouseDownMouseY = 0;
+        let lon = -90, onMouseDownLon = 0; 
+        let lat = 0, onMouseDownLat = 0;   
+        
+        let loadedFiles = [];
+        let currentIndex = -1;
+        let annotations = []; 
+        let annCounter = 0;
+        
+        let draggingAnn = null;
+        let editingAnn = null; 
+        let pendingPos = null; 
+
+        const container = document.getElementById('canvas-container');
+        const dialogOverlay = document.getElementById('dialog-overlay');
+        const annInput = document.getElementById('ann-input');
+        const annColor = document.getElementById('ann-color');
+        const annSize = document.getElementById('ann-size');
+        const annSizeVal = document.getElementById('ann-size-val');
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1100);
+            camera.position.y = 40; 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            const geometry = new THREE.SphereGeometry(500, 60, 40);
+            geometry.scale(-1, 1, 1); 
+
+            // 乾淨且高效的 Shader (僅處理 Gamma 與 Brightness)
+            material = new THREE.ShaderMaterial({
+                uniforms: {
+                    tDiffuse: { value: null },
+                    brightness: { value: 1.0 },
+                    gamma: { value: 1.0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D tDiffuse;
+                    uniform float brightness;
+                    uniform float gamma;
+                    varying vec2 vUv;
+                    void main() {
+                        vec4 texel = texture2D(tDiffuse, vUv);
+                        vec3 color = texel.rgb * brightness;
+                        color = pow(max(color, vec3(0.0001)), vec3(1.0 / gamma));
+                        gl_FragColor = vec4(color, texel.a);
+                    }
+                `
+            });
+
+            sphereMesh = new THREE.Mesh(geometry, material);
+            scene.add(sphereMesh);
+
+            setupDragAndDrop();
+            setupControls();
+            
+            window.addEventListener('resize', onWindowResize);
+            container.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+            container.addEventListener('wheel', onMouseWheel, { passive: false });
+        }
+
+        function setupDragAndDrop() {
+            const overlay = document.getElementById('drop-overlay');
+            const fileInput = document.getElementById('file-input');
+            let dragTimer;
+
+            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+            window.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                overlay.style.display = 'flex';
+                clearTimeout(dragTimer);
+            });
+
+            window.addEventListener('dragleave', (e) => {
+                dragTimer = setTimeout(() => { overlay.style.display = 'none'; }, 100);
+            });
+
+            window.addEventListener('drop', (e) => {
+                e.preventDefault();
+                overlay.style.display = 'none';
+                handleFiles(e.dataTransfer.files);
+            });
+
+            function handleFiles(fileList) {
+                // 僅允許標準圖片格式
+                const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+
+                if (files.length > 0) {
+                    loadedFiles = files;
+                    loadedFiles.sort((a, b) => a.name.localeCompare(b.name));
+                    currentIndex = 0;
+                    loadImage(currentIndex);
+                }
+            }
+
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                if (loadedFiles.length === 0) return;
+                currentIndex = (currentIndex - 1 + loadedFiles.length) % loadedFiles.length;
+                loadImage(currentIndex);
+            });
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                if (loadedFiles.length === 0) return;
+                currentIndex = (currentIndex + 1) % loadedFiles.length;
+                loadImage(currentIndex);
+            });
+        }
+
+        function loadImage(index) {
+            const file = loadedFiles[index];
+            document.getElementById('file-status').innerHTML = `<b>${file.name}</b><br>(${index + 1} / ${loadedFiles.length})`;
+            
+            const url = URL.createObjectURL(file);
+            new THREE.TextureLoader().load(url, (texture) => {
+                texture.minFilter = THREE.LinearFilter;
+                material.uniforms.tDiffuse.value = texture;
+                
+                annotations.forEach(ann => ann.htmlElement.remove());
+                annotations = [];
+            }, undefined, () => {
+                alert("圖片載入失敗，請確認檔案格式正確。");
+            });
+        }
+
+        function setupControls() {
+            document.getElementById('slider-gamma').addEventListener('input', (e) => {
+                material.uniforms.gamma.value = parseFloat(e.target.value);
+                document.getElementById('lbl-gamma').innerText = `Gamma (暗部細節): ${e.target.value}`;
+            });
+
+            document.getElementById('slider-bright').addEventListener('input', (e) => {
+                material.uniforms.brightness.value = parseFloat(e.target.value);
+                document.getElementById('lbl-bright').innerText = `整體亮度: ${e.target.value}`;
+            });
+
+            // 標記大小滑桿動態顯示數值
+            annSize.addEventListener('input', (e) => {
+                annSizeVal.innerText = e.target.value;
+            });
+
+            document.getElementById('btn-save').addEventListener('click', saveSnapshot);
+            document.getElementById('btn-ann-save').addEventListener('click', saveAnnotation);
+            document.getElementById('btn-ann-cancel').addEventListener('click', closeDialog);
+            document.getElementById('btn-ann-delete').addEventListener('click', deleteAnnotation);
+        }
+
+        function onPointerDown(e) {
+            if (e.button !== 0) return;
+
+            if (e.ctrlKey && material.uniforms.tDiffuse.value) {
+                const intersect = getRaycastIntersection(e.clientX, e.clientY);
+                if (intersect) {
+                    editingAnn = null; 
+                    pendingPos = intersect.point;
+                    // 預設大小為 15
+                    openDialog("新增空間標記", "", "rgba(0, 0, 0, 0.7)", 15);
+                }
+                return;
+            }
+
+            isDraggingView = true;
+            onMouseDownMouseX = e.clientX;
+            onMouseDownMouseY = e.clientY;
+            onMouseDownLon = lon;
+            onMouseDownLat = lat;
+        }
+
+        function onPointerMove(e) {
+            if (isDraggingView) {
+                lon = (onMouseDownMouseX - e.clientX) * 0.15 + onMouseDownLon;
+                lat = (e.clientY - onMouseDownMouseY) * 0.15 + onMouseDownLat;
+            }
+            if (draggingAnn) {
+                draggingAnn.htmlElement.style.left = e.clientX + 'px';
+                draggingAnn.htmlElement.style.top = e.clientY + 'px';
+            }
+        }
+
+        function onPointerUp(e) {
+            isDraggingView = false;
+            if (draggingAnn) {
+                draggingAnn.htmlElement.style.cursor = 'grab';
+                const intersect = getRaycastIntersection(e.clientX, e.clientY);
+                if (intersect) {
+                    draggingAnn.position.copy(intersect.point);
+                }
+                draggingAnn = null;
+            }
+        }
+
+        function onMouseWheel(e) {
+            e.preventDefault(); 
+            const fov = camera.fov + e.deltaY * 0.05;
+            camera.fov = Math.max(15, Math.min(110, fov));
+            camera.updateProjectionMatrix();
+        }
+
+        function getRaycastIntersection(clientX, clientY) {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2(
+                (clientX / window.innerWidth) * 2 - 1,
+                -(clientY / window.innerHeight) * 2 + 1
+            );
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(sphereMesh);
+            return intersects.length > 0 ? intersects[0] : null;
+        }
+
+        function createAnnotationElement(ann) {
+            const el = document.createElement('div');
+            el.className = 'annotation';
+            el.innerText = ann.text;
+            el.style.background = ann.color;
+            el.style.fontSize = ann.size + 'px';
+            document.body.appendChild(el);
+            ann.htmlElement = el;
+
+            el.addEventListener('mousedown', (e) => {
+                if (e.button === 0 && !e.ctrlKey) {
+                    e.stopPropagation(); 
+                    draggingAnn = ann;
+                    el.style.cursor = 'grabbing';
+                }
+            });
+
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                editingAnn = ann;
+                openDialog("編輯/刪除標記", ann.text, ann.color, ann.size);
+            });
+        }
+
+        function openDialog(title, text, color, size) {
+            dialogOverlay.style.display = 'flex';
+            document.getElementById('dialog-title').innerText = title;
+            annInput.value = text;
+            annColor.value = color;
+            annSize.value = size;
+            annSizeVal.innerText = size;
+            annInput.focus();
+            
+            document.getElementById('btn-ann-delete').style.display = editingAnn ? 'block' : 'none';
+        }
+
+        function closeDialog() {
+            dialogOverlay.style.display = 'none';
+        }
+
+        function saveAnnotation() {
+            const text = annInput.value.trim();
+            const size = parseInt(annSize.value);
+            if (!text) return;
+
+            if (editingAnn) {
+                editingAnn.text = text;
+                editingAnn.color = annColor.value;
+                editingAnn.size = size;
+                
+                editingAnn.htmlElement.innerText = text;
+                editingAnn.htmlElement.style.background = annColor.value;
+                editingAnn.htmlElement.style.fontSize = size + 'px';
+            } else if (pendingPos) {
+                const newAnn = {
+                    id: annCounter++,
+                    position: pendingPos.clone(),
+                    text: text,
+                    color: annColor.value,
+                    size: size,
+                    htmlElement: null
+                };
+                createAnnotationElement(newAnn);
+                annotations.push(newAnn);
+            }
+            closeDialog();
+        }
+
+        function deleteAnnotation() {
+            if (editingAnn) {
+                editingAnn.htmlElement.remove();
+                annotations = annotations.filter(a => a.id !== editingAnn.id);
+            }
+            closeDialog();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            lat = Math.max(-85, Math.min(85, lat));
+            let phi = THREE.MathUtils.degToRad(90 - lat);
+            let theta = THREE.MathUtils.degToRad(lon);
+
+            camera.lookAt(
+                500 * Math.sin(phi) * Math.cos(theta),
+                camera.position.y + 500 * Math.cos(phi), 
+                500 * Math.sin(phi) * Math.sin(theta)
+            );
+
+            renderer.render(scene, camera);
+            updateAnnotationPositions();
+        }
+
+        function updateAnnotationPositions() {
+            if (draggingAnn) return; 
+
+            annotations.forEach(ann => {
+                const pos = ann.position.clone();
+                pos.project(camera); 
+                
+                if (pos.z < 1 && pos.z > -1) {
+                    const x = (pos.x *  .5 + .5) * window.innerWidth;
+                    const y = (pos.y * -.5 + .5) * window.innerHeight;
+                    ann.htmlElement.style.display = 'block';
+                    ann.htmlElement.style.left = `${x}px`;
+                    ann.htmlElement.style.top = `${y}px`;
+                } else {
+                    ann.htmlElement.style.display = 'none';
+                }
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- 智慧截圖：按照各個標記的實際大小動態繪製 ---
+        function saveSnapshot() {
+            if(!material.uniforms.tDiffuse.value) return;
+            
+            const mergeCanvas = document.createElement('canvas');
+            mergeCanvas.width = window.innerWidth;
+            mergeCanvas.height = window.innerHeight;
+            const ctx = mergeCanvas.getContext('2d');
+
+            ctx.drawImage(renderer.domElement, 0, 0);
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            annotations.forEach(ann => {
+                if (ann.htmlElement.style.display === 'block') {
+                    // 取得 HTML 元素的精準定位點
+                    const originX = parseFloat(ann.htmlElement.style.left);
+                    const originY = parseFloat(ann.htmlElement.style.top);
+
+                    // 依照設定設定字體大小
+                    ctx.font = `bold ${ann.size}px Microsoft JhengHei`;
+                    const textWidth = ctx.measureText(ann.text).width;
+                    
+                    // 動態計算背景框的長寬與間距
+                    const paddingX = ann.size; 
+                    const paddingY = ann.size * 0.8; 
+                    const boxWidth = textWidth + paddingX;
+                    const boxHeight = ann.size + paddingY;
+                    
+                    // 繪製定位黃點 (精準於原點)
+                    ctx.fillStyle = 'yellow';
+                    ctx.beginPath();
+                    ctx.arc(originX, originY, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // 計算背景框位置 (置中並位於黃點上方 12px)
+                    const boxX = originX - boxWidth / 2;
+                    const boxY = originY - boxHeight - 12;
+
+                    // 繪製背景框
+                    ctx.fillStyle = ann.color;
+                    ctx.beginPath();
+                    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 6);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // 繪製文字
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(ann.text, originX, boxY + boxHeight / 2);
+                }
+            });
+
+            const link = document.createElement('a');
+            const fileBaseName = loadedFiles.length > 0 ? loadedFiles[currentIndex].name.split('.')[0] : 'evidence';
+            link.download = `${fileBaseName}_snapshot.png`;
+            link.href = mergeCanvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

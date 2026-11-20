@@ -1,0 +1,123 @@
+const contactData = [
+    // --- 長官室 ---
+    { "dept": "長官室", "name": "主任室", "title": "主任", "ext": "2172" },
+    { "dept": "長官室", "name": "專員室", "title": "專員", "ext": "2173" },
+
+    // --- 第一股 ---
+    { "dept": "第一股", "name": "蕭◯廷", "title": "股長", "ext": "2390" },
+    { "dept": "第一股", "name": "林◯國", "title": "組員", "ext": "2391" },
+    { "dept": "第一股", "name": "徐◯駿", "title": "組員", "ext": "2394" },
+    { "dept": "第一股", "name": "吳◯宸", "title": "組員", "ext": "2395" },
+    { "dept": "第一股", "name": "董◯澤", "title": "組員", "ext": "2396" },
+    { "dept": "第一股", "name": "陳◯勳", "title": "組員", "ext": "2397" },
+    { "dept": "第一股", "name": "茆◯鵬", "title": "組員", "ext": "2398" },
+    { "dept": "第一股", "name": "洪◯棟", "title": "組員", "ext": "2393" },
+
+    // --- 第二股 ---
+    { "dept": "第二股", "name": "魏◯政", "title": "股長", "ext": "2409" },
+    { "dept": "第二股", "name": "吳◯宇", "title": "組員", "ext": "2410" },
+    { "dept": "第二股", "name": "林◯至", "title": "組員", "ext": "2411" },
+    { "dept": "第二股", "name": "楊◯瑜", "title": "組員", "ext": "2412" },
+    { "dept": "第二股", "name": "彭◯庭", "title": "組員", "ext": "2414" },
+    { "dept": "第二股", "name": "江◯遠", "title": "組員", "ext": "2415" },
+    { "dept": "第二股", "name": "乃◯康", "title": "組員", "ext": "2416" },
+    { "dept": "第二股", "name": "曾◯祥", "title": "組員", "ext": "2395" },
+    { "dept": "第二股", "name": "羅◯秀", "title": "組員", "ext": "2417" },
+
+    // --- 第三股 ---
+    { "dept": "第三股", "name": "徐◯惠", "title": "股長", "ext": "2418" },
+    { "dept": "第三股", "name": "蔡◯穎", "title": "組員", "ext": "2419" },
+    { "dept": "第三股", "name": "羅◯欣", "title": "組員", "ext": "2423" },
+    { "dept": "第三股", "name": "林◯臻", "title": "組員", "ext": "2421" },
+    { "dept": "第三股", "name": "余◯娟", "title": "組員", "ext": "2422" },
+    { "dept": "第三股", "name": "謝◯致", "title": "組員", "ext": "2420" },
+    { "dept": "第三股", "name": "陳◯耕", "title": "組員", "ext": "2424" },
+    { "dept": "第三股", "name": "柏◯儀", "title": "組員", "ext": "2426" },
+
+    // --- DNA小組 ---
+    { "dept": "DNA小組", "name": "翁◯蓮", "title": "警務正", "ext": "2400" },
+    { "dept": "DNA小組", "name": "王◯立", "title": "組員", "ext": "2401" },
+    { "dept": "DNA小組", "name": "陳◯安", "title": "組員", "ext": "2402" },
+    { "dept": "DNA小組", "name": "莊◯仁", "title": "組員", "ext": "2404" },
+    { "dept": "DNA小組", "name": "李◯龍", "title": "組員", "ext": "2405" },
+    { "dept": "DNA小組", "name": "林◯敏", "title": "組員", "ext": "2406" },
+    { "dept": "DNA小組", "name": "花◯誼", "title": "組員", "ext": "2407" },
+
+    // --- 辦公室區域 ---
+    { "dept": "辦公室區域", "name": "會議室", "title": "8樓", "ext": "2428" },
+    { "dept": "辦公室區域", "name": "會客室", "title": "8樓", "ext": "2427" },
+    { "dept": "辦公室區域", "name": "證物室", "title": "8樓", "ext": "2689" },
+    { "dept": "辦公室區域", "name": "槍彈室", "title": "8樓", "ext": "2690" },
+    { "dept": "辦公室區域", "name": "指紋室", "title": "8樓", "ext": "2687" },
+
+    // --- 8樓實驗室 ---
+    { "dept": "8樓實驗室", "name": "痕跡實驗室", "title": "Lab", "ext": "2683" },
+    { "dept": "8樓實驗室", "name": "槍彈實驗室", "title": "Lab", "ext": "2690" },
+    { "dept": "8樓實驗室", "name": "證物室", "title": "Lab", "ext": "2689" },
+    { "dept": "8樓實驗室", "name": "指紋實驗室", "title": "Lab", "ext": "2688" },
+    { "dept": "8樓實驗室", "name": "指紋工作站", "title": "Lab", "ext": "2687" },
+    { "dept": "8樓實驗室", "name": "化學實驗室", "title": "Lab", "ext": "2685" },
+    { "dept": "8樓實驗室", "name": "重建教室", "title": "Lab", "ext": "2684" },
+    { "dept": "8樓實驗室", "name": "出勤區", "title": "Area", "ext": "2682" },
+    { "dept": "8樓實驗室", "name": "會議室", "title": "Lab Area", "ext": "2679" },
+    { "dept": "8樓實驗室", "name": "電泳室", "title": "Lab", "ext": "2678" },
+    { "dept": "8樓實驗室", "name": "萃取室", "title": "Lab", "ext": "2676" },
+    { "dept": "8樓實驗室", "name": "前處理室", "title": "Lab", "ext": "2675" },
+    { "dept": "8樓實驗室", "name": "標準室", "title": "Lab", "ext": "2674" },
+    { "dept": "8樓實驗室", "name": "DNA收案", "title": "Lab", "ext": "2673" },
+    // ---各分局---
+    { "dept": "各分局", "name": "第一分局", "ext": "5125、5126", "title": "" },
+  { "dept": "各分局", "name": "第二分局", "ext": "5225、5231", "title": "" },
+  { "dept": "各分局", "name": "第三分局", "ext": "5325、5326", "title": "" },
+  { "dept": "各分局", "name": "第四分局", "ext": "5425、5430", "title": "" },
+  { "dept": "各分局", "name": "第五分局", "ext": "5530、5525", "title": "" },
+  { "dept": "各分局", "name": "第六分局", "ext": "5625～5627", "title": "" },
+  { "dept": "各分局", "name": "豐原分局", "ext": "3128、3129", "title": "" },
+  { "dept": "各分局", "name": "大雅分局", "ext": "3930、3927", "title": "" },
+  { "dept": "各分局", "name": "大甲分局", "ext": "3411、3412", "title": "" },
+  { "dept": "各分局", "name": "清水分局", "ext": "3512、3539", "title": "" },
+  { "dept": "各分局", "name": "烏日分局", "ext": "3678、3612", "title": "" },
+  { "dept": "各分局", "name": "霧峰分局", "ext": "3712、3737", "title": "" },
+  { "dept": "各分局", "name": "太平分局", "ext": "3838、3838", "title": "" },
+  { "dept": "各分局", "name": "東勢分局", "ext": "3310、3310", "title": "" },
+  { "dept": "各分局", "name": "和平分局", "ext": "3211、3212", "title": "" },
+    // --- 刑事警察局 ---
+    { "dept": "刑事警察局", "name": "生物科", "title": "CIB", "ext": "725-2502~5" },
+    { "dept": "刑事警察局", "name": "生物科收發", "title": "CIB", "ext": "725-2703" },
+    { "dept": "刑事警察局", "name": "指紋科", "title": "CIB", "ext": "725-3124~6" },
+    { "dept": "刑事警察局", "name": "槍彈股", "title": "CIB", "ext": "725-2477~8" },
+    { "dept": "刑事警察局", "name": "化學股", "title": "CIB", "ext": "725-2471~2" },
+    { "dept": "刑事警察局", "name": "偵五隊", "title": "CIB", "ext": "791-4020~21" }
+];
+
+function showGroup(groupName) {
+    const menu = document.getElementById('group-menu');
+    const listView = document.getElementById('contact-list-view');
+    const container = document.getElementById('contacts-container');
+    const title = document.getElementById('selected-group-name');
+
+    menu.classList.add('hidden');
+    listView.classList.remove('hidden');
+    title.innerText = groupName;
+
+    container.innerHTML = '';
+    const filtered = contactData.filter(c => c.dept === groupName);
+
+    filtered.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'contact-card';
+        card.innerHTML = `
+            <div class="info">
+                <span class="name">${c.name}</span>
+                <span class="title">${c.title}</span>
+            </div>
+            <div class="ext-box">📞 ${c.ext}</div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function goBack() {
+    document.getElementById('group-menu').classList.remove('hidden');
+    document.getElementById('contact-list-view').classList.add('hidden');
+}

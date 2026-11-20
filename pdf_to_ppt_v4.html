@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PDF 視覺化框選 → PPT 還原工具</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--text:#182230;--muted:#667085;--line:#d8dee8;--accent:#2563eb;--accent2:#1d4ed8;--danger:#c4320a;--ok:#067647;--shadow:0 8px 24px rgba(16,24,40,.08);--radius:14px}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif}
+.wrap{max-width:1500px;margin:auto;padding:20px}.topbar{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}.topbar h1{margin:0;font-size:27px}.lead{margin:5px 0 0;color:var(--muted);font-size:14px;line-height:1.6}.layout{display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px;align-items:start}.card{background:var(--card);border:1px solid #e5e9f0;border-radius:var(--radius);box-shadow:var(--shadow)}.panel{padding:16px;position:sticky;top:12px}.viewerCard{padding:14px}.drop{display:block;padding:22px 12px;border:2px dashed #b8c4d6;border-radius:12px;text-align:center;background:#fbfcfe;cursor:pointer;transition:.15s}.drop.dragover{border-color:var(--accent);background:#eff6ff}.drop strong{display:block;font-size:16px}.drop span{display:block;color:var(--muted);font-size:13px;margin-top:4px}input[type=file]{display:none}.section{margin-top:16px}.section h3{font-size:14px;margin:0 0 9px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btnrow{display:flex;gap:8px;flex-wrap:wrap}button,select,input[type=number]{font:inherit}.btn{border:0;border-radius:9px;padding:9px 11px;font-weight:700;cursor:pointer;background:#eef2f6;color:#344054}.btn:hover{filter:brightness(.98)}.btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2)}.btn.danger{background:#fff1ed;color:var(--danger)}.btn.toolActive{background:#dbeafe;color:#1d4ed8;outline:2px solid #60a5fa}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{width:100%}select,input[type=number]{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}label{font-size:12px;color:#475467}.hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:7px}.status{font-size:12px;line-height:1.55;color:#475467;min-height:34px;margin-top:10px}.progress{height:8px;background:#e9edf3;border-radius:999px;overflow:hidden}.bar{height:100%;width:0;background:var(--accent);transition:.15s}.modebox{padding:10px;border:1px solid #dce4ef;border-radius:10px;background:#f8fafc}.modebox label{display:flex;gap:7px;align-items:center;font-size:13px;color:#344054;margin:4px 0}.regions{display:flex;flex-direction:column;gap:6px;max-height:250px;overflow:auto}.regionItem{display:grid;grid-template-columns:28px 1fr auto;gap:7px;align-items:center;padding:7px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}.regionItem.active{outline:2px solid #93c5fd;border-color:#60a5fa}.badge{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;background:#dbeafe;color:#1d4ed8;font-size:12px;font-weight:800}.regionItem .name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.miniBtn{border:0;background:transparent;cursor:pointer;color:#667085;padding:3px 5px;font-weight:800}.viewerTop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.pageNav{display:flex;gap:7px;align-items:center}.pageNav input{width:76px}.meta{font-size:12px;color:var(--muted)}.stageWrap{background:#e7ebf1;border-radius:12px;padding:12px;overflow:auto;min-height:420px;display:flex;justify-content:center;align-items:flex-start}.stage{position:relative;display:inline-block;user-select:none;touch-action:none;line-height:0}.stage canvas{display:block;max-width:100%;height:auto;background:white;box-shadow:0 2px 10px rgba(0,0,0,.13)}.selectionLayer{position:absolute;inset:0;cursor:crosshair}.sel{position:absolute;border:2px solid #2563eb;background:rgba(37,99,235,.08);cursor:move;line-height:normal}.sel.active{border-width:3px;background:rgba(37,99,235,.12)}.sel .tag{position:absolute;left:-2px;top:-24px;background:#2563eb;color:#fff;font-size:11px;line-height:18px;height:20px;padding:1px 6px;border-radius:5px 5px 5px 0;white-space:nowrap}.handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #2563eb;border-radius:50%;z-index:2}.h-nw{left:-7px;top:-7px;cursor:nwse-resize}.h-ne{right:-7px;top:-7px;cursor:nesw-resize}.h-sw{left:-7px;bottom:-7px;cursor:nesw-resize}.h-se{right:-7px;bottom:-7px;cursor:nwse-resize}.h-n{left:50%;top:-7px;transform:translateX(-50%);cursor:ns-resize}.h-s{left:50%;bottom:-7px;transform:translateX(-50%);cursor:ns-resize}.h-w{left:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize}.h-e{right:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize}.empty{padding:80px 20px;text-align:center;color:#98a2b3;line-height:1.8}.thumbTitle{font-size:13px;font-weight:750;margin:14px 0 8px}.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}.thumb{border:1px solid var(--line);border-radius:9px;padding:6px;background:#fafbfc}.thumb canvas{width:100%;display:block;background:#fff}.thumb div{font-size:11px;color:#667085;margin-top:5px}.kbd{display:inline-block;padding:1px 5px;border:1px solid #cfd5df;border-bottom-width:2px;border-radius:5px;background:white;font-size:11px;color:#475467}.good{color:var(--ok);font-weight:700}
+@media(max-width:920px){.layout{grid-template-columns:1fr}.panel{position:static}.wrap{padding:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div><h1>PDF 視覺化框選 → PowerPoint 還原</h1><p class="lead">直接在 PDF 頁面上拖曳框選。每一個框就是一張 PPT；同一頁可 1 張、2 張或更多張。</p></div>
+  </div>
+  <div class="layout">
+    <aside class="card panel">
+      <label class="drop" id="dropZone" for="fileInput"><strong>拖曳 PDF 到這裡</strong><span>或點一下選擇 PDF</span></label>
+      <input id="fileInput" type="file" accept="application/pdf,.pdf" />
+
+      <div class="section">
+        <h3>① 選取方式</h3>
+        <div class="modebox">
+          <label><input type="radio" name="scope" value="template" checked> 共用範圍：目前框選套用到所有頁</label>
+          <label><input type="radio" name="scope" value="page"> 本頁範圍：只調整目前這一頁</label>
+        </div>
+        <div class="hint">一般講義先用「共用範圍」。只有某頁版型不同，再切成「本頁範圍」微調。</div>
+      </div>
+
+      <div class="section">
+        <h3>② 框選工具</h3>
+        <div class="btnrow">
+          <button class="btn" id="preset2Btn" disabled>上下 2 張</button>
+          <button class="btn" id="preset1Btn" disabled>整頁 1 張</button>
+          <button class="btn" id="duplicateBtn" disabled>複製選取框</button>
+          <button class="btn danger" id="deleteBtn" disabled>刪除選取框</button>
+          <button class="btn danger" id="clearBtn" disabled>重新框選</button>
+        </div>
+        <div class="hint">在右側 PDF 上直接拖曳建立新框。<span class="kbd">Alt</span> + 拖曳可沿用目前選取框；若未選取，則沿用上一個框的尺寸。點框可選取；拖曳框可移動；拉藍色圓點可縮放。按 <span class="kbd">Delete</span> 可刪除。</div>
+      </div>
+
+      <div class="section">
+        <h3>③ 目前輸出範圍</h3>
+        <div class="regions" id="regions"><div class="hint">尚未建立選取框。</div></div>
+      </div>
+
+      <div class="section">
+        <h3>④ 輸出設定</h3>
+        <div class="row">
+          <label>投影片比例<select id="slideRatio"><option value="16:9" selected>16:9</option><option value="4:3">4:3</option><option value="source">依選取框比例</option></select></label>
+          <label>畫質<select id="renderScale"><option value="2">一般</option><option value="3" selected>高</option><option value="4">Full HD+</option></select></label>
+          <label>圖片格式<select id="imgFormat"><option value="jpeg" selected>JPEG</option><option value="png">PNG</option></select></label>
+          <label>JPEG 品質<select id="jpegQuality"><option value="0.88">88%</option><option value="0.93" selected>93%</option><option value="0.97">97%</option></select></label>
+        </div>
+        <div class="hint">「依選取框比例」時，PPT 尺寸會依第一個輸出框建立；若各框比例差異很大，建議固定 16:9 或 4:3。</div>
+      </div>
+
+      <div class="section">
+        <div class="btnrow">
+          <button class="btn primary" id="exportBtn" disabled style="flex:1">產生 PPTX</button>
+          <button class="btn" id="exportPngBtn" disabled style="flex:1">批次匯出 PNG</button>
+        </div>
+        <div class="hint">PNG 會逐張下載，不壓縮成 ZIP。第一次大量下載時，瀏覽器可能會詢問是否允許多個檔案下載。</div>
+        <div class="status" id="status">尚未載入 PDF。</div><div class="progress"><div class="bar" id="bar"></div></div>
+      </div>
+    </aside>
+
+    <main class="card viewerCard">
+      <div class="viewerTop">
+        <div><strong>PDF 頁面框選</strong><div class="meta" id="meta">尚未載入</div></div>
+        <div class="pageNav"><button class="btn" id="prevPage" disabled>上一頁</button><input id="pageNum" type="number" min="1" value="1" disabled><span class="meta" id="pageCount">/ 0</span><button class="btn" id="nextPage" disabled>下一頁</button></div>
+      </div>
+      <div class="stageWrap" id="stageWrap"><div class="empty" id="emptyMsg">載入 PDF 後，頁面會顯示在這裡。<br>直接用滑鼠拖曳出你要變成 PPT 的範圍。</div><div class="stage" id="stage" hidden><canvas id="pageCanvas"></canvas><div class="selectionLayer" id="selectionLayer"></div></div></div>
+      <div class="thumbTitle">目前頁面的輸出預覽</div>
+      <div class="thumbs" id="thumbs"><div class="hint">建立選取框後會顯示預覽。</div></div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const $=id=>document.getElementById(id);
+const E={dropZone:$('dropZone'),fileInput:$('fileInput'),stage:$('stage'),emptyMsg:$('emptyMsg'),canvas:$('pageCanvas'),layer:$('selectionLayer'),regions:$('regions'),thumbs:$('thumbs'),status:$('status'),bar:$('bar'),meta:$('meta'),pageNum:$('pageNum'),pageCount:$('pageCount'),prevPage:$('prevPage'),nextPage:$('nextPage'),preset2Btn:$('preset2Btn'),preset1Btn:$('preset1Btn'),duplicateBtn:$('duplicateBtn'),deleteBtn:$('deleteBtn'),clearBtn:$('clearBtn'),exportBtn:$('exportBtn'),exportPngBtn:$('exportPngBtn'),renderScale:$('renderScale'),imgFormat:$('imgFormat'),jpegQuality:$('jpegQuality'),slideRatio:$('slideRatio')};
+let pdfDoc=null,fileName='',currentPage=1,busy=false,activeId=null;
+let templateRegions=[]; const pageRegions=new Map();
+const cloneRegions=a=>a.map(r=>({...r}));
+const uid=()=> 'r'+Math.random().toString(36).slice(2,9);
+function status(t,p=null){E.status.textContent=t;if(p!==null)E.bar.style.width=Math.max(0,Math.min(100,p))+'%'}
+function scope(){return document.querySelector('input[name="scope"]:checked').value}
+function ensurePageOverride(){if(!pageRegions.has(currentPage)) pageRegions.set(currentPage,cloneRegions(templateRegions));return pageRegions.get(currentPage)}
+function currentRegions(){return scope()==='page'?ensurePageOverride():templateRegions}
+function outputRegionsForPage(p){return pageRegions.has(p)?pageRegions.get(p):templateRegions}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function normalizeRegion(r){r.x=clamp(r.x,0,1);r.y=clamp(r.y,0,1);r.w=clamp(r.w,.01,1-r.x);r.h=clamp(r.h,.01,1-r.y);return r}
+async function loadFile(file){if(!file||!/pdf/i.test(file.type+file.name))return alert('請選擇 PDF 檔案。');try{status('正在讀取 PDF…',3);const buf=await file.arrayBuffer();fileName=file.name.replace(/\.pdf$/i,'');pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;currentPage=1;templateRegions=[];pageRegions.clear();activeId=null;E.pageNum.max=pdfDoc.numPages;E.pageNum.value=1;E.pageCount.textContent='/ '+pdfDoc.numPages;[E.pageNum,E.prevPage,E.nextPage,E.preset2Btn,E.preset1Btn,E.clearBtn,E.exportBtn,E.exportPngBtn].forEach(x=>x.disabled=false);E.emptyMsg.hidden=true;E.stage.hidden=false;E.meta.innerHTML='<span class="good">'+escapeHtml(file.name)+'</span>　'+pdfDoc.numPages+' 頁';status('已載入 '+pdfDoc.numPages+' 頁。請直接在右側拖曳框選輸出範圍。',0);await renderPage()}catch(err){console.error(err);status('PDF 載入失敗：'+err.message,0)}}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+async function renderPage(){if(!pdfDoc||busy)return;busy=true;try{const page=await pdfDoc.getPage(currentPage);const base=page.getViewport({scale:1});const maxW=Math.min(1000,Math.max(420,document.querySelector('.viewerCard').clientWidth-42));const scale=maxW/base.width;const viewport=page.getViewport({scale});E.canvas.width=Math.round(viewport.width);E.canvas.height=Math.round(viewport.height);E.canvas.style.width=E.canvas.width+'px';E.canvas.style.height=E.canvas.height+'px';E.stage.style.width=E.canvas.width+'px';E.stage.style.height=E.canvas.height+'px';const ctx=E.canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,E.canvas.width,E.canvas.height);await page.render({canvasContext:ctx,viewport}).promise;E.pageNum.value=currentPage;renderSelections();renderThumbs();updateMeta()}catch(err){console.error(err);status('頁面預覽失敗：'+err.message)}finally{busy=false}}
+function updateMeta(){const rs=outputRegionsForPage(currentPage);E.meta.innerHTML=(E.meta.innerHTML.split('　')[0]||'')+'　第 '+currentPage+' 頁　目前 '+rs.length+' 個輸出框'+(pageRegions.has(currentPage)?'（本頁個別設定）':'（共用設定）')}
+function renderSelections(){E.layer.innerHTML='';const rs=currentRegions();rs.forEach((r,i)=>{const d=document.createElement('div');d.className='sel'+(r.id===activeId?' active':'');d.dataset.id=r.id;d.style.left=(r.x*100)+'%';d.style.top=(r.y*100)+'%';d.style.width=(r.w*100)+'%';d.style.height=(r.h*100)+'%';d.innerHTML='<div class="tag">PPT '+(i+1)+'</div>'+['nw','n','ne','e','se','s','sw','w'].map(h=>'<span class="handle h-'+h+'" data-h="'+h+'"></span>').join('');E.layer.appendChild(d)});renderRegionList();E.duplicateBtn.disabled=!activeId;E.deleteBtn.disabled=!activeId}
+function renderRegionList(){const rs=currentRegions();if(!rs.length){E.regions.innerHTML='<div class="hint">尚未建立選取框。直接在右側頁面拖曳即可。</div>';return}E.regions.innerHTML='';rs.forEach((r,i)=>{const it=document.createElement('div');it.className='regionItem'+(r.id===activeId?' active':'');it.innerHTML='<div class="badge">'+(i+1)+'</div><div class="name">PPT '+(i+1)+'　'+Math.round(r.w*100)+'% × '+Math.round(r.h*100)+'%</div><button class="miniBtn" title="刪除">×</button>';it.addEventListener('click',e=>{if(e.target.tagName==='BUTTON'){removeRegion(r.id);return}activeId=r.id;renderSelections()});E.regions.appendChild(it)})}
+function addRegion(r){const rs=currentRegions();r=normalizeRegion({id:uid(),...r});rs.push(r);activeId=r.id;renderSelections();renderThumbs();updateMeta()}
+function removeRegion(id){const rs=currentRegions(),idx=rs.findIndex(r=>r.id===id);if(idx>=0)rs.splice(idx,1);if(activeId===id)activeId=null;renderSelections();renderThumbs();updateMeta()}
+function activeRegion(){return currentRegions().find(r=>r.id===activeId)}
+function pointerPos(ev){const rect=E.layer.getBoundingClientRect();return{x:clamp((ev.clientX-rect.left)/rect.width,0,1),y:clamp((ev.clientY-rect.top)/rect.height,0,1)}}
+let drag=null;
+function lastRegionForSize(){const rs=currentRegions();return activeRegion()||rs[rs.length-1]||null}
+function placeSameSizeAt(p,source,center=true){
+  if(!source)return null;
+  const w=source.w,h=source.h;
+  const x=center?clamp(p.x-w/2,0,1-w):clamp(p.x,0,1-w);
+  const y=center?clamp(p.y-h/2,0,1-h):clamp(p.y,0,1-h);
+  const r={id:uid(),x,y,w,h};currentRegions().push(r);activeId=r.id;return r;
+}
+E.layer.addEventListener('pointerdown',ev=>{
+  if(!pdfDoc)return;
+  const sel=ev.target.closest('.sel');
+  const p=pointerPos(ev);
+  if(sel){
+    activeId=sel.dataset.id;
+    const r=activeRegion();
+    drag={type:ev.target.dataset.h?'resize':'move',handle:ev.target.dataset.h||'',sx:p.x,sy:p.y,orig:{...r}};
+    renderSelections();E.layer.setPointerCapture(ev.pointerId);ev.preventDefault();return;
+  }
+  if(ev.altKey){
+    const src=lastRegionForSize();
+    if(src){
+      const r=placeSameSizeAt(p,src,true);
+      drag={type:'move',sx:p.x,sy:p.y,orig:{...r}};
+      renderSelections();E.layer.setPointerCapture(ev.pointerId);ev.preventDefault();return;
+    }
+  }
+  activeId=null;
+  const r={id:uid(),x:p.x,y:p.y,w:.001,h:.001};currentRegions().push(r);activeId=r.id;
+  drag={type:'new',sx:p.x,sy:p.y,orig:{...r}};E.layer.setPointerCapture(ev.pointerId);renderSelections();ev.preventDefault();
+});
+E.layer.addEventListener('pointermove',ev=>{if(!drag)return;const p=pointerPos(ev),r=activeRegion();if(!r)return;const dx=p.x-drag.sx,dy=p.y-drag.sy,o=drag.orig;if(drag.type==='new'){r.x=Math.min(o.x,p.x);r.y=Math.min(o.y,p.y);r.w=Math.max(.001,Math.abs(p.x-o.x));r.h=Math.max(.001,Math.abs(p.y-o.y))}else if(drag.type==='move'){r.x=clamp(o.x+dx,0,1-o.w);r.y=clamp(o.y+dy,0,1-o.h)}else{let x=o.x,y=o.y,w=o.w,h=o.h;const H=drag.handle;if(H.includes('e'))w=clamp(o.w+dx,.01,1-o.x);if(H.includes('s'))h=clamp(o.h+dy,.01,1-o.y);if(H.includes('w')){x=clamp(o.x+dx,0,o.x+o.w-.01);w=o.w+(o.x-x)}if(H.includes('n')){y=clamp(o.y+dy,0,o.y+o.h-.01);h=o.h+(o.y-y)}Object.assign(r,{x,y,w,h})}renderSelections()});
+function endDrag(ev){if(!drag)return;const r=activeRegion();if(r&&(r.w<.015||r.h<.015))removeRegion(r.id);drag=null;try{E.layer.releasePointerCapture(ev.pointerId)}catch{}renderSelections();renderThumbs();updateMeta()}
+E.layer.addEventListener('pointerup',endDrag);E.layer.addEventListener('pointercancel',endDrag);
+function makePreset(kind){let rs=currentRegions();rs.splice(0,rs.length);if(kind===1)rs.push({id:uid(),x:.03,y:.03,w:.94,h:.94});else{rs.push({id:uid(),x:.08,y:.10,w:.84,h:.34},{id:uid(),x:.08,y:.56,w:.84,h:.34})}activeId=rs[0]?.id||null;renderSelections();renderThumbs();updateMeta()}
+async function renderThumbs(){if(!pdfDoc)return;const rs=outputRegionsForPage(currentPage);if(!rs.length){E.thumbs.innerHTML='<div class="hint">建立選取框後會顯示預覽。</div>';return}E.thumbs.innerHTML='';for(let i=0;i<rs.length;i++){const r=rs[i],box=document.createElement('div');box.className='thumb';const c=document.createElement('canvas');const sx=Math.round(E.canvas.width*r.x),sy=Math.round(E.canvas.height*r.y),sw=Math.max(1,Math.round(E.canvas.width*r.w)),sh=Math.max(1,Math.round(E.canvas.height*r.h));c.width=sw;c.height=sh;c.getContext('2d').drawImage(E.canvas,sx,sy,sw,sh,0,0,sw,sh);box.appendChild(c);const lab=document.createElement('div');lab.textContent='PPT '+(i+1)+'｜'+sw+'×'+sh;box.appendChild(lab);E.thumbs.appendChild(box)}}
+async function renderSourcePage(pageNo,scale){const p=await pdfDoc.getPage(pageNo),v=p.getViewport({scale});const c=document.createElement('canvas');c.width=Math.round(v.width);c.height=Math.round(v.height);const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);await p.render({canvasContext:ctx,viewport:v}).promise;return c}
+function crop(src,r){const sx=Math.round(src.width*r.x),sy=Math.round(src.height*r.y),sw=Math.max(1,Math.round(src.width*r.w)),sh=Math.max(1,Math.round(src.height*r.h));const c=document.createElement('canvas');c.width=sw;c.height=sh;const x=c.getContext('2d',{alpha:false});x.fillStyle='#fff';x.fillRect(0,0,sw,sh);x.drawImage(src,sx,sy,sw,sh,0,0,sw,sh);return c}
+function dataUrl(c){return E.imgFormat.value==='png'?c.toDataURL('image/png'):c.toDataURL('image/jpeg',parseFloat(E.jpegQuality.value))}
+function pptLayout(pptx,firstR){
+  const ratio=E.slideRatio.value;
+  let w,h,name;
+  if(ratio==='4:3'){
+    w=10;h=7.5;name='USER_4_3';
+  }else if(ratio==='16:9'){
+    w=13.333333;h=7.5;name='USER_16_9';
+  }else{
+    const a=firstR?firstR.w/firstR.h:16/9;
+    h=7.5;w=Math.max(4,Math.min(14,h*a));name='USER_AUTO';
+  }
+  // 不依賴 PptxGenJS 內建 layout 名稱，避免不同版本出現 UNKNOWN-LAYOUT。
+  pptx.defineLayout({name,width:w,height:h});
+  pptx.layout=name;
+  return{w,h};
+}
+function fitImageToSlide(imgW,imgH,slideW,slideH){
+  const scale=Math.min(slideW/imgW,slideH/imgH);
+  const w=imgW*scale,h=imgH*scale;
+  return{x:(slideW-w)/2,y:(slideH-h)/2,w,h};
+}
+async function exportPptx(){if(!pdfDoc||busy)return;let total=0,firstR=null;for(let p=1;p<=pdfDoc.numPages;p++){const rs=outputRegionsForPage(p);total+=rs.length;if(!firstR&&rs.length)firstR=rs[0]}if(!total)return alert('請至少建立一個選取框。');if(typeof PptxGenJS==='undefined')return alert('PPTX 函式庫載入失敗，請確認網路連線。');busy=true;E.exportBtn.disabled=true;try{const pptx=new PptxGenJS(),size=pptLayout(pptx,firstR);pptx.author='PDF Visual Restore Tool';pptx.title=fileName;pptx.lang='zh-TW';let done=0;for(let p=1;p<=pdfDoc.numPages;p++){const rs=outputRegionsForPage(p);if(!rs.length)continue;status('處理 PDF 第 '+p+'/'+pdfDoc.numPages+' 頁…',done/total*92);const src=await renderSourcePage(p,parseFloat(E.renderScale.value));for(const r of rs){const cc=crop(src,r);const slide=pptx.addSlide();slide.background={color:'FFFFFF'};const box=fitImageToSlide(cc.width,cc.height,size.w,size.h);slide.addImage({data:dataUrl(cc),...box});done++;status('已建立 '+done+'/'+total+' 張投影片…',done/total*92);if(done%3===0)await new Promise(r=>setTimeout(r,0))}}status('正在封裝 PPTX…',96);await pptx.writeFile({fileName:fileName+'_框選還原.pptx'});status('完成：'+pdfDoc.numPages+' 頁 PDF → '+total+' 張 PPT。',100)}catch(err){console.error(err);status('輸出失敗：'+err.message,0);alert('輸出失敗：'+err.message)}finally{busy=false;E.exportBtn.disabled=false}}
+async function canvasToPngBlob(c){return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('PNG 轉換失敗')),'image/png'))}
+function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+async function exportPngs(){
+  if(!pdfDoc||busy)return;
+  let total=0;for(let p=1;p<=pdfDoc.numPages;p++)total+=outputRegionsForPage(p).length;
+  if(!total)return alert('請至少建立一個選取框。');
+  busy=true;E.exportBtn.disabled=true;E.exportPngBtn.disabled=true;
+  try{
+    let done=0;
+    const pageDigits=Math.max(3,String(pdfDoc.numPages).length);
+    for(let p=1;p<=pdfDoc.numPages;p++){
+      const rs=outputRegionsForPage(p);if(!rs.length)continue;
+      status('PNG：處理 PDF 第 '+p+'/'+pdfDoc.numPages+' 頁…',done/total*100);
+      const src=await renderSourcePage(p,parseFloat(E.renderScale.value));
+      for(let i=0;i<rs.length;i++){
+        const cc=crop(src,rs[i]);
+        const blob=await canvasToPngBlob(cc);
+        const name=fileName+'_page_'+String(p).padStart(pageDigits,'0')+'_crop_'+String(i+1).padStart(2,'0')+'.png';
+        downloadBlob(blob,name);
+        done++;status('已下載 '+done+'/'+total+' 張 PNG…',done/total*100);
+        // 讓瀏覽器有時間接收多檔下載事件，仍可能需使用者允許「多個檔案下載」。
+        await new Promise(r=>setTimeout(r,120));
+      }
+    }
+    status('完成：已送出 '+total+' 張 PNG 下載。',100);
+  }catch(err){console.error(err);status('PNG 匯出失敗：'+err.message,0);alert('PNG 匯出失敗：'+err.message)}
+  finally{busy=false;E.exportBtn.disabled=false;E.exportPngBtn.disabled=false}
+}
+
+E.fileInput.addEventListener('change',e=>loadFile(e.target.files[0]));E.dropZone.addEventListener('dragover',e=>{e.preventDefault();E.dropZone.classList.add('dragover')});E.dropZone.addEventListener('dragleave',()=>E.dropZone.classList.remove('dragover'));E.dropZone.addEventListener('drop',e=>{e.preventDefault();E.dropZone.classList.remove('dragover');loadFile(e.dataTransfer.files?.[0])});
+E.prevPage.addEventListener('click',async()=>{if(currentPage>1){currentPage--;activeId=null;await renderPage()}});E.nextPage.addEventListener('click',async()=>{if(pdfDoc&&currentPage<pdfDoc.numPages){currentPage++;activeId=null;await renderPage()}});E.pageNum.addEventListener('change',async()=>{if(!pdfDoc)return;currentPage=clamp(parseInt(E.pageNum.value||1),1,pdfDoc.numPages);activeId=null;await renderPage()});
+E.preset2Btn.addEventListener('click',()=>makePreset(2));E.preset1Btn.addEventListener('click',()=>makePreset(1));E.clearBtn.addEventListener('click',()=>{if(!confirm('清除目前模式下的所有框，重新框選？'))return;const rs=currentRegions();rs.splice(0,rs.length);activeId=null;renderSelections();renderThumbs();updateMeta()});E.deleteBtn.addEventListener('click',()=>activeId&&removeRegion(activeId));E.duplicateBtn.addEventListener('click',()=>{const r=activeRegion();if(!r)return;addRegion({x:clamp(r.x+.02,0,1-r.w),y:clamp(r.y+.02,0,1-r.h),w:r.w,h:r.h})});E.exportBtn.addEventListener('click',exportPptx);E.exportPngBtn.addEventListener('click',exportPngs);
+document.querySelectorAll('input[name="scope"]').forEach(x=>x.addEventListener('change',()=>{activeId=null;renderSelections();renderThumbs();updateMeta()}));
+window.addEventListener('keydown',e=>{if((e.key==='Delete'||e.key==='Backspace')&&activeId&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();removeRegion(activeId)}});
+window.addEventListener('resize',()=>{if(pdfDoc)clearTimeout(window.__rt),window.__rt=setTimeout(renderPage,180)});
+</script>
+</body>
+</html>

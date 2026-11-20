@@ -1,0 +1,33 @@
+:root {
+    --primary-color: #4ecca3;   /* 科技綠 */
+    --bg-color: #1a1a2e;       /* 深藍底 */
+    --card-bg: #16213e;        /* 卡片深藍 */
+    --accent-color: #0f3460;   /* 導覽列藍 */
+    --text-main: #e0e0e0;      /* 主文字白 */
+    --text-muted: #99aab5;     /* 次要文字灰 */
+    --border-color: #2d3a5a;
+    --canvas-bg: #111;         /* 畫布深色 */
+}
+
+body {
+    font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0; padding: 0;
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    margin: 15px auto;
+    border: 1px solid var(--border-color);
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    border: none; padding: 10px 20px; border-radius: 8px;
+    font-weight: bold; cursor: pointer;
+}
